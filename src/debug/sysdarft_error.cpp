@@ -5,16 +5,16 @@
 
 const char * sysdarft_errors[] = {
     "Successful",
-    "No such log level",
 };
 
 sysdarft_error_t::sysdarft_error_t(sysdarft_error_t::error_types_t types)
 {
-    std::ostrstream str;
-    str << "Exception Thrown: " << sysdarft_errors[types]
-        << std::endl << "Obtained stack frame:\n"
-        << obtain_stack_frame() << "\n"
-        << "Errno: " << strerror(errno) << "\n";
+    std::ostringstream str;
+    sysdarft_log::output_to_stream(str, sysdarft_log::GREEN, sysdarft_log::BOLD, "Exception Thrown: ",
+        sysdarft_log::RED, sysdarft_errors[types], sysdarft_log::REGULAR,
+        '\n', sysdarft_log::GREEN, "Obtained stack frame:\n", sysdarft_log::REGULAR,
+        obtain_stack_frame(), "\n",
+        sysdarft_log::RED, sysdarft_log::BOLD, "Errno: ", strerror(errno), "\n", sysdarft_log::REGULAR);
     err_info = str.str();
 }
 
