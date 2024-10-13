@@ -23,3 +23,4 @@ link_libraries(sysdarft_debug)
 sysdarft_add_test(cmake_sysdarft_test
         utests/cmake_sysdarft_test_case_test.cpp
 )
+
