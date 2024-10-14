@@ -32,11 +32,7 @@ add_library(sysdarft_debug STATIC
         src/debug/stack_frame_tracer.cpp
         src/debug/sysdarft_error.cpp
 )
-if (WIN32)
-    add_compile_definitions(SYSDARFT_BUILD_TARGET_PLATFORM_IS_WINDOWS)
-elseif (UNIX)
-    target_compile_options(sysdarft_debug PUBLIC -Wno-deprecated -frtti)
-endif()
+target_compile_options(sysdarft_debug PUBLIC -Wno-deprecated -frtti)
 link_libraries(sysdarft_debug)
 
 # Unit tests
