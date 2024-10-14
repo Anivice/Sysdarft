@@ -10,8 +10,7 @@
 #include <cxxabi.h>
 #include <debug.h>
 
-#define MAX_STACK_FRAMES 64
-#define ADDR2LINE_CMD_SIZE 256
+constexpr auto MAX_STACK_FRAMES = 64;
 
 bool sysdarft_log::is_console_supporting_colored_output()
 {
