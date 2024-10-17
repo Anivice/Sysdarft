@@ -17,7 +17,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Update APT
-      run: apt update -y && apt upgrade -y
+      run: apt update -y
 
     - name: Install dependencies
       run: apt install python3 python3-pip cmake build-essential xvfb-run
