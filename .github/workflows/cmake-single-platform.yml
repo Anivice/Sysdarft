@@ -20,7 +20,7 @@ jobs:
       run: sudo apt update -y && sudo apt upgrade -y
 
     - name: Install dependencies
-      run: sudo apt install python3 python3-pip cmake build-essential xvfb
+      run: sudo apt install python3 python3-pip cmake build-essential xvfb --ignore firefox
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
@@ -30,4 +30,4 @@ jobs:
 
     - name: Test
       working-directory: ${{github.workspace}}/build
-      run: bash -c "if ! xvfb-run ctest; then cat /home/runner/work/Sysdarft/Sysdarft/build/Testing/Temporary/LastTest.log; fi"
+      run: bash -c "source ${{github.workspace}}/build/PythonVirtualEnvironment/bin/activate; xvfb-run ctest; deactivate"
