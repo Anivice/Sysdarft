@@ -1,17 +1,12 @@
-/**
- * @file debug.h
- * @brief This file is intended for providing debug functionality for all functions available in this project
- */
-
 #ifndef SYSDARFT_DEBUG_H
 #define SYSDARFT_DEBUG_H
 
 #include <string>
 #include <iostream>
 #include <stdexcept>
-#include <iomanip>    // For std::put_time
-#include <chrono>     // For std::chrono::system_clock
-#include <ctime>      // For std::localtime
+#include <iomanip>
+#include <chrono>
+#include <ctime>
 #include <execinfo.h>
 #include <unistd.h>
 #include <cstring>
@@ -54,7 +49,6 @@ namespace sysdarft_log
 
     bool is_console_supporting_colored_output();
 
-    // Helper function to output console colors
     template <typename StreamType>
     void output_console_color(StreamType& ostream, console_color_t color)
     {
@@ -74,7 +68,6 @@ namespace sysdarft_log
         }
     }
 
-    // General output to stream function (special handling for console_color_t)
     template < typename StreamType, typename ParamType >
     void output_to_stream(StreamType& ostream, const ParamType& param)
     {
@@ -88,7 +81,6 @@ namespace sysdarft_log
         }
     }
 
-    // Variadic template function to output multiple arguments
     template < typename StreamType, typename ParamType, typename... Args >
     void output_to_stream(StreamType& ostream, const ParamType& param, const Args&... args)
     {
@@ -108,146 +100,70 @@ namespace sysdarft_log
         return ret.str();
     };
 
-    // Log function for a single parameter
-    template < typename Type >
-    void log(const log_level_t level, const Type& param)
+    // Helper function to get stack frame and invocation line
+    inline std::string get_invocation_line()
     {
         constexpr int MAX_STACK_FRAMES = 4;
         void* buffer[MAX_STACK_FRAMES] = {};
         const int frames = backtrace(buffer, MAX_STACK_FRAMES);
         std::string invocation_line = "(unknown line of code)";
 
-        // Get the executable's path
         char exe_path[1024] = {};
         if (readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1) == -1) {
-            // std::cerr << "readlink failed while obtaining stack frame! errno: " << strerror(errno) << std::endl;
             sysdarft_log::output_to_stream(std::cerr, sysdarft_log::RED,
-                "readlink failed while obtaining stack frame! errno: ",
-                sysdarft_log::PURPLE, strerror(errno), sysdarft_log::CLEAR);
+                                           "readlink failed while obtaining stack frame! errno: ",
+                                           sysdarft_log::PURPLE, strerror(errno), sysdarft_log::CLEAR);
         }
 
-        // Get backtrace symbols
         char** symbols = backtrace_symbols(buffer, frames);
         if (symbols == nullptr) {
-            // std::cerr << "backtrace_symbols failed while obtaining stack frame! errno: " << strerror(errno) << std::endl;
             sysdarft_log::output_to_stream(std::cerr, sysdarft_log::RED,
-                "backtrace_symbols failed while obtaining stack frame! errno: ",
-                sysdarft_log::PURPLE, strerror(errno), sysdarft_log::CLEAR);
+                                           "backtrace_symbols failed while obtaining stack frame! errno: ",
+                                           sysdarft_log::PURPLE, strerror(errno), sysdarft_log::CLEAR);
         }
 
-        // Iterate through the stack frames
-        if (frames >= 2)
+        if (frames >= 3)
         {
-            std::string address = get_addr_from_symbol(symbols[1]);
+            std::string address = get_addr_from_symbol(symbols[2]);
             if (!address.empty())
             {
-                // Use addr2line to resolve file name and line number
                 std::ostringstream cmd;
                 cmd << "addr2line -e " << exe_path << " -f -p " << address;
 
                 FILE* fp = popen(cmd.str().c_str(), "r");
-                if (fp == nullptr)
+                if (fp != nullptr)
                 {
-                    // std::cerr << "popen failed while obtaining stack frame! errno: " << strerror(errno) << std::endl;
-                    sysdarft_log::output_to_stream(std::cerr, sysdarft_log::RED,
-                        "popen failed while obtaining stack frame! errno: ",
-                        sysdarft_log::PURPLE, strerror(errno), sysdarft_log::CLEAR);
-                }
-
-                char addr2line_output[1024] = {};
-                if (fgets(addr2line_output, sizeof(addr2line_output), fp) != nullptr)
-                {
-                    std::string input = addr2line_output;
-                    size_t at_pos = input.find(" at ");
-                    if (at_pos != std::string::npos)
+                    char addr2line_output[1024] = {};
+                    if (fgets(addr2line_output, sizeof(addr2line_output), fp) != nullptr)
                     {
-                        // Separate the string into two parts
-                        invocation_line = input.substr(at_pos + 4);        // Part after " at "
-                    }
+                        std::string input = addr2line_output;
+                        size_t at_pos = input.find(" at ");
+                        if (at_pos != std::string::npos)
+                        {
+                            invocation_line = input.substr(at_pos + 4);
+                        }
 
-                    pclose(fp);
+                        pclose(fp);
+                    }
                 }
             }
 
             free(symbols);
         }
 
-        auto& ostream = (level == LOG_ERROR) ? std::cerr : std::cout;
-        output_to_stream(ostream, BLUE, BOLD, "[", get_current_date_time(), "]: From ",
-            GREEN, invocation_line, REGULAR);
-        output_to_stream(ostream, " ==> ", param);
+        return invocation_line;
     }
 
-    // Log function for multiple parameters
-    template<typename Type, typename... Args>
-    void log(const log_level_t level, const Type& param, const Args&... args)
+    // Log function for variadic parameters
+    template<typename... Args>
+    void log(const log_level_t level, const Args&... args)
     {
-        constexpr int MAX_STACK_FRAMES = 4;
-        void* buffer[MAX_STACK_FRAMES] = {};
-        const int frames = backtrace(buffer, MAX_STACK_FRAMES);
-        std::string invocation_line = "(unknown line of code)";
-
-        // Get the executable's path
-        char exe_path[1024] = {};
-        if (readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1) == -1) {
-            // std::cerr << "readlink failed while obtaining stack frame! errno: " << strerror(errno) << std::endl;
-            sysdarft_log::output_to_stream(std::cerr, sysdarft_log::RED,
-                "readlink failed while obtaining stack frame! errno: ",
-                sysdarft_log::PURPLE, strerror(errno), sysdarft_log::CLEAR);
-        }
-
-        // Get backtrace symbols
-        char** symbols = backtrace_symbols(buffer, frames);
-        if (symbols == nullptr) {
-            // std::cerr << "backtrace_symbols failed while obtaining stack frame! errno: " << strerror(errno) << std::endl;
-            sysdarft_log::output_to_stream(std::cerr, sysdarft_log::RED,
-                "backtrace_symbols failed while obtaining stack frame! errno: ",
-                sysdarft_log::PURPLE, strerror(errno), sysdarft_log::CLEAR);
-        }
-
-        // Iterate through the stack frames
-        if (frames >= 2)
-        {
-            std::string address = get_addr_from_symbol(symbols[1]);
-            if (!address.empty())
-            {
-                // Use addr2line to resolve file name and line number
-                std::ostringstream cmd;
-                cmd << "addr2line -e " << exe_path << " -f -p " << address;
-
-                FILE* fp = popen(cmd.str().c_str(), "r");
-                if (fp == nullptr)
-                {
-                    // std::cerr << "popen failed while obtaining stack frame! errno: " << strerror(errno) << std::endl;
-                    sysdarft_log::output_to_stream(std::cerr, sysdarft_log::RED,
-                        "popen failed while obtaining stack frame! errno: ",
-                        sysdarft_log::PURPLE, strerror(errno), sysdarft_log::CLEAR);
-                }
-
-                char addr2line_output[1024] {};
-                if (fgets(addr2line_output, sizeof(addr2line_output), fp) != nullptr)
-                {
-                    std::string input = addr2line_output;
-                    size_t at_pos = input.find(" at ");
-                    if (at_pos != std::string::npos)
-                    {
-                        // Separate the string into two parts
-                        invocation_line = input.substr(at_pos + 4);        // Part after " at "
-                    }
-
-                    pclose(fp);
-                }
-            }
-
-            free(symbols);
-        }
-
+        std::string invocation_line = get_invocation_line();
         auto& ostream = (level == LOG_ERROR) ? std::cerr : std::cout;
         output_to_stream(ostream, BLUE, BOLD, "[", get_current_date_time(), "]: From ",
-            GREEN, invocation_line, REGULAR);
-        output_to_stream(ostream, " ==> ", param, args...);
+                         GREEN, invocation_line, REGULAR);
+        output_to_stream(ostream, " ==> ", args...);
     }
-
 }
 
 #endif // SYSDARFT_DEBUG_H

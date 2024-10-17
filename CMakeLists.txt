@@ -48,8 +48,9 @@ target_compile_options(sysdarft_debug PUBLIC -Wno-deprecated -frtti -g3 -gdwarf-
 link_libraries(sysdarft_debug)
 
 # ##2: Amber Screen Display
-list(APPEND CMAKE_PREFIX_PATH "${PythonVirtualEnvironment_DIR}/lib/python${Python3_VERSION}/site-packages/pybind11/share/cmake/pybind11")
-message(STATUS "pybind11 set to ${PythonVirtualEnvironment_DIR}/lib/python${Python3_VERSION}/site-packages/pybind11/share/cmake/pybind11")
+string(REGEX REPLACE "^([0-9]+\\.[0-9]+).*" "\\1" TRIMMED_Python3_VERSION "${Python3_VERSION}")
+list(APPEND CMAKE_PREFIX_PATH "${PythonVirtualEnvironment_DIR}/lib/python${TRIMMED_Python3_VERSION}/site-packages/pybind11/share/cmake/pybind11")
+message(STATUS "pybind11 set to ${PythonVirtualEnvironment_DIR}/lib/python${TRIMMED_Python3_VERSION}/site-packages/pybind11/share/cmake/pybind11")
 find_package(pybind11 REQUIRED)
 set(PYBIND11_CPP_STANDARD -std=c++20)
 link_libraries(pybind11::embed Python3::Python)

@@ -57,7 +57,7 @@ class AmberScreenEmulator:
 
         # Create clock for FPS control
         self.clock = pygame.time.Clock()
-        self.FPS = 60
+        self.FPS = 30  # Reduced FPS for better CPU efficiency
 
     def add_glow(self, image_surface, blur_radius=8):
         pil_string_image = pygame.image.tostring(image_surface, "RGB")
@@ -90,46 +90,51 @@ class AmberScreenEmulator:
         final_surface = pygame.transform.scale(pixelated_surface, (self.char_width, self.char_height))
         return final_surface
 
+    def decay_buffer_changed(self):
+        return any(self.decay_timer[row][col] > 0 for row in range(self.rows) for col in range(self.cols))
+
     def service_loop(self):
         self.running_verification_flag = True
 
         try:
             while self.running_event.is_set():
-                self.screen.fill(self.bg_color)
+                screen_updated = False
 
-                # Display the grid of text with a decay effect
-                for row in range(self.rows):
-                    for col in range(self.cols):
-                        if self.decay_buffer[row][col] != '':
-                            brightness_factor = max(self.decay_timer[row][col] / self.max_decay_time, self.min_brightness_factor)
-                            current_color = (
-                                int(self.amber_color[0] * brightness_factor),
-                                int(self.amber_color[1] * brightness_factor),
-                                int(self.amber_color[2] * brightness_factor)
-                            )
+                if self.decay_buffer_changed():  # Only render if decay buffer changes
+                    self.screen.fill(self.bg_color)
 
-                            pixelated_text_surface = self.render_pixelated_text(self.decay_buffer[row][col], current_color)
-                            self.screen.blit(pixelated_text_surface, (col * self.char_width, row * self.char_height))
+                    for row in range(self.rows):
+                        for col in range(self.cols):
+                            if self.decay_buffer[row][col] != '':
+                                brightness_factor = max(self.decay_timer[row][col] / self.max_decay_time, self.min_brightness_factor)
+                                current_color = (
+                                    int(self.amber_color[0] * brightness_factor),
+                                    int(self.amber_color[1] * brightness_factor),
+                                    int(self.amber_color[2] * brightness_factor)
+                                )
 
-                # Update decay and apply glow effect
-                self.update_decay()
-                self.glow_surface = self.add_glow(self.screen)
-                self.screen.blit(self.glow_surface, (0, 0), special_flags=pygame.BLEND_ADD)
+                                pixelated_text_surface = self.render_pixelated_text(self.decay_buffer[row][col], current_color)
+                                self.screen.blit(pixelated_text_surface, (col * self.char_width, row * self.char_height))
+
+                    self.update_decay()
+                    self.glow_surface = self.add_glow(self.screen)
+                    self.screen.blit(self.glow_surface, (0, 0), special_flags=pygame.BLEND_ADD)
+
+                    screen_updated = True
+
+                if screen_updated:
+                    pygame.display.flip()
+
+                # Control frame rate with a more CPU-friendly wait
+                pygame.time.wait(int(1000 / self.FPS))
 
                 # Handle events
                 self.handle_events()
 
-                # Update display and control frame rate
-                pygame.display.flip()
-                self.clock.tick(self.FPS)
-
-            # service finished
             self.cleanup()
-
             self.running_verification_flag = False
 
         except Exception as err:
-            # Log the error and stop the event loop if an exception occurs
             print(f"An error occurred during the service loop: {err}")
             self.running_event.clear()
 
@@ -202,7 +207,7 @@ class AmberScreenEmulator:
 
     def join_service_loop(self):
         while self.running_event.is_set() or self.running_verification_flag:
-            time.sleep(0.1)
+            self.sleep(0.2)  # Increased to reduce CPU usage
 
     def sleep(self, seconds):
         time.sleep(seconds)
