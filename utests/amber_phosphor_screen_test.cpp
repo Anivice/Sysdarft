@@ -55,6 +55,7 @@ int main()
         // Optionally, query the input stream
         auto input_stream = convert_input_stream(AmberScreen.attr("query_input_stream")());
 
+        AmberScreen.attr("display_char")(0, 0, ' ');
         AmberScreen.attr("sleep")(1);
 
         if (AmberScreen.attr("stop_service")().cast<int>() == -1) {
