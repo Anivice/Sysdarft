@@ -141,7 +141,7 @@ std::string obtain_stack_frame()
                     std::string unprocessed_name = match[1].str();
                     std::string processed_name = demangled_name(unprocessed_name);
                     // ret << "    " << std::regex_replace(unprocessed_output, regex_pattern, processed_name + " at");
-                   sysdarft_log:: output_to_stream(ret, "    ", sysdarft_log::RED,
+                   sysdarft_log:: output_to_stream(ret, "    ",
                        format_processed_regex_replace_output(
                         std::regex_replace(unprocessed_output, regex_pattern, processed_name + " at")),
                         sysdarft_log::REGULAR);
