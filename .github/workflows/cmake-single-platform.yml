@@ -20,7 +20,7 @@ jobs:
       run: sudo apt update -y && sudo apt upgrade -y
 
     - name: Install dependencies
-      run: sudo apt install python3 python3-pip cmake build-essential xvfb-run
+      run: sudo apt install python3 python3-pip cmake build-essential xvfb
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
