@@ -17,7 +17,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Update APT
-      run: sudo apt update -y && sudo apt upgrade --ignore firefox -y
+      run: sudo apt update -y && sudo apt-mark hold firefox && sudo apt upgrade -y
 
     - name: Install dependencies
       run: sudo apt install python3 python3-pip cmake build-essential xvfb
