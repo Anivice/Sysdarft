@@ -1,50 +1,11 @@
 message(STATUS "CMake Module Python Virtual Environment Loaded")
 
+include("${CMAKE_CURRENT_LIST_DIR}/check_program.cmake")
+
 set(VENV_DIR "${CMAKE_BINARY_DIR}/PythonVirtualEnvironment")
 
-# Ensure Python 3 is installed
-find_program(PYTHON3_EXECUTABLE python3)
-if(NOT PYTHON3_EXECUTABLE)
-    message(FATAL_ERROR "Python 3 was not found! Please install Python 3 to proceed.")
-else()
-    message(STATUS "Python 3 found: ${PYTHON3_EXECUTABLE}")
-    # Optionally check if Python is usable by running a simple version command
-    execute_process(
-            COMMAND ${PYTHON3_EXECUTABLE} --version
-            OUTPUT_VARIABLE python_version_output
-            ERROR_VARIABLE python_version_error
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_STRIP_TRAILING_WHITESPACE
-            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    )
-    if(NOT python_version_output)
-        message(FATAL_ERROR "Python 3 is installed but not usable.")
-    else()
-        message(STATUS "Python 3 version: ${python_version_output}")
-    endif()
-endif()
-
-# Ensure Bash is installed
-find_program(BASH_EXECUTABLE bash)
-if(NOT BASH_EXECUTABLE)
-    message(FATAL_ERROR "Bash was not found! Please install Bash to proceed.")
-else()
-    message(STATUS "Bash found: ${BASH_EXECUTABLE}")
-    # Optionally check if Bash is usable by running a simple version command
-    execute_process(
-            COMMAND ${BASH_EXECUTABLE} --version
-            OUTPUT_VARIABLE bash_version_output
-            ERROR_VARIABLE bash_version_error
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_STRIP_TRAILING_WHITESPACE
-            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    )
-    if(NOT bash_version_output)
-        message(FATAL_ERROR "Bash is installed but not usable.")
-    else()
-        message(STATUS "Bash version: ${bash_version_output}")
-    endif()
-endif()
+check_program("bash" "BASH")
+check_program("python3" "PYTHON3")
 
 message(STATUS "Creating Python virtual environment...")
 execute_process(

@@ -27,10 +27,13 @@ endif()
 
 # Include CMake submodules
 include(cmake_modules/utests.cmake)
+
 find_package(Python3 COMPONENTS Interpreter Development)
 set(PythonVirtualEnvironment_DIR)
 include(cmake_modules/python_venv.cmake)
 message(STATUS "Python virtual environment is setup at `${PythonVirtualEnvironment_DIR}`")
+
+include(cmake_modules/xxd_compiler.cmake)
 
 # Universal include directory
 include_directories(include)
@@ -60,6 +63,9 @@ add_library(sysdarft_amber_phosphor_screen STATIC
 )
 link_libraries(sysdarft_amber_phosphor_screen)
 
+# ##3: Resource Packer for script files and other resource files
+sysdarft_add_xxd_target(AmberScreenEmulator scripts/AmberScreenEmulator.py)
+
 # Unit tests
 sysdarft_add_test(cmake_sysdarft_test
         utests/cmake_sysdarft_test_case_test.cpp
@@ -71,4 +77,8 @@ sysdarft_add_test(amber_phosphor_screen_test
 
 sysdarft_add_test(sysdarft_display
     utests/sysdarft_display_test.cpp
+)
+
+sysdarft_add_test(res_packer
+    utests/res_packer_test.cpp
 )
