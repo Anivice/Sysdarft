@@ -31,6 +31,7 @@ public:
     void join();
     void sleep(float);
 
+    sysdarft_display_t & operator=(const sysdarft_display_t&) = delete;
 } sysdarft_display;
 
 #endif // SYSDARFT_AMBER_PHOSPHOR_SCREEN_H

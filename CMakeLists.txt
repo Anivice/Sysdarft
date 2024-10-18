@@ -11,8 +11,6 @@ if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     message(FATAL_ERROR "GCC is required as the compiler.")
 endif()
 
-enable_testing()
-
 # Platform check
 if (NOT UNIX)
     message(FATAL_ERROR "Unknown target platform!")
@@ -25,15 +23,42 @@ elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
     add_compile_definitions(SYSDARFT_TARGET_IS_RELEASE_BUILD)
 endif()
 
+function(auto_set_flag flag_name default_var)
+    set(${flag_name} "${${flag_name}}")
+    if (NOT ${flag_name})
+        set(${flag_name} "${default_var}" PARENT_SCOPE)
+        return()
+    endif ()
+
+    message(STATUS "[FLAG]: Flag ${flag_name} is manually set as ${${flag_name}}")
+endfunction()
+
 # Include CMake submodules
+auto_set_flag(SUPRESS_DEBUG_INFO "False")
+auto_set_flag(DISABLE_APT_UPDATE "False")
+auto_set_flag(DISABLE_PYTHON3_VENV_SETUP "False")
+
+set(LOADED_MODULE_LIST "")
+include(cmake_modules/color_the_console.cmake)
+include(cmake_modules/dependencies_auto_install.cmake)
 include(cmake_modules/utests.cmake)
 
 find_package(Python3 COMPONENTS Interpreter Development)
 set(PythonVirtualEnvironment_DIR)
 include(cmake_modules/python_venv.cmake)
+console_turn_green()
 message(STATUS "Python virtual environment is setup at `${PythonVirtualEnvironment_DIR}`")
+console_reset_color()
 
 include(cmake_modules/xxd_compiler.cmake)
+
+console_turn_green()
+message(STATUS "The following CMake modules are loaded:")
+foreach (Module IN LISTS LOADED_MODULE_LIST)
+    message(STATUS "\t\t${Module}")
+endforeach (Module IN LISTS LOADED_MODULE_LIST)
+message(STATUS "\t")
+console_reset_color()
 
 # Universal include directory
 include_directories(include)
@@ -53,7 +78,9 @@ link_libraries(sysdarft_debug)
 # ##2: Amber Screen Display
 string(REGEX REPLACE "^([0-9]+\\.[0-9]+).*" "\\1" TRIMMED_Python3_VERSION "${Python3_VERSION}")
 list(APPEND CMAKE_PREFIX_PATH "${PythonVirtualEnvironment_DIR}/lib/python${TRIMMED_Python3_VERSION}/site-packages/pybind11/share/cmake/pybind11")
+console_turn_yellow()
 message(STATUS "pybind11 set to ${PythonVirtualEnvironment_DIR}/lib/python${TRIMMED_Python3_VERSION}/site-packages/pybind11/share/cmake/pybind11")
+console_reset_color()
 find_package(pybind11 REQUIRED)
 set(PYBIND11_CPP_STANDARD -std=c++20)
 link_libraries(pybind11::embed Python3::Python)
@@ -63,8 +90,15 @@ add_library(sysdarft_amber_phosphor_screen STATIC
 )
 link_libraries(sysdarft_amber_phosphor_screen)
 
-# ##3: Resource Packer for script files and other resource files
-sysdarft_add_xxd_target(AmberScreenEmulator scripts/AmberScreenEmulator.py)
+# ##4: Resource Packer for script files and other resource files
+add_library(sysdarft_resource_packer STATIC
+        include/res_packer.h
+        src/utils/res_packer/res_packer.cpp
+)
+target_link_libraries(sysdarft_resource_packer PUBLIC ${xxdTargetLibraries})
+link_libraries(sysdarft_resource_packer)
+sysdarft_add_xxd_target(AmberScreenEmulator scripts/AmberScreenEmulator.py sysdarft_resource_packer)
+sysdarft_add_xxd_target(ModuleMarkdown cmake_modules/Modules.md sysdarft_resource_packer)
 
 # Unit tests
 sysdarft_add_test(cmake_sysdarft_test
