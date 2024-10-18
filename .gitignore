@@ -15,3 +15,4 @@ cmake-build-release
 *out*/
 *build*/
 PythonVEnv/*
+*/__pycache__/*
