@@ -36,7 +36,10 @@ public:
     enum error_types_t {
         SUCCESS,
         SCREEN_SERVICE_LOOP_EXECUTION_FAILED,
-        SCREEN_SERVICE_LOOP_FAILED_TO_STOP
+        SCREEN_SERVICE_LOOP_FAILED_TO_STOP,
+        FUSE_SERVICE_FAILED_TO_START,
+        FUSE_SERVICE_FAILED_TO_STOP,
+        FILESYSTEM_CREATE_DIRECTORIES_FAILED,
     };
 
     explicit sysdarft_error_t(error_types_t);

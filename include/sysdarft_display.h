@@ -9,6 +9,7 @@
 #include <pybind11/embed.h> // pybind11's embedding module
 #include <map>
 #include <string>
+#include <res_packer.h>
 namespace py = pybind11;
 
 typedef std::map < std::string /* stream type (Control/Input) */,
@@ -18,12 +19,15 @@ extern
 class __attribute__((visibility("hidden"))) sysdarft_display_t
 {
 private:
+    py::object AmberScreen { };
     py::scoped_interpreter guard{};
-    py::object AmberScreen{};
 
 public:
-    sysdarft_display_t();
-    ~sysdarft_display_t();
+    void initialize();
+    void cleanup();
+
+    // sysdarft_display_t() { initialize(); }
+    // ~sysdarft_display_t() { cleanup(); }
 
     input_stream_t query_input();
     void input_stream_pop_first_element();

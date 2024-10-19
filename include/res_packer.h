@@ -4,21 +4,15 @@
 #include <map>
 #include <string>
 
-extern class res_packer_t
-{
-private:
-    struct resource_file_t {
-        unsigned int file_length;
-        const unsigned char * file_content;
-    };
+struct resource_file_t {
+    const unsigned int file_length;
+    const unsigned char * file_content;
+};
 
-    std::map < std::string /* file path name, like scripts_AmberScreenEmulator.py */,
-            resource_file_t > resource_file_folder;
+void initialize_resource_filesystem();
+void fuse_start();
+void fuse_stop();
 
-public:
-    res_packer_t();
-
-    res_packer_t & operator=(const res_packer_t &) = delete;
-} res_packer;
+[[nodiscard]] const std::map < std::string, resource_file_t > & get_res_file_list() noexcept;
 
 #endif //RES_PACKER_H

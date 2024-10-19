@@ -6,8 +6,10 @@
 const char * sysdarft_errors[] = {
     "Success",
     "Screen service loop failed to start",
-    "Screen service loop failed to stop"
-
+    "Screen service loop failed to stop",
+    "FUSE service failed to start",
+    "FUSE service failed to stop",
+    "Filesystem create directories failed",
 };
 
 inline std::string init_error_msg(const sysdarft_error_t::error_types_t types)

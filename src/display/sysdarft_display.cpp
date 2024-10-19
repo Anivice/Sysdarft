@@ -2,8 +2,10 @@
 #include <string>
 #include <sysdarft_display.h>
 #include <debug.h>
+#include <res_packer.h>
 
 sysdarft_display_t sysdarft_display;
+extern bool fuse_running_flag;
 
 // Function to convert Python object (list) to std::map<std::string, std::map<std::string, std::string>>
 std::map<std::string, std::map<std::string, std::string>>
@@ -31,13 +33,29 @@ convert_input_stream(const py::list & py_list)
     return cpp_map;
 }
 
-sysdarft_display_t::sysdarft_display_t()
+// Function to load the script from memory and get the class
+py::object load_class_from_script(const unsigned char *script, size_t size, const std::string &class_name)
 {
-    // Import the Python module
-    py::module_ sys = py::module_::import("sys");
-    sys.attr("path").attr("append")(CMAKE_SOURCE_DIR "/scripts");
-    py::object AmberScreenEmulator = py::module_::import("AmberScreenEmulator");
-    py::object AmberScreen_t = AmberScreenEmulator.attr("AmberScreenEmulator");
+    // Convert the script to a Python string
+    py::str py_script(reinterpret_cast<const char*>(script), size);
+
+    // Execute the script in a global namespace
+    py::dict globals = py::globals();
+    py::exec(py_script, globals);
+
+    // Extract the class from the global namespace
+    py::object py_class = globals[class_name.c_str()];
+
+    return py_class;
+}
+
+void sysdarft_display_t::initialize()
+{
+    auto file = get_res_file_list().at("scripts_AmberScreenEmulator.py");
+    auto AmberScreen_t = load_class_from_script(file.file_content,
+        file.file_length,
+        "AmberScreenEmulator");
+
     AmberScreen = AmberScreen_t();
 
     // Start the emulator (calls the start_service method)
@@ -45,7 +63,8 @@ sysdarft_display_t::sysdarft_display_t()
         throw sysdarft_error_t(sysdarft_error_t::SCREEN_SERVICE_LOOP_EXECUTION_FAILED);
     }
 }
-sysdarft_display_t::~sysdarft_display_t()
+
+void sysdarft_display_t::cleanup()
 {
     // note: in C++11 destructors default to `noexcept`
     if (AmberScreen.attr("stop_service")().cast<int>() == -1) {

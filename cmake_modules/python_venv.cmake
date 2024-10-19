@@ -38,24 +38,25 @@ console_turn_blue()
 message(STATUS "Activating virtual environment and installing packages...")
 console_reset_color()
 
-console_turn_dim()
-if (${SUPRESS_DEBUG_INFO} STREQUAL "True")
-    execute_process(
-            COMMAND ${BASH_EXECUTABLE} -c "         \
-            source ${VENV_DIR}/bin/activate;        \
-            pip install --upgrade pip > /dev/null;  \
-            pip install -r ${CMAKE_SOURCE_DIR}/requirements.txt > /dev/null"
-            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    )
-else ()
-    execute_process(
-            COMMAND ${BASH_EXECUTABLE} -c " \
-            source ${VENV_DIR}/bin/activate; \
-            pip install --upgrade pip && pip install -r ${CMAKE_SOURCE_DIR}/requirements.txt"
-            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    )
+if ("${DISABLE_PYTHON3_VENV_SETUP}" STREQUAL "False")
+    console_turn_dim()
+    if (${SUPRESS_DEBUG_INFO} STREQUAL "True")
+        execute_process(
+                COMMAND ${BASH_EXECUTABLE} -c "         \
+                source ${VENV_DIR}/bin/activate;        \
+                pip install --upgrade pip > /dev/null;  \
+                pip install -r ${CMAKE_SOURCE_DIR}/requirements.txt > /dev/null"
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        )
+    else ()
+        execute_process(
+                COMMAND ${BASH_EXECUTABLE} -c " \
+                source ${VENV_DIR}/bin/activate; \
+                pip install --upgrade pip && pip install -r ${CMAKE_SOURCE_DIR}/requirements.txt"
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        )
+    endif ()
 endif ()
-
 
 console_reset_color()
 

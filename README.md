@@ -1,6 +1,6 @@
 # Sysdarft
-![Lines of Code](https://img.shields.io/badge/ProjectLines-3076-cyan)
-![Size of Code](https://img.shields.io/badge/ProjectSize-288%20K-yellow)
+![Lines of Code](https://img.shields.io/badge/ProjectLines-3107-cyan)
+![Size of Code](https://img.shields.io/badge/ProjectSize-296%20K-yellow)
 
 > ⚠️ **Warning:** ⚠️ THIS README FILE IS AUTO GENERATED! ANY MODIFICATION WON'T BE PRESERVED! MODIFY [THIS FILE](scripts/res/README.md) INSTEAD!
 

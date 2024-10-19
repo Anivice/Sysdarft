@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.18)
 
 # Setup language standards
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_C_STANDARD 99)
 
 project(Sysdarft C CXX)
@@ -34,9 +35,14 @@ function(auto_set_flag flag_name default_var)
 endfunction()
 
 # Include CMake submodules
-auto_set_flag(SUPRESS_DEBUG_INFO "False")
-auto_set_flag(DISABLE_APT_UPDATE "False")
-auto_set_flag(DISABLE_PYTHON3_VENV_SETUP "False")
+auto_set_flag(SUPRESS_DEBUG_INFO            "False")
+auto_set_flag(DISABLE_APT_UPDATE            "False")
+auto_set_flag(DISABLE_PYTHON3_VENV_SETUP    "False")
+if ("${SUPRESS_DEBUG_INFO}" STREQUAL "True")
+    add_compile_definitions(SUPRESS_DEBUG_INFO=1)
+else ()
+    add_compile_definitions(SUPRESS_DEBUG_INFO=0)
+endif ()
 
 set(LOADED_MODULE_LIST "")
 include(cmake_modules/color_the_console.cmake)
@@ -66,13 +72,14 @@ include_directories(include)
 add_compile_definitions("CMAKE_SOURCE_DIR=\"${CMAKE_SOURCE_DIR}\"")
 add_compile_definitions("CMAKE_BINARY_DIR=\"${CMAKE_BINARY_DIR}\"")
 
+add_compile_options(-g3 -O0)
+
 # ##1: Sysdarft debug library
 add_library(sysdarft_debug STATIC
         include/debug.h
         src/debug/stack_frame_tracer.cpp
         src/debug/sysdarft_error.cpp
 )
-target_compile_options(sysdarft_debug PUBLIC -Wno-deprecated -frtti -g3 -gdwarf-4 -O0)
 link_libraries(sysdarft_debug)
 
 # ##2: Amber Screen Display
@@ -90,15 +97,28 @@ add_library(sysdarft_amber_phosphor_screen STATIC
 )
 link_libraries(sysdarft_amber_phosphor_screen)
 
-# ##4: Resource Packer for script files and other resource files
+# ##3: Resource Packer for script files and other resource files
+add_compile_definitions(FUSE_FSNAME="SysdarftResourceFS")
+auto_set_flag(FOURCE_FUSE_FOREGROUND_WITH_DEBUG_INFO "False")
+if ("${FOURCE_FUSE_FOREGROUND_WITH_DEBUG_INFO}" STREQUAL "True")
+    add_compile_definitions(FOURCE_FUSE_FOREGROUND_WITH_DEBUG_INFO=1)
+else ()
+    add_compile_definitions(FOURCE_FUSE_FOREGROUND_WITH_DEBUG_INFO=0)
+endif ()
+auto_set_flag(RESOURCE_PACK_TMP_DIR "/tmp/.Sysdarft/Resources")
+add_compile_definitions(RESOURCE_PACK_TMP_DIR="${RESOURCE_PACK_TMP_DIR}")
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(FUSE3 REQUIRED fuse)
 add_library(sysdarft_resource_packer STATIC
         include/res_packer.h
         src/utils/res_packer/res_packer.cpp
+        src/utils/res_packer/filesystem_operations.cpp
 )
-target_link_libraries(sysdarft_resource_packer PUBLIC ${xxdTargetLibraries})
+target_include_directories(sysdarft_resource_packer PUBLIC ${FUSE3_INCLUDE_DIRS})
+target_link_libraries(sysdarft_resource_packer PUBLIC ${FUSE3_LIBRARIES})
+target_compile_options(sysdarft_resource_packer PUBLIC ${FUSE3_CFLAGS_OTHER})
 link_libraries(sysdarft_resource_packer)
-sysdarft_add_xxd_target(AmberScreenEmulator scripts/AmberScreenEmulator.py sysdarft_resource_packer)
-sysdarft_add_xxd_target(ModuleMarkdown cmake_modules/Modules.md sysdarft_resource_packer)
+sysdarft_xxd_link_library(sysdarft_resource_packer)
 
 # Unit tests
 sysdarft_add_test(cmake_sysdarft_test

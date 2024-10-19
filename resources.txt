@@ -1,2 +1,0 @@
-scripts/AmberScreenEmulator.py
-cmake_modules/Modules.md
