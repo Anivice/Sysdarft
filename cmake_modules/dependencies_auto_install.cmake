@@ -26,8 +26,8 @@ console_turn_blue()
 message(STATUS "Installing dependencies...")
 console_reset_color()
 
-set(debian_packages "python3 python3-dev python3-venv fuse3 libfuse-dev vim")
-set(fedora_packages "python3 python3-devel python3-virtualenv fuse3 fuse3-devel vim")
+set(debian_packages python3 python3-dev python3-venv fuse3 libfuse-dev vim)
+set(fedora_packages python3 python3-devel python3-virtualenv fuse3 fuse3-devel vim)
 # Installation commands based on the detected distribution
 if (DISTRO MATCHES "ubuntu|debian")
     console_turn_yellow()
