@@ -94,8 +94,6 @@ The function this module provides is
 
  | Paramater     | Explanation                                                |
  |---------------|------------------------------------------------------------|
- | `TARGET_NAME` | CMake target name                                          |
- | `TARGET_FILE` | Path to file that wishes to be compiled into resource file |
  | `HOST_NAME`   | CMake target name that wish to link to the binary library  | 
 
 
@@ -109,5 +107,5 @@ set(LOADED_MODULE_LIST "")
 include(cmake_modules/xxd_compiler.cmake)
 
 add_executable(host_executable main.cpp)
-sysdarft_add_xxd_target(ResourcePack res/resource.res host_executable)
+sysdarft_add_xxd_target(host_executable)
 ```

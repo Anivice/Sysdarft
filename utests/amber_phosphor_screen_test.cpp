@@ -51,10 +51,13 @@ py::object load_class_from_script(const unsigned char *script, size_t size, cons
 
 int main()
 {
-    // Initialize the Python interpreter
-    py::scoped_interpreter guard{};
-
     try {
+        // Initialize the Python interpreter
+        py::scoped_interpreter guard{};
+
+        // Manually invoke Python garbage collection
+        py::module gc = py::module::import("gc");
+
         initialize_resource_filesystem();
 
         auto file = get_res_file_list().at("scripts_AmberScreenEmulator.py");
@@ -79,6 +82,12 @@ int main()
         if (AmberScreen.attr("stop_service")().cast<int>() == -1) {
             throw std::runtime_error("Error when stopping service loop!");
         }
+
+        gc.attr("collect")();
+
+        py::dict globals = py::globals();
+        // Clear the global namespace to avoid memory leaks
+        globals.clear();
     } catch (const std::exception &e) {
         sysdarft_log::log(sysdarft_log::LOG_ERROR, "Error: ", e.what(), "\n");
         return 1;

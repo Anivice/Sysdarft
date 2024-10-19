@@ -125,9 +125,9 @@ namespace sysdarft_log
                                            sysdarft_log::PURPLE, strerror(errno), sysdarft_log::CLEAR);
         }
 
-        if (frames >= 3)
+        if (frames >= 4)
         {
-            std::string address = get_addr_from_symbol(symbols[2]);
+            std::string address = get_addr_from_symbol(symbols[3]);
             if (!address.empty())
             {
                 std::ostringstream cmd;

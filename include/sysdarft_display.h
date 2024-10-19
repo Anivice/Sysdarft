@@ -10,32 +10,58 @@
 #include <map>
 #include <string>
 #include <res_packer.h>
+#include <thread>  // for std::this_thread::sleep_for
+#include <chrono>  // for std::chrono::seconds
+
 namespace py = pybind11;
 
 typedef std::map < std::string /* stream type (Control/Input) */,
-    std::map < std::string, std::string > > input_stream_t;
+                   std::map < std::string, std::string > > input_stream_t;
 
-extern
-class __attribute__((visibility("hidden"))) sysdarft_display_t
-{
+extern class __attribute__((visibility("hidden"))) sysdarft_display_t {
 private:
-    py::object AmberScreen { };
-    py::scoped_interpreter guard{};
+    py::object * AmberScreen;
+    // py::object AmberScreen;         // The instantiated AmberScreen object from Python
+    py::scoped_interpreter guard;   // Manages the Python interpreter lifecycle
+    py::object AmberScreen_t;       // The AmberScreenEmulator class object
+    py::module gc;                  // Garbage collection module
 
 public:
+    sysdarft_display_t() {
+        // Initialize the resource filesystem and the Amber Screen
+        initialize_resource_filesystem();
+        initialize();
+    }
+
+    ~sysdarft_display_t();
+
+    // Deleted copy assignment to avoid accidental copying of the display object
+    sysdarft_display_t& operator=(const sysdarft_display_t&) = delete;
+
+    // Initialize the AmberScreenEmulator instance
     void initialize();
+
+    // Cleanup function to safely stop the service and collect garbage
     void cleanup();
 
-    // sysdarft_display_t() { initialize(); }
-    // ~sysdarft_display_t() { cleanup(); }
-
+    // Query input stream from the AmberScreen emulator
     input_stream_t query_input();
-    void input_stream_pop_first_element();
-    void display_char(int, int, char);
-    void join();
-    void sleep(float);
 
-    sysdarft_display_t & operator=(const sysdarft_display_t&) = delete;
+    // Pop the first element from the input stream
+    void input_stream_pop_first_element();
+
+    // Display a character on the screen at the specified row and column
+    void display_char(int row, int col, char _char);
+
+    // Join the service loop, ensuring that it is safely terminated
+    void join();
+
+    // Put the emulator to sleep for a specified time (in seconds)
+    void sleep(float seconds);
+
+private:
+    // Wait for the service thread to complete before cleanup
+    void wait_for_service_to_stop();
 } sysdarft_display;
 
 #endif // SYSDARFT_AMBER_PHOSPHOR_SCREEN_H

@@ -7,7 +7,6 @@
 
 void fuse_start();
 void fuse_stop();
-extern bool fuse_running_flag;
 std::map < std::string, resource_file_t > resource_file_folder;
 
 std::string process_path_name(std::string pathname)

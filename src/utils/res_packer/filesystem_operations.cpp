@@ -6,6 +6,7 @@
 #include <sysdarft_display.h>
 #include <filesystem>
 #include <debug.h>
+#include <res_packer.h>
 
 #if (!SUPRESS_DEBUG_INFO)
 #define INVK_NOTIFICATION(__path__) sysdarft_log::log(sysdarft_log::LOG_NORMAL,          \

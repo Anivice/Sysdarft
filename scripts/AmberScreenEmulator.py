@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import pygame
 import pygame.freetype
 from PIL import Image, ImageFilter
@@ -51,6 +49,9 @@ class AmberScreenEmulator:
         # Threading event to manage the running state
         self.running_event = threading.Event()
         self.running_event.set()
+
+        # Thread object to control the service loop thread
+        self.service_thread = None
 
         # Start text input for pygame
         pygame.key.start_text_input()
@@ -131,11 +132,13 @@ class AmberScreenEmulator:
                 # Handle events
                 self.handle_events()
 
-            self.cleanup()
-            self.running_verification_flag = False
-
         except Exception as err:
             print(f"An error occurred during the service loop: {err}")
+
+        finally:
+            # Clean up properly when loop is stopped
+            self.cleanup()
+            self.running_verification_flag = False
             self.running_event.clear()
 
     def handle_events(self):
@@ -182,8 +185,13 @@ class AmberScreenEmulator:
 
     def start_service(self):
         try:
-            service_thread = threading.Thread(target=self.service_loop)
-            service_thread.start()
+            # Ensure no thread is already running
+            if self.service_thread and self.service_thread.is_alive():
+                print("Service is already running.")
+                return -1
+
+            self.service_thread = threading.Thread(target=self.service_loop)
+            self.service_thread.start()
             return 0
 
         except Exception as err:
@@ -192,10 +200,16 @@ class AmberScreenEmulator:
 
     def stop_service(self):
         try:
+            # Signal the service loop to stop
             self.running_event.clear()
+
+            # Wait for the service loop to finish
+            if self.service_thread:
+                self.service_thread.join()
+
             return 0
         except Exception as err:
-            print(f'Error when starting service ({err})!')
+            print(f'Error when stopping service ({err})!')
             return -1
 
     def query_input_stream(self):
@@ -206,8 +220,8 @@ class AmberScreenEmulator:
             self.input_stream.pop(0)
 
     def join_service_loop(self):
-        while self.running_event.is_set() or self.running_verification_flag:
-            self.sleep(0.2)  # Increased to reduce CPU usage
+        if self.service_thread and self.service_thread.is_alive():
+            self.service_thread.join()
 
     def sleep(self, seconds):
         time.sleep(seconds)

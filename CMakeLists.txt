@@ -12,6 +12,61 @@ if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     message(FATAL_ERROR "GCC is required as the compiler.")
 endif()
 
+set(compiler_options
+        # Warnings and diagnostics
+        -Wall                                # Enable common warnings
+        -Wextra                              # Enable extra warnings
+        -Wpedantic                           # Strict compliance with the standard
+        -Wunused                             # Warn about unused variables, functions, etc.
+        -Wuninitialized                      # Warn if variables are used uninitialized
+        -fdiagnostics-show-option            # Show which option triggered the warning
+        -fdiagnostics-color=always           # Enable colored diagnostics for better readability
+
+        # Debugging and stack protection
+        -g3                                  # Maximum debug information, including macro expansions
+        -O0                                  # No optimization, easier for debugging
+        -fstack-usage                        # Generate stack usage info for each function
+        -fstack-protector-all                # Protect all functions with a stack canary to prevent stack overflow attacks
+        -D_FORTIFY_SOURCE=2                  # Buffer overflow detection on safer libc functions (e.g., memcpy)
+        -gdwarf-4
+
+        # Sanitize memory and thread issues
+        -fsanitize=address                   # Detect illegal memory access such as buffer overflows and use-after-free
+        -fsanitize=undefined                 # Detect undefined behavior like integer overflows and null dereferencing
+#        -fsanitize=thread                    # Ensure thread safety by detecting data races
+
+        # Linker options
+#        -Wl,--verbose                        # Verbose linker output to show linking process details
+        -flto                                # Enable Link-Time Optimization, but keep it compatible with debug builds
+)
+
+set(linker_options
+        # Linker options for memory safety, thread safety, and verbose debugging
+        -fuse-ld=gold                           # Use the gold linker for faster linking (optional, depending on system availability)
+        -Wl,--no-omagic                         # Prevent the generation of object files in memory; useful for debugging
+        -Wl,--as-needed                         # Only link libraries that are actually needed to reduce binary size
+        -Wl,--fatal-warnings                    # Treat all linker warnings as errors to catch issues early
+        -Wl,-z,relro                            # Read-only relocations to prevent certain memory exploits (optional)
+        -Wl,-z,now                              # Fully resolve all symbols during the link time for extra safety
+        -Wl,-z,noexecstack                      # Prevent execution of code on the stack (security hardening)
+        -Wl,-z,defs                             # Ensure all symbols are defined, and prevent undefined symbols
+        -Wl,-O1                                 # Optimize the linking process while maintaining debuggability
+
+        -gdwarf-4
+
+        # AddressSanitizer and ThreadSanitizer linking (to ensure proper linking of sanitizers)
+        -fsanitize=address                      # Link the AddressSanitizer runtime for memory integrity
+#        -fsanitize=thread                       # Link the ThreadSanitizer runtime for thread safety
+        -fsanitize=undefined                    # Link the UndefinedBehaviorSanitizer for detecting undefined behavior
+
+        # Stack protection and LTO options
+        -fstack-protector-all                   # Link with stack protection for all functions
+        -flto                                   # Enable link-time optimization (can be disabled during debug for clarity)
+)
+
+add_compile_options(${compiler_options})
+add_link_options(${linker_options})
+
 # Platform check
 if (NOT UNIX)
     message(FATAL_ERROR "Unknown target platform!")
@@ -84,9 +139,10 @@ link_libraries(sysdarft_debug)
 
 # ##2: Amber Screen Display
 string(REGEX REPLACE "^([0-9]+\\.[0-9]+).*" "\\1" TRIMMED_Python3_VERSION "${Python3_VERSION}")
-list(APPEND CMAKE_PREFIX_PATH "${PythonVirtualEnvironment_DIR}/lib/python${TRIMMED_Python3_VERSION}/site-packages/pybind11/share/cmake/pybind11")
+auto_set_flag(Pybind11_DIR "${PythonVirtualEnvironment_DIR}/lib/python${TRIMMED_Python3_VERSION}/site-packages/pybind11/share/cmake/pybind11")
+list(APPEND CMAKE_PREFIX_PATH "${Pybind11_DIR}")
 console_turn_yellow()
-message(STATUS "pybind11 set to ${PythonVirtualEnvironment_DIR}/lib/python${TRIMMED_Python3_VERSION}/site-packages/pybind11/share/cmake/pybind11")
+message(STATUS "pybind11 set to ${Pybind11_DIR}")
 console_reset_color()
 find_package(pybind11 REQUIRED)
 set(PYBIND11_CPP_STANDARD -std=c++20)
