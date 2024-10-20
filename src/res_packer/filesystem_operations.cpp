@@ -256,7 +256,7 @@ void fuse_stop()
     sysdarft_log::log(sysdarft_log::LOG_NORMAL, sysdarft_log::BOLD, sysdarft_log::CYAN,
         "[FUSE] Ready to stop FUSE service...\n", sysdarft_log::REGULAR);
 
-    if (std::system("sudo umount -f " RESOURCE_PACK_TMP_DIR) != 0) {
+    if (std::system("sudo umount -l " RESOURCE_PACK_TMP_DIR) != 0) {
         sysdarft_log::log(sysdarft_log::LOG_ERROR, sysdarft_log::BOLD, sysdarft_log::RED,
             "[FUSE] umount failed!\n", sysdarft_log::REGULAR);
         // throw sysdarft_error_t(sysdarft_error_t::FUSE_SERVICE_FAILED_TO_STOP);

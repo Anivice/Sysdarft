@@ -19,8 +19,7 @@ typedef std::map < std::string /* stream type (Control/Input) */,
 
 extern class sysdarft_display_t {
 private:
-    py::object * AmberScreen = nullptr;
-    // py::object AmberScreen;         // The instantiated AmberScreen object from Python
+    py::object * AmberScreen = nullptr; // The instantiated AmberScreen object from Python
     py::scoped_interpreter guard;   // Manages the Python interpreter lifecycle
     py::object AmberScreen_t;       // The AmberScreenEmulator class object
     py::module gc;                  // Garbage collection module

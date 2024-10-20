@@ -145,6 +145,9 @@ if (EXTREME_DEBUG_TRACE STREQUAL "True")
     endif ()
     add_compile_options(${compiler_options})
     add_link_options(${linker_options})
+else ()
+    add_compile_options(-g3 -O0 -flto -fPIC)
+    add_link_options(-g3 -O0 -flto -fPIC)
 endif()
 
 # Universal include directory
