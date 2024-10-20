@@ -80,7 +80,7 @@ which will automatically create a test called `Sysdarft_test_case_${TEST_NAME}`
 ## xxd_compiler
 This module provides a way to compile resource file into
 a `.cpp` file under `${CMAKE_BINARY_DIR}/res`, and generate
-a `${CMAKE_BINARY_DIR}/include/res/resource_file_list.h`,
+a `${CMAKE_BINARY_DIR}/include/resource_file_list.h`,
 which provides **extern** references to resource file
 content (i.e., resource file content in `unsigned char *`,
 and its length in `unsigned int`). The max file size for

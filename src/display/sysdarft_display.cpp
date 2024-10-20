@@ -58,7 +58,7 @@ void sysdarft_display_t::initialize()
 
     AmberScreen  = new py::object();
 
-    *AmberScreen = AmberScreen_t();
+    *AmberScreen = AmberScreen_t("Sysdarft Emulator Screen");
     // *AmberScreen = AmberScreen_t();
 
     // Start the emulator (calls the start_service method)
@@ -69,6 +69,10 @@ void sysdarft_display_t::initialize()
 
 void sysdarft_display_t::cleanup()
 {
+    if (did_i_cleanup) {
+        return;
+    }
+
     try {
         // Stop the service
         if (AmberScreen->attr("stop_service")().cast<int>() == -1) {
@@ -86,6 +90,9 @@ void sysdarft_display_t::cleanup()
         globals.clear();
 
         delete AmberScreen;
+        AmberScreen = nullptr;
+
+        did_i_cleanup = true;
     } catch (const std::exception& e) {
         std::cerr << "Error during cleanup: " << e.what() << std::endl;
     }

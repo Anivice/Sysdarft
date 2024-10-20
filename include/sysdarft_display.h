@@ -10,7 +10,6 @@
 #include <map>
 #include <string>
 #include <res_packer.h>
-#include <thread>  // for std::this_thread::sleep_for
 #include <chrono>  // for std::chrono::seconds
 
 namespace py = pybind11;
@@ -18,13 +17,21 @@ namespace py = pybind11;
 typedef std::map < std::string /* stream type (Control/Input) */,
                    std::map < std::string, std::string > > input_stream_t;
 
-extern class __attribute__((visibility("hidden"))) sysdarft_display_t {
+extern class sysdarft_display_t {
 private:
-    py::object * AmberScreen;
+    py::object * AmberScreen = nullptr;
     // py::object AmberScreen;         // The instantiated AmberScreen object from Python
     py::scoped_interpreter guard;   // Manages the Python interpreter lifecycle
     py::object AmberScreen_t;       // The AmberScreenEmulator class object
     py::module gc;                  // Garbage collection module
+
+    bool did_i_cleanup = false;
+
+    // Initialize the AmberScreenEmulator instance
+    void initialize();
+
+    // Cleanup function to safely stop the service and collect garbage
+    void cleanup();
 
 public:
     sysdarft_display_t() {
@@ -37,12 +44,6 @@ public:
 
     // Deleted copy assignment to avoid accidental copying of the display object
     sysdarft_display_t& operator=(const sysdarft_display_t&) = delete;
-
-    // Initialize the AmberScreenEmulator instance
-    void initialize();
-
-    // Cleanup function to safely stop the service and collect garbage
-    void cleanup();
 
     // Query input stream from the AmberScreen emulator
     input_stream_t query_input();

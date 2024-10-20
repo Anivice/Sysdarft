@@ -3,10 +3,12 @@
 #include <cstring>
 #include <string>
 #include <ranges>
-#include <sysdarft_display.h>
 #include <filesystem>
 #include <debug.h>
 #include <res_packer.h>
+#include <fuse_operations.h>
+#include <resource_file_list.h>
+#include <thread>
 
 #if (!SUPRESS_DEBUG_INFO)
 #define INVK_NOTIFICATION(__path__) sysdarft_log::log(sysdarft_log::LOG_NORMAL,          \
@@ -67,7 +69,7 @@ static int getattr_callback(const char *path, struct stat *stbuf)
 static int readdir_callback(const char *path,
     void *buf, fuse_fill_dir_t filler,
     off_t,
-    struct fuse_file_info *)
+    fuse_file_info *)
 {
     INVK_NOTIFICATION(path);
 
@@ -79,10 +81,10 @@ static int readdir_callback(const char *path,
     filler(buf, ".", nullptr, 0);
     filler(buf, "..", nullptr, 0);
 
-    for (const auto& key : get_res_file_list())
-    {
-        // sysdarft_log::log(sysdarft_log::LOG_NORMAL, "[FUSE] Filling directory info -- ", key.first, "\n");
-        filler(buf, key.first.c_str(), nullptr, 0);
+    for (unsigned int index = 0; index < resource_file_count; index++) {
+        if (filler(buf, resource_file_list[index], nullptr, 0) != 0) {
+            break; // Stop if buffer is full
+        }
     }
 
     EXIT_NOTIFICATION(path);
@@ -160,15 +162,58 @@ static int read_callback(const char *path, char *buf, size_t size, off_t offset,
 }
 
 // FUSE operation definitions.
-static struct fuse_operations res_packer_fs_operations = {
-    .getattr = getattr_callback,
-    .open = open_callback,
-    .read = read_callback,
-    .readdir = readdir_callback,
-    .access = access_callback,
+fuse_operations res_packer_fs_operations = {
+    .getattr    = getattr_callback,
+    .readlink   = nullptr,
+    .getdir     = nullptr,
+    .mknod      = nullptr,
+    .mkdir      = nullptr,
+    .unlink     = nullptr,
+    .rmdir      = nullptr,
+    .symlink    = nullptr,
+    .rename     = nullptr,
+    .link       = nullptr,
+    .chmod      = nullptr,
+    .chown      = nullptr,
+    .truncate   = nullptr,
+    .utime      = nullptr,
+    .open       = open_callback,
+    .read       = read_callback,
+    .write      = nullptr,
+    .statfs     = nullptr,
+    .flush      = nullptr,
+    .release    = nullptr,
+    .fsync      = nullptr,
+    .setxattr   = nullptr,
+    .getxattr   = nullptr,
+    .listxattr  = nullptr,
+    .removexattr = nullptr,
+    .opendir    = nullptr,
+    .readdir    = readdir_callback,
+    .releasedir = nullptr,
+    .fsyncdir   = nullptr,
+	.init       = nullptr,
+    .destroy    = nullptr,
+    .access     = access_callback,
+    .create     = nullptr,
+    .ftruncate  = nullptr,
+    .fgetattr   = nullptr,
+    .lock       = nullptr,
+    .utimens    = nullptr,
+    .bmap       = nullptr,
+    .flag_nullpath_ok       = 0,
+    .flag_nopath            = 0,
+    .flag_utime_omit_ok     = 0,
+    .flag_reserved          = 0,
+    .ioctl      = nullptr,
+    .poll       = nullptr,
+	.write_buf  = nullptr,
+	.read_buf   = nullptr,
+    .flock      = nullptr,
+    .fallocate  = nullptr,
 };
 
-void _fuse_start()
+void fuse_start_handler()
 {
     std::error_code err;
     err.clear();
@@ -192,7 +237,7 @@ void _fuse_start()
     sysdarft_log::log(sysdarft_log::LOG_NORMAL, sysdarft_log::BOLD, sysdarft_log::CYAN,
         "[FUSE] Starting fuse_main, mount point being " RESOURCE_PACK_TMP_DIR, "\n", sysdarft_log::REGULAR);
 
-    int ret = fuse_main(argc, (char**)argv, &res_packer_fs_operations, nullptr);
+    const int ret = fuse_main(argc, (char**)argv, &res_packer_fs_operations, nullptr);
     if (ret != 0) {
         sysdarft_log::log(sysdarft_log::LOG_ERROR, sysdarft_log::BOLD, sysdarft_log::RED,
             "[FUSE] fuse_main exited with ", ret, "\n", sysdarft_log::REGULAR);
@@ -202,7 +247,7 @@ void _fuse_start()
 
 void fuse_start()
 {
-    std::thread Thread(_fuse_start);
+    std::thread Thread(fuse_start_handler);
     Thread.detach();
 }
 
@@ -219,4 +264,11 @@ void fuse_stop()
 
     sysdarft_log::log(sysdarft_log::LOG_NORMAL, sysdarft_log::BOLD, sysdarft_log::CYAN,
         "[FUSE] fuse service is stopped.\n", sysdarft_log::REGULAR);
+}
+
+int mount_main(int argc, char ** argv)
+{
+    initialize_resource_filesystem();
+    const int ret = fuse_main(argc, argv, &res_packer_fs_operations, nullptr);
+    return ret;
 }

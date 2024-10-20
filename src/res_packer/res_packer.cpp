@@ -2,11 +2,8 @@
 #include <debug.h>
 #include <res_packer.h>
 #include <resource_file_list.h>
-#include <thread>
 #include <map>
 
-void fuse_start();
-void fuse_stop();
 std::map < std::string, resource_file_t > resource_file_folder;
 
 std::string process_path_name(std::string pathname)
@@ -17,10 +14,11 @@ std::string process_path_name(std::string pathname)
 
 void initialize_resource_filesystem()
 {
-    __initialization_for_resource_file_vectors__();
+    if (!resource_file_folder.empty()) {
+        return;
+    }
 
-    unsigned int index = 0;
-    for (; index < resource_file_count; index++)
+    for (unsigned int index = 0; index < resource_file_count; index++)
     {
         std::string filename = resource_file_list[index];
         resource_file_t file = {

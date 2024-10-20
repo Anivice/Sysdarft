@@ -2,10 +2,9 @@
 
 echo -n "Automatically generating README.md..."
 
-cd "$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" || exit 0
-cd .. || exit 0
+SOURCE_DIR="$1"
 
-LIST=$(git ls-tree -r --name-only HEAD);
+LIST=$(git ls-files --others --exclude-standard --cached "$SOURCE_DIR" && git diff --name-only --diff-filter=ADR "$SOURCE_DIR");
 lines=0;
 size=0;
 for FILE in $LIST;
@@ -20,8 +19,8 @@ echo "# Sysdarft""
 
 > ⚠️ **Warning:** ⚠️ THIS README FILE IS AUTO GENERATED! ANY MODIFICATION WON'T BE PRESERVED! MODIFY [THIS FILE](scripts/res/README.md) INSTEAD!
 
-" > "./README.md"
+" > "$SOURCE_DIR/README.md"
 
-cat "scripts/res/README.md" >> "./README.md"
+cat "$SOURCE_DIR/scripts/res/README.md" >> "$SOURCE_DIR/README.md"
 
 echo " done"

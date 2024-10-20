@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Sysdarft_test_case_cmake_sysdarft_test" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Sysdarft" TARGET_NAME="Sysdarft_test_case_cmake_sysdarft_test" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Sysdarft" RUN_TARGET_NAME="Sysdarft_test_case_cmake_sysdarft_test">
+    <envs>
+      <env name="ASAN_OPTIONS" value="detect_leaks=0" />
+    </envs>
+    <method v="2">
+      <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+    </method>
+  </configuration>
+</component>

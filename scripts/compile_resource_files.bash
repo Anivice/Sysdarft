@@ -65,36 +65,29 @@ done
     echo ' * !! DO NOT DIRECTLY MODIFY THIS FILE !! INSTEAD, MODIFY THE BUILD SCRIPT !! *'
     echo ' *****************************************************************************/'
     echo
-    echo '#include <vector>'
-    echo '#include <debug.h>'
-    echo
     echo "// Resource file content vector references:"
     cat "$RESOURCE_FILE_DIR/xxd_"*".xxd"
     echo
-    echo 'std::vector < const char * > resource_file_list;                  // Resource file list'
-    echo 'std::vector < unsigned char * > resource_file_content_vector;     // Resource file content vector'
-    echo 'std::vector < unsigned int > resource_file_content_length_vector; // Resource file content length vector'
-    echo
-    echo 'void __initialization_for_resource_file_vectors__()'
-    echo '{'
-    # shellcheck disable=SC2028
-    echo '    sysdarft_log::log(sysdarft_log::LOG_NORMAL, "Initializing resource reference vectors...\n");'
-    echo
+    echo '// Resource file list'
+    echo 'const char * resource_file_list[] = {'
     for FILENAME_DEF in "${FILE_NAME_DEFINITION[@]}"; do
-            echo "    resource_file_list.emplace_back(\"${FILENAME_DEF/\//_}\");"
+            echo "    \"${FILENAME_DEF/\//_}\","
     done
+    echo '};'
     echo
-    for FILEVEC_DEF in "${FILE_CONTENT_VEC_DEF[@]}"; do
-            echo "    resource_file_content_vector.emplace_back($FILEVEC_DEF);"
+    echo '// Resource file content vector'
+    echo 'const unsigned char * resource_file_content_vector [] = {'
+    for FILE_CONTENT_VEC in "${FILE_CONTENT_VEC_DEF[@]}"; do
+            echo "    static_cast<const unsigned char *>($FILE_CONTENT_VEC),"
     done
+    echo '};'
     echo
+    echo '// Resource file content length vector'
+    echo 'unsigned int resource_file_content_length_vector[] = { '
     for FILEVEC_LEN_DEF in "${FILE_CNT_VEC_LEN_DEF[@]}"; do
-            echo "    resource_file_content_length_vector.emplace_back($FILEVEC_LEN_DEF);"
+            echo "    $FILEVEC_LEN_DEF,"
     done
-    echo
-    # shellcheck disable=SC2028
-    echo '    sysdarft_log::log(sysdarft_log::LOG_NORMAL, "Initialization complete\n");'
-    echo '}'
+    echo '};'
     echo
 } > "$RESOURCE_FILE_LIST_CPP"
 
@@ -111,13 +104,10 @@ echo '[xxdCompiler]: Initialization for resource_file_list.cpp completed.'
     echo '#ifndef SYSDARFT_RESOURCE_FILE_LIST_H'
     echo '#define SYSDARFT_RESOURCE_FILE_LIST_H'
     echo
-    echo '#include <vector>'
-    echo
-    echo 'extern std::vector < const char * > resource_file_list;'
-    echo 'extern std::vector < unsigned char * > resource_file_content_vector;'
-    echo 'extern std::vector < unsigned int > resource_file_content_length_vector;'
+    echo 'extern const char * resource_file_list[];'
+    echo 'extern unsigned char * resource_file_content_vector[];'
+    echo 'extern unsigned int resource_file_content_length_vector[];'
     echo "const unsigned int resource_file_count = $FILE_COUNT;"
-    echo 'void __initialization_for_resource_file_vectors__();'
     echo
     echo '#endif // SYSDARFT_RESOURCE_FILE_LIST_H'
 } > "$RESOURCE_FILE_LIST_H"
