@@ -3,8 +3,9 @@
 echo -n "Automatically generating README.md..."
 
 SOURCE_DIR="$1"
+cd "$SOURCE_DIR" || exit 1
 
-LIST=$(git ls-files --others --exclude-standard --cached "$SOURCE_DIR" && git diff --name-only --diff-filter=ADR "$SOURCE_DIR");
+LIST=$(git ls-files --others --exclude-standard --cached && git diff --name-only --diff-filter=ADR);
 lines=0;
 size=0;
 for FILE in $LIST;
