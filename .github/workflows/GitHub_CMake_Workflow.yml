@@ -23,7 +23,7 @@ jobs:
       run: sudo apt install python3 python3-pip python3-venv cmake build-essential xvfb libfuse-dev fuse3 vim
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DRESOURCE_PACK_TMP_DIR="$PWD/_tmp"
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
