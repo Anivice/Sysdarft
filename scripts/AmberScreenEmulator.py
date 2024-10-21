@@ -7,7 +7,7 @@ import time
 class AmberScreenEmulator:
     def __init__(self,
                  caption='Amber Phosphor Screen Emulator',
-                 font='Courier',
+                 font='JetBrains Mono Bold',
                  screen_width=1366,
                  screen_height=768,
                  cols=50,
@@ -81,8 +81,19 @@ class AmberScreenEmulator:
     def render_pixelated_text(self, text, color, scale_factor=1.5):
         small_surface = pygame.Surface((self.char_width, self.char_height))
         small_surface.fill(self.bg_color)
-        self.font.render_to(small_surface, (0, 0), text, color)
 
+        # Check if the character is one that should be aligned to the bottom
+        bottom_aligned_chars = ['.', '_', ',']
+        if text in bottom_aligned_chars:
+            # Render the character slightly lower on the surface
+            y_offset = int(self.char_height * 0.6)  # Adjust this factor as needed
+        else:
+            y_offset = 0  # Normal rendering
+
+        # Render text with adjusted y_offset
+        self.font.render_to(small_surface, (0, y_offset), text, color)
+
+        # Perform scaling for pixelation effect
         pixelated_surface = pygame.transform.scale(
             small_surface,
             (int(self.char_width // scale_factor), int(self.char_height // scale_factor))
