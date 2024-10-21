@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <res_packer.h>
 #include <tools.h>
+#include <chrono>
 
 sysdarft_display_t sysdarft_display;
 
@@ -73,6 +74,8 @@ void sysdarft_display_t::initialize()
     if (AmberScreen->attr("start_service")().cast<int>() == -1) {
         throw sysdarft_error_t(sysdarft_error_t::SCREEN_SERVICE_LOOP_EXECUTION_FAILED);
     }
+
+    start_cursor_service();
 }
 
 void sysdarft_display_t::cleanup()
@@ -82,6 +85,8 @@ void sysdarft_display_t::cleanup()
     }
 
     try {
+        // stop_cursor_service();
+
         // Stop the service
         if (AmberScreen->attr("stop_service")().cast<int>() == -1) {
             std::cerr << "Service failed to stop correctly." << std::endl;
@@ -131,8 +136,45 @@ void sysdarft_display_t::sleep(float sec)
     AmberScreen->attr("sleep")(sec);
 }
 
+std::string sysdarft_display_t::get_char_at_pos(int x, int y)
+{
+    return AmberScreen->attr("get_char_at_pos")(x, y).cast<std::string>();
+}
+
 sysdarft_display_t::~sysdarft_display_t()
 {
     // Perform cleanup and ensure the service has stopped
     cleanup();
+}
+
+void sysdarft_display_t::set_cursors_visibility(bool _is_visible)
+{
+    is_cursor_visible = _is_visible;
+}
+
+void sysdarft_display_t::set_cursors_position(int x, int y)
+{
+    position_t pos {.pos_x = x, .pos_y = y };
+    cursor_pos.store(pos);
+}
+
+void sysdarft_display_t::start_cursor_service()
+{
+    auto _cursor_service_loop = [&]()->void {
+        while (should_cursor_service_be_running) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+        }
+
+        exitSignal.set_value();
+    };
+
+    should_cursor_service_be_running = true;
+    std::thread cursor_service(_cursor_service_loop);
+    cursor_service.detach();
+}
+
+void sysdarft_display_t::stop_cursor_service()
+{
+    should_cursor_service_be_running = false;
+    futureObj.wait();
 }

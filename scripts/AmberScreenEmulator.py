@@ -1,8 +1,9 @@
+#!/usr/bin/env python3
+
 import pygame
 import pygame.freetype
 from PIL import Image, ImageFilter
 import threading
-import time
 import ctypes
 import io
 
@@ -96,6 +97,9 @@ class AmberScreenEmulator:
         return pygame.image.fromstring(pil_image.tobytes(), pil_image.size, "RGB")
 
     def display_char(self, row, col, char):
+        if (row < 0 or row >= self.rows) or (col < 0 or col >= self.cols):
+            return -1
+
         char = turn_upper_case(char)
 
         # Check if the character changed
@@ -105,9 +109,7 @@ class AmberScreenEmulator:
             if (row, col) not in self.active_decay_positions:
                 self.active_decay_positions.append((row, col))
 
-        # Starting x and y positions for the first character
-        x_pos = col * self.char_width
-        y_pos = row * self.char_height
+        return 0
 
     def update_decay(self):
         for (row, col) in self.active_decay_positions[:]:
@@ -180,7 +182,7 @@ class AmberScreenEmulator:
             print(f"An error occurred during the service loop: {err}")
 
         finally:
-            # Clean up properly when loop is stopped
+            # Clean up properly when the loop is stopped
             self.cleanup()
             self.running_verification_flag = False
             self.running_event.clear()
@@ -270,7 +272,13 @@ class AmberScreenEmulator:
             self.service_thread.join()
 
     def sleep(self, seconds):
-        time.sleep(seconds)
+        threading.Event().wait(seconds)
+
+    def get_char_at_pos(self, row, col):
+        if (row < 0 or row >= self.rows) or (col < 0 or col >= self.cols):
+            return 'Nah'
+
+        return self.decay_buffer[row][col]
 
 # Screen = AmberScreenEmulator("/tmp/build/libxxd_binary_content.so", "(Untitled)")
 # Screen.start_service()
@@ -285,5 +293,6 @@ class AmberScreenEmulator:
 # Screen.display_char(0, 8, 'f')
 # Screen.display_char(0, 9, 't')
 # Screen.display_char(24, 67, '#')
+# print(Screen.get_char_at_pos(0, 0))
 # Screen.sleep(3)
 # Screen.stop_service()
