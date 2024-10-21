@@ -12,14 +12,15 @@ def turn_upper_case(text):
 class AmberScreenEmulator:
     def __init__(self,
                  library_pah,
-                 caption='Amber Phosphor Screen Emulator',
-                 # font='JetBrains Mono Bold',
-                 screen_width=1366,
-                 screen_height=768,
-                 cols=50,
-                 rows=25,
-                 kerning_x=0,  # New attribute for horizontal kerning
-                 kerning_y=0):  # New attribute for vertical kerning
+                 caption        = 'Amber Phosphor Screen Emulator',
+                 _char_width    = 20,
+                 _char_height   = 30,
+                 _font_size     = 32,
+                 _screen_width  = 1366,
+                 _screen_height = 768,
+                 _cols          = 68,
+                 _rows          = 25,
+                 _fps           = 30):
 
         # Load the shared library
         self.font_lib = ctypes.CDLL(library_pah)
@@ -44,29 +45,24 @@ class AmberScreenEmulator:
 
         self.running_verification_flag = False
 
-        # Store kerning values
-        self.kerning_x = kerning_x
-        self.kerning_y = kerning_y
-
         # Screen settings
-        self.screen_width = screen_width
-        self.screen_height = screen_height
-        self.cols = cols
-        self.rows = rows
-        self.char_width = screen_width // cols
-        self.char_height = screen_height // rows
+        self.screen_width = _screen_width
+        self.screen_height = _screen_height
+        self.cols = _cols
+        self.rows = _rows
+        self.char_width = _char_width
+        self.char_height = _char_height
 
         # Font settings
-        self.font_size = min(self.char_width, self.char_height)
-        # self.not_freetype_font = pygame.font.Font(self.font_file, self.font_size)
+        self.font_size = _font_size
         self.font = pygame.freetype.Font(self.font_file, self.font_size)
 
         self.amber_color = (255, 191, 0)
         self.bg_color = (16, 2, 0)
 
         # Decay settings
-        self.decay_buffer = [['' for _ in range(cols)] for _ in range(rows)]
-        self.decay_timer = [[0 for _ in range(cols)] for _ in range(rows)]
+        self.decay_buffer = [['' for _ in range(self.cols)] for _ in range(self.rows)]
+        self.decay_timer = [[0 for _ in range(self.cols)] for _ in range(self.rows)]
         self.active_decay_positions = []
         self.max_decay_time = 50
         self.min_brightness_factor = 0.6
@@ -91,7 +87,7 @@ class AmberScreenEmulator:
 
         # Create clock for FPS control
         self.clock = pygame.time.Clock()
-        self.FPS = 30  # Reduced FPS for better CPU efficiency
+        self.FPS = _fps  # Reduced FPS for better CPU efficiency
 
     def add_glow(self, image_surface, blur_radius=8):
         pil_string_image = pygame.image.tostring(image_surface, "RGB")
@@ -102,19 +98,16 @@ class AmberScreenEmulator:
     def display_char(self, row, col, char):
         char = turn_upper_case(char)
 
+        # Check if the character changed
         if self.decay_buffer[row][col] != char:
             self.decay_buffer[row][col] = char
             self.decay_timer[row][col] = self.max_decay_time
             if (row, col) not in self.active_decay_positions:
                 self.active_decay_positions.append((row, col))
 
-        # Calculate position with kerning
-        x_pos = col * (self.char_width + self.kerning_x)
-        y_pos = row * (self.char_height + self.kerning_y)
-
-        # Render the pixelated text with the new position
-        pixelated_text_surface = self.render_pixelated_text(char, self.amber_color)
-        self.screen.blit(pixelated_text_surface, (x_pos, y_pos))
+        # Starting x and y positions for the first character
+        x_pos = col * self.char_width
+        y_pos = row * self.char_height
 
     def update_decay(self):
         for (row, col) in self.active_decay_positions[:]:
@@ -125,14 +118,11 @@ class AmberScreenEmulator:
         small_surface = pygame.Surface((self.char_width, self.char_height))
         small_surface.fill(self.bg_color)
 
-        # Check if the character is one that should be aligned to the bottom
+        # Check for bottom-aligned characters and adjust y_offset
         bottom_aligned_chars = ['.', '_', ',']
-        if text in bottom_aligned_chars:
-            y_offset = int(self.char_height * 0.6)  # Adjust this factor as needed
-        else:
-            y_offset = 0  # Normal rendering
+        y_offset = int(self.char_height * 0.6) if text in bottom_aligned_chars else 0
 
-        # Render text with adjusted y_offset
+        # Render the text onto the small surface
         self.font.render_to(small_surface, (0, y_offset), text, color)
 
         # Perform scaling for pixelation effect
@@ -141,6 +131,7 @@ class AmberScreenEmulator:
             (int(self.char_width // scale_factor), int(self.char_height // scale_factor))
         )
 
+        # Scale it back to fit the character cell
         final_surface = pygame.transform.scale(pixelated_surface, (self.char_width, self.char_height))
         return final_surface
 
@@ -281,17 +272,18 @@ class AmberScreenEmulator:
     def sleep(self, seconds):
         time.sleep(seconds)
 
-Screen = AmberScreenEmulator("/tmp/build/libxxd_binary_content.so")
+Screen = AmberScreenEmulator("/tmp/build/libxxd_binary_content.so", "(Untitled)")
 Screen.start_service()
-Screen.display_char(1, 0, '_')
-Screen.display_char(1, 1, '>')
-Screen.display_char(1, 2, 'S')
-Screen.display_char(1, 3, 'y')
-Screen.display_char(1, 4, 's')
-Screen.display_char(1, 5, 'd')
-Screen.display_char(1, 6, 'a')
-Screen.display_char(1, 7, 'r')
-Screen.display_char(1, 8, 'f')
-Screen.display_char(1, 9, 't')
+Screen.display_char(0, 0, '_')
+Screen.display_char(0, 1, '>')
+Screen.display_char(0, 2, 'S')
+Screen.display_char(0, 3, 'y')
+Screen.display_char(0, 4, 's')
+Screen.display_char(0, 5, 'd')
+Screen.display_char(0, 6, 'a')
+Screen.display_char(0, 7, 'r')
+Screen.display_char(0, 8, 'f')
+Screen.display_char(0, 9, 't')
+Screen.display_char(24, 67, '#')
 Screen.sleep(3)
 Screen.stop_service()
