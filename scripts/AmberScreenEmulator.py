@@ -200,6 +200,8 @@ class AmberScreenEmulator:
 
     def stop_service(self):
         try:
+            pygame.event.post(pygame.event.Event(pygame.QUIT))
+
             # Signal the service loop to stop
             self.running_event.clear()
 
