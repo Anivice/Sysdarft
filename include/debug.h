@@ -40,6 +40,7 @@ public:
         FUSE_SERVICE_FAILED_TO_START,
         FUSE_SERVICE_FAILED_TO_STOP,
         FILESYSTEM_CREATE_DIRECTORIES_FAILED,
+        CANNOT_OBTAIN_DYNAMIC_LIBRARIES,
     };
 
     explicit sysdarft_error_t(error_types_t);

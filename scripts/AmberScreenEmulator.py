@@ -6,6 +6,9 @@ import time
 import ctypes
 import io
 
+def turn_upper_case(text):
+    return text.upper()
+
 class AmberScreenEmulator:
     def __init__(self,
                  library_pah,
@@ -14,7 +17,9 @@ class AmberScreenEmulator:
                  screen_width=1366,
                  screen_height=768,
                  cols=50,
-                 rows=25):
+                 rows=25,
+                 kerning_x=0,  # New attribute for horizontal kerning
+                 kerning_y=0):  # New attribute for vertical kerning
 
         # Load the shared library
         self.font_lib = ctypes.CDLL(library_pah)
@@ -38,6 +43,10 @@ class AmberScreenEmulator:
         pygame.font.init()
 
         self.running_verification_flag = False
+
+        # Store kerning values
+        self.kerning_x = kerning_x
+        self.kerning_y = kerning_y
 
         # Screen settings
         self.screen_width = screen_width
@@ -91,11 +100,21 @@ class AmberScreenEmulator:
         return pygame.image.fromstring(pil_image.tobytes(), pil_image.size, "RGB")
 
     def display_char(self, row, col, char):
+        char = turn_upper_case(char)
+
         if self.decay_buffer[row][col] != char:
             self.decay_buffer[row][col] = char
             self.decay_timer[row][col] = self.max_decay_time
             if (row, col) not in self.active_decay_positions:
                 self.active_decay_positions.append((row, col))
+
+        # Calculate position with kerning
+        x_pos = col * (self.char_width + self.kerning_x)
+        y_pos = row * (self.char_height + self.kerning_y)
+
+        # Render the pixelated text with the new position
+        pixelated_text_surface = self.render_pixelated_text(char, self.amber_color)
+        self.screen.blit(pixelated_text_surface, (x_pos, y_pos))
 
     def update_decay(self):
         for (row, col) in self.active_decay_positions[:]:
@@ -109,7 +128,6 @@ class AmberScreenEmulator:
         # Check if the character is one that should be aligned to the bottom
         bottom_aligned_chars = ['.', '_', ',']
         if text in bottom_aligned_chars:
-            # Render the character slightly lower on the surface
             y_offset = int(self.char_height * 0.6)  # Adjust this factor as needed
         else:
             y_offset = 0  # Normal rendering
@@ -183,7 +201,7 @@ class AmberScreenEmulator:
             elif event.type == pygame.TEXTINPUT:
                 character = event.text[0]
                 if ord(character) in range(0, 256):
-                    self.input_stream += ["Input", [character, ""]]
+                    self.input_stream += ["Input", [turn_upper_case(character), ""]]
             elif event.type == pygame.KEYDOWN:
                 self.process_special_keys(event)
 
@@ -262,3 +280,18 @@ class AmberScreenEmulator:
 
     def sleep(self, seconds):
         time.sleep(seconds)
+
+Screen = AmberScreenEmulator("/tmp/build/libxxd_binary_content.so")
+Screen.start_service()
+Screen.display_char(1, 0, '_')
+Screen.display_char(1, 1, '>')
+Screen.display_char(1, 2, 'S')
+Screen.display_char(1, 3, 'y')
+Screen.display_char(1, 4, 's')
+Screen.display_char(1, 5, 'd')
+Screen.display_char(1, 6, 'a')
+Screen.display_char(1, 7, 'r')
+Screen.display_char(1, 8, 'f')
+Screen.display_char(1, 9, 't')
+Screen.sleep(3)
+Screen.stop_service()

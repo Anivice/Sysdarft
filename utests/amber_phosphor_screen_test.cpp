@@ -85,10 +85,15 @@ int main()
                                                     file.file_length,
                                                     "AmberScreenEmulator");
 
-        auto xxd_lib_path = CMAKE_BINARY_DIR "/libxxd_binary_content.so";
+        auto libxxd = find_containing_substring(list_shared_libraries(), "libxxd_binary_content.so");
+        if (libxxd.empty()) {
+            throw sysdarft_error_t(sysdarft_error_t::CANNOT_OBTAIN_DYNAMIC_LIBRARIES);
+        }
+
+        auto xxd_lib_path = libxxd.at(0);
 
         // Create an instance of the ScreenEmulator class
-        py::object AmberScreen = AmberScreen_t(xxd_lib_path);
+        py::object AmberScreen = AmberScreen_t(xxd_lib_path.c_str());
 
         // Start the emulator (calls the start_service method)
         if (AmberScreen.attr("start_service")().cast<int>() == -1) {

@@ -3,6 +3,7 @@
 #include <sysdarft_display.h>
 #include <debug.h>
 #include <res_packer.h>
+#include <tools.h>
 
 sysdarft_display_t sysdarft_display;
 
@@ -58,9 +59,14 @@ void sysdarft_display_t::initialize()
 
     AmberScreen  = new py::object();
 
-    auto xxd_lib_path = CMAKE_BINARY_DIR "/libxxd_binary_content.so";
+    auto libxxd = find_containing_substring(list_shared_libraries(), "libxxd_binary_content.so");
+    if (libxxd.empty()) {
+        throw sysdarft_error_t(sysdarft_error_t::CANNOT_OBTAIN_DYNAMIC_LIBRARIES);
+    }
 
-    *AmberScreen = AmberScreen_t(xxd_lib_path, "Sysdarft Emulator Screen");
+    auto xxd_lib_path = libxxd.at(0);
+
+    *AmberScreen = AmberScreen_t(xxd_lib_path.c_str(), "Sysdarft Emulator Screen");
     // *AmberScreen = AmberScreen_t();
 
     // Start the emulator (calls the start_service method)

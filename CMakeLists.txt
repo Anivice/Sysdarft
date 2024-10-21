@@ -184,11 +184,10 @@ sysdarft_xxd_link_library(sysdarft_resource_packer)
 sysdarft_add_test(res_packer utests/res_packer_test.cpp "sysdarft_resource_packer")
 
 # Tools
-#add_library(tools SHARED
-#        include/tools.h
-#        src/tools/obtain_xxd_lib_path.cpp)
-#target_link_libraries(tools PUBLIC dl)
-#sysdarft_add_test(get_xxd_lib_path utests/get_lib_path_test.cpp tools)
+add_library(sysdarft_tools SHARED
+        include/tools.h
+        src/tools/obtain_xxd_lib_path.cpp)
+sysdarft_add_test(get_xxd_lib_path utests/get_lib_path_test.cpp sysdarft_tools)
 
 # Amber Screen Display
 string(REGEX REPLACE "^([0-9]+\\.[0-9]+).*" "\\1" TRIMMED_Python3_VERSION "${Python3_VERSION}")
@@ -200,11 +199,11 @@ add_library(sysdarft_amber_phosphor_screen SHARED
         include/sysdarft_display.h
         src/display/sysdarft_display.cpp
 )
-target_link_libraries(sysdarft_amber_phosphor_screen PUBLIC pybind11::embed Python3::Python sysdarft_resource_packer sysdarft_debug)
-sysdarft_add_test(sysdarft_display utests/sysdarft_display_test.cpp "sysdarft_resource_packer;sysdarft_amber_phosphor_screen;sysdarft_debug")
+target_link_libraries(sysdarft_amber_phosphor_screen PUBLIC pybind11::embed Python3::Python sysdarft_resource_packer sysdarft_debug sysdarft_tools)
+sysdarft_add_test(sysdarft_display utests/sysdarft_display_test.cpp "sysdarft_resource_packer;sysdarft_amber_phosphor_screen;sysdarft_debug;sysdarft_tools")
 
 # Amber Phosphor Screen Unit Test
-sysdarft_add_test(amber_phosphor_screen_test utests/amber_phosphor_screen_test.cpp "sysdarft_resource_packer;sysdarft_debug;pybind11::embed;Python3::Python")
+sysdarft_add_test(amber_phosphor_screen_test utests/amber_phosphor_screen_test.cpp "sysdarft_resource_packer;sysdarft_debug;pybind11::embed;Python3::Python;sysdarft_tools")
 
 # Mount Project Resource Utility
 add_executable(mount.prjres utils/mount_project_resource.cpp include/fuse_operations.h)

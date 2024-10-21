@@ -10,6 +10,7 @@ const char * sysdarft_errors[] = {
     "FUSE service failed to start",
     "FUSE service failed to stop",
     "Filesystem create directories failed",
+    "Failed to obtain dynamic libraries",
 };
 
 inline std::string init_error_msg(const sysdarft_error_t::error_types_t types)
