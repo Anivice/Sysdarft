@@ -65,6 +65,7 @@ done
     echo ' * !! DO NOT DIRECTLY MODIFY THIS FILE !! INSTEAD, MODIFY THE BUILD SCRIPT !! *'
     echo ' *****************************************************************************/'
     echo
+    echo 'extern "C" {'
     echo "// Resource file content vector references:"
     cat "$RESOURCE_FILE_DIR/xxd_"*".xxd"
     echo
@@ -89,6 +90,17 @@ done
     done
     echo '};'
     echo
+    echo '    unsigned char * get_font()'
+    echo '    {'
+    echo '        return scripts_res_fonts_JetBrainsMono_Bold_ttf;'
+    echo '    }'
+    echo
+    echo '    unsigned int get_font_len()'
+    echo '    {'
+    echo '        return scripts_res_fonts_JetBrainsMono_Bold_ttf_len;'
+    echo '    }'
+    echo '}'
+    echo
 } > "$RESOURCE_FILE_LIST_CPP"
 
 echo '[xxdCompiler]: Initialization for resource_file_list.cpp completed.'
@@ -104,10 +116,14 @@ echo '[xxdCompiler]: Initialization for resource_file_list.cpp completed.'
     echo '#ifndef SYSDARFT_RESOURCE_FILE_LIST_H'
     echo '#define SYSDARFT_RESOURCE_FILE_LIST_H'
     echo
-    echo 'extern const char * resource_file_list[];'
-    echo 'extern unsigned char * resource_file_content_vector[];'
-    echo 'extern unsigned int resource_file_content_length_vector[];'
-    echo "const unsigned int resource_file_count = $FILE_COUNT;"
+    echo 'extern "C" {'
+    echo '    extern const char * resource_file_list[];'
+    echo '    extern unsigned char * resource_file_content_vector[];'
+    echo '    extern unsigned int resource_file_content_length_vector[];'
+    echo "    const unsigned int resource_file_count = $FILE_COUNT;"
+    echo '    unsigned char * get_font();'
+    echo '    unsigned int get_font_len();'
+    echo '}'
     echo
     echo '#endif // SYSDARFT_RESOURCE_FILE_LIST_H'
 } > "$RESOURCE_FILE_LIST_H"

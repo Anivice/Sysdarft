@@ -3,17 +3,39 @@ import pygame.freetype
 from PIL import Image, ImageFilter
 import threading
 import time
+import ctypes
+import io
 
 class AmberScreenEmulator:
     def __init__(self,
+                 library_pah,
                  caption='Amber Phosphor Screen Emulator',
-                 font='JetBrains Mono Bold',
+                 # font='JetBrains Mono Bold',
                  screen_width=1366,
                  screen_height=768,
                  cols=50,
                  rows=25):
+
+        # Load the shared library
+        self.font_lib = ctypes.CDLL(library_pah)
+
+        # Get the pointer to the font data and the size of the font
+        self.font_lib.get_font.restype = ctypes.POINTER(ctypes.c_ubyte)
+        self.font_lib.get_font_len.restype = ctypes.c_size_t
+
+        # Retrieve the font data and its size
+        self.font_data_ptr = self.font_lib.get_font()
+        self.font_data_size = self.font_lib.get_font_len()
+
+        # Convert the font data to a Python byte string
+        self.font_data = ctypes.string_at(self.font_data_ptr, self.font_data_size)
+
+        # Use io.BytesIO to wrap the binary data as a file-like object
+        self.font_file = io.BytesIO(self.font_data)
+
         # Initialize pygame
         pygame.init()
+        pygame.font.init()
 
         self.running_verification_flag = False
 
@@ -27,7 +49,9 @@ class AmberScreenEmulator:
 
         # Font settings
         self.font_size = min(self.char_width, self.char_height)
-        self.font = pygame.freetype.SysFont(font, self.font_size)
+        # self.not_freetype_font = pygame.font.Font(self.font_file, self.font_size)
+        self.font = pygame.freetype.Font(self.font_file, self.font_size)
+
         self.amber_color = (255, 191, 0)
         self.bg_color = (16, 2, 0)
 

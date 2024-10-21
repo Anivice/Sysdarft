@@ -183,6 +183,13 @@ target_compile_options(sysdarft_resource_packer PUBLIC ${FUSE3_CFLAGS_OTHER})
 sysdarft_xxd_link_library(sysdarft_resource_packer)
 sysdarft_add_test(res_packer utests/res_packer_test.cpp "sysdarft_resource_packer")
 
+# Tools
+#add_library(tools SHARED
+#        include/tools.h
+#        src/tools/obtain_xxd_lib_path.cpp)
+#target_link_libraries(tools PUBLIC dl)
+#sysdarft_add_test(get_xxd_lib_path utests/get_lib_path_test.cpp tools)
+
 # Amber Screen Display
 string(REGEX REPLACE "^([0-9]+\\.[0-9]+).*" "\\1" TRIMMED_Python3_VERSION "${Python3_VERSION}")
 auto_set_flag(Pybind11_DIR "${PythonVirtualEnvironment_DIR}/lib/python${TRIMMED_Python3_VERSION}/site-packages/pybind11/share/cmake/pybind11")

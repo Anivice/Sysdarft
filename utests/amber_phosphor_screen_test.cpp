@@ -3,6 +3,7 @@
 #include <res_packer.h>
 #include <string>
 #include <debug.h>
+#include <tools.h>
 
 namespace py = pybind11;
 
@@ -84,8 +85,10 @@ int main()
                                                     file.file_length,
                                                     "AmberScreenEmulator");
 
+        auto xxd_lib_path = CMAKE_BINARY_DIR "/libxxd_binary_content.so";
+
         // Create an instance of the ScreenEmulator class
-        py::object AmberScreen = AmberScreen_t();
+        py::object AmberScreen = AmberScreen_t(xxd_lib_path);
 
         // Start the emulator (calls the start_service method)
         if (AmberScreen.attr("start_service")().cast<int>() == -1) {

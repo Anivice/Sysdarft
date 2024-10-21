@@ -58,7 +58,9 @@ void sysdarft_display_t::initialize()
 
     AmberScreen  = new py::object();
 
-    *AmberScreen = AmberScreen_t("Sysdarft Emulator Screen");
+    auto xxd_lib_path = CMAKE_BINARY_DIR "/libxxd_binary_content.so";
+
+    *AmberScreen = AmberScreen_t(xxd_lib_path, "Sysdarft Emulator Screen");
     // *AmberScreen = AmberScreen_t();
 
     // Start the emulator (calls the start_service method)
