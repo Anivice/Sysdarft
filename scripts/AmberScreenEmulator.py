@@ -280,6 +280,19 @@ class AmberScreenEmulator:
 
         return self.decay_buffer[row][col]
 
+    def get_current_config(self):
+        ret = [ [ "Character Width",    self.char_width     ],
+                [ "Character Height",   self.char_height    ],
+                [ "Font Size",          self.font_size      ],
+                [ "Screen Width",       self.screen_width   ],
+                [ "Screen Height",      self.screen_height  ],
+                [ "Columns",            self.cols           ],
+                [ "Rows",               self.rows           ],
+                [ "FPS",                self.FPS            ]
+        ]
+
+        return ret
+
 # Screen = AmberScreenEmulator("/tmp/build/libxxd_binary_content.so", "(Untitled)")
 # Screen.start_service()
 # Screen.display_char(0, 0, '_')
@@ -293,6 +306,6 @@ class AmberScreenEmulator:
 # Screen.display_char(0, 8, 'f')
 # Screen.display_char(0, 9, 't')
 # Screen.display_char(24, 67, '#')
-# print(Screen.get_char_at_pos(0, 0))
+# print(Screen.get_current_config())
 # Screen.sleep(3)
 # Screen.stop_service()

@@ -141,6 +141,11 @@ std::string sysdarft_display_t::get_char_at_pos(int x, int y)
     return AmberScreen->attr("get_char_at_pos")(x, y).cast<std::string>();
 }
 
+std::vector < std::pair< std::string, int> > sysdarft_display_t::get_current_config()
+{
+    return AmberScreen->attr("get_current_config")().cast < std::vector < std::pair< std::string, int> > >();
+}
+
 sysdarft_display_t::~sysdarft_display_t()
 {
     // Perform cleanup and ensure the service has stopped

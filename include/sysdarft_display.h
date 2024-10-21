@@ -42,10 +42,10 @@ private:
     // Cleanup function to safely stop the service and collect garbage
     void cleanup();
 
-public:
     void start_cursor_service();
     void stop_cursor_service();
 
+public:
     sysdarft_display_t()
     {
         futureObj = exitSignal.get_future();
@@ -80,6 +80,7 @@ public:
 
     std::string get_char_at_pos(int x, int y);
 
+    std::vector < std::pair< std::string, int> > get_current_config();
 private:
     // Wait for the service thread to complete before cleanup
     void wait_for_service_to_stop();
