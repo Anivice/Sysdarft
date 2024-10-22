@@ -30,11 +30,8 @@ public:
     void cleanup();
     sysdarft_display_t& operator=(const sysdarft_display_t&) = delete;
     input_stream_t query_input();
-    void input_stream_pop_first_element();
     void display_char(int row, int col, char _char);
     void join_service_loop();
-    void sleep(float seconds);
-    std::string get_char_at_pos(int x, int y);
     std::vector < std::pair< std::string, int> > get_current_config();
 
 private:

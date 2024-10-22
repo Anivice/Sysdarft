@@ -79,7 +79,16 @@ void sysdarft_display_t::initialize()
         throw sysdarft_error_t(sysdarft_error_t::CANNOT_OBTAIN_DYNAMIC_LIBRARIES);
     }
     auto xxd_lib_path = libxxd.at(0);
-    AmberScreen = new py::object(AmberScreen_t(xxd_lib_path.c_str(), "Sysdarft Emulator Screen"));
+    std::regex libPattern("libxxd_binary_content\\.so");
+    std::string event_lib_path = std::regex_replace(xxd_lib_path, libPattern, "libsysdarft_event_vec.so");
+
+    AmberScreen = new py::object(
+        AmberScreen_t(
+            xxd_lib_path.c_str(),
+            event_lib_path.c_str(),
+            "Sysdarft Emulator Screen"
+        )
+    );
 
     // Start the emulator (calls the start_service method)
     if (AmberScreen->attr("start_service")().cast<int>() == -1) {
@@ -139,13 +148,6 @@ input_stream_t sysdarft_display_t::query_input()
     return ret;
 }
 
-void sysdarft_display_t::input_stream_pop_first_element()
-{
-    py::gil_scoped_acquire acquire;
-    AmberScreen->attr("input_stream_pop_front")();
-    py::gil_scoped_release release;
-}
-
 void sysdarft_display_t::display_char(int row, int col, char _char)
 {
     py::gil_scoped_acquire acquire;
@@ -158,21 +160,6 @@ void sysdarft_display_t::join_service_loop()
     py::gil_scoped_acquire acquire;
     AmberScreen->attr("join_service_loop")();
     py::gil_scoped_release release;
-}
-
-void sysdarft_display_t::sleep(float sec)
-{
-    py::gil_scoped_acquire acquire;
-    AmberScreen->attr("sleep")(sec);
-    py::gil_scoped_release release;
-}
-
-std::string sysdarft_display_t::get_char_at_pos(int x, int y)
-{
-    py::gil_scoped_acquire acquire;
-    auto ret = AmberScreen->attr("get_char_at_pos")(x, y).cast<std::string>();
-    py::gil_scoped_release release;
-    return ret;
 }
 
 std::vector < std::pair< std::string, int> > sysdarft_display_t::get_current_config()

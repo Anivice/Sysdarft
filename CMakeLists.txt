@@ -190,6 +190,12 @@ add_library(sysdarft_tools SHARED
 target_link_libraries(sysdarft_tools PUBLIC sysdarft_debug)
 sysdarft_add_test(get_xxd_lib_path utests/get_lib_path_test.cpp sysdarft_tools)
 
+# Event Vectors
+add_library(sysdarft_event_vec SHARED
+        include/event_vector.h
+        include/pygame_keys.h
+        src/evet_vec/evet_vector.cpp)
+
 # Amber Screen Display
 string(REGEX REPLACE "^([0-9]+\\.[0-9]+).*" "\\1" TRIMMED_Python3_VERSION "${Python3_VERSION}")
 auto_set_flag(Pybind11_DIR "${PythonVirtualEnvironment_DIR}/lib/python${TRIMMED_Python3_VERSION}/site-packages/pybind11/share/cmake/pybind11")

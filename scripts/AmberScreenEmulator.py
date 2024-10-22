@@ -7,12 +7,17 @@ import threading
 import ctypes
 import io
 
+KEYBOARD_INTERRUPTION = 1
+KEYBOARD_INTERRUPTION_NORMAL_INPUT = 0
+KEYBOARD_INTERRUPTION_MOD_INPUT = 1
+
 def turn_upper_case(text):
     return text.upper()
 
 class AmberScreenEmulator:
     def __init__(self,
-                 library_pah,
+                 xxd_font_library_pah,
+                 interruption_invocation_library,
                  caption        = 'Amber Phosphor Screen Emulator',
                  _char_width    = 20,
                  _char_height   = 30,
@@ -24,7 +29,7 @@ class AmberScreenEmulator:
                  _fps           = 30):
 
         # Load the shared library
-        self.font_lib = ctypes.CDLL(library_pah)
+        self.font_lib = ctypes.CDLL(xxd_font_library_pah)
 
         # Get the pointer to the font data and the size of the font
         self.font_lib.get_font.restype = ctypes.POINTER(ctypes.c_ubyte)
@@ -39,6 +44,16 @@ class AmberScreenEmulator:
 
         # Use io.BytesIO to wrap the binary data as a file-like object
         self.font_file = io.BytesIO(self.font_data)
+
+        # Interruption library
+        self.interruption_lib = ctypes.CDLL(interruption_invocation_library)
+        self.interruption_lib.call_interruption_handler.argtypes = [
+            ctypes.c_int,       # Interruption code
+            ctypes.c_void_p,    # Parameter starting address (void *)
+            ctypes.c_uint,      # Parameter numbers
+        ]
+        self.interruption_lib.restype = ctypes.c_int
+        self.interruption_lib.initialize_interruption_handler()
 
         # Initialize pygame
         pygame.init()
@@ -89,6 +104,16 @@ class AmberScreenEmulator:
         # Create clock for FPS control
         self.clock = pygame.time.Clock()
         self.FPS = _fps  # Reduced FPS for better CPU efficiency
+
+    def invoke_interruption(self, interruption_code, parameter_list):
+        IntArrayType = ctypes.c_int * len(parameter_list)
+        int_array = IntArrayType(*parameter_list)
+        void_ptr = ctypes.cast(int_array, ctypes.c_void_p)
+
+        return self.interruption_lib.call_interruption_handler(
+            interruption_code,
+            void_ptr,
+            len(parameter_list))
 
     def add_glow(self, image_surface, blur_radius=8):
         pil_string_image = pygame.image.tostring(image_surface, "RGB")
@@ -194,36 +219,14 @@ class AmberScreenEmulator:
             elif event.type == pygame.TEXTINPUT:
                 character = event.text[0]
                 if ord(character) in range(0, 256):
-                    self.input_stream += ["Input", [turn_upper_case(character), ""]]
+                    self.invoke_interruption(KEYBOARD_INTERRUPTION,
+                                             [KEYBOARD_INTERRUPTION_NORMAL_INPUT,
+                                              int(ord(turn_upper_case(character)[0]))])
             elif event.type == pygame.KEYDOWN:
-                self.process_special_keys(event)
-
-    def process_special_keys(self, event):
-        mods = pygame.key.get_mods()
-        if mods & pygame.KMOD_CTRL:
-            if not (event.key == pygame.K_LCTRL or event.key == pygame.K_RCTRL):
-                self.input_stream += ["Control", ["Control", pygame.key.name(event.key)]]
-
-        special_keys = {
-            pygame.K_TAB: ["Input", ["\t", ""]],
-            pygame.K_RETURN: ["Control", ["Enter", ""]],
-            pygame.K_BACKSPACE: ["Control", ["Backspace", ""]],
-            pygame.K_UP: ["Control", ["Up", ""]],
-            pygame.K_DOWN: ["Control", ["Down", ""]],
-            pygame.K_LEFT: ["Control", ["Left", ""]],
-            pygame.K_RIGHT: ["Control", ["Right", ""]],
-            pygame.K_PAGEUP: ["Control", ["PageUp", ""]],
-            pygame.K_PAGEDOWN: ["Control", ["PageDown", ""]],
-            pygame.K_HOME: ["Control", ["Home", ""]],
-            pygame.K_END: ["Control", ["End", ""]],
-            pygame.K_INSERT: ["Control", ["Insert", ""]],
-            pygame.K_DELETE: ["Control", ["Delete", ""]],
-            pygame.K_BREAK: ["Control", ["ExternalSyscall", ""]],
-            pygame.K_PAUSE: ["Control", ["ExternalSyscall", ""]]
-        }
-
-        if event.key in special_keys:
-            self.input_stream += special_keys[event.key]
+                mods = pygame.key.get_mods()
+                key = event.key
+                self.invoke_interruption(KEYBOARD_INTERRUPTION,
+                                         [KEYBOARD_INTERRUPTION_MOD_INPUT, int(mods), int(key)])
 
     def cleanup(self):
         pygame.key.stop_text_input()
@@ -260,25 +263,12 @@ class AmberScreenEmulator:
             print(f'Error when stopping service ({err})!')
             return -1
 
-    def query_input_stream(self):
-        return self.input_stream
-
-    def input_stream_pop_front(self):
-        if self.input_stream:
-            self.input_stream.pop(0)
-
     def join_service_loop(self):
         if self.service_thread and self.service_thread.is_alive():
             self.service_thread.join()
 
     def sleep(self, seconds):
         threading.Event().wait(seconds)
-
-    def get_char_at_pos(self, row, col):
-        if (row < 0 or row >= self.rows) or (col < 0 or col >= self.cols):
-            return 'Nah'
-
-        return self.decay_buffer[row][col]
 
     def get_current_config(self):
         ret = [ [ "Character Width",    self.char_width     ],
@@ -293,7 +283,11 @@ class AmberScreenEmulator:
 
         return ret
 
-# Screen = AmberScreenEmulator("/tmp/build/libxxd_binary_content.so", "(Untitled)")
+# Screen = AmberScreenEmulator(
+#     "/tmp/build/libxxd_binary_content.so",
+#     "/tmp/build/libsysdarft_event_vec.so",
+#     "(Untitled)")
+# # print("Return value from interruption: ", Screen.invoke_interruption(0, [114514, 1, 2, 3]))
 # print(Screen.get_current_config())
 # Screen.start_service()
 # Screen.display_char(0, 0, '_')
@@ -307,5 +301,5 @@ class AmberScreenEmulator:
 # Screen.display_char(0, 8, 'f')
 # Screen.display_char(0, 9, 't')
 # Screen.display_char(24, 67, '#')
-# Screen.sleep(3)
+# Screen.sleep(10)
 # Screen.stop_service()

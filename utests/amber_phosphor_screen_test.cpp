@@ -72,9 +72,6 @@ int main()
     try {
         PythonInterpreter& interpreter = PythonInterpreter::getInstance();
 
-        // Initialize the Python interpreter
-        // py::scoped_interpreter guard{};
-
         // Manually invoke Python garbage collection
         py::module gc = py::module::import("gc");
 
@@ -89,23 +86,25 @@ int main()
         if (libxxd.empty()) {
             throw sysdarft_error_t(sysdarft_error_t::CANNOT_OBTAIN_DYNAMIC_LIBRARIES);
         }
-
         auto xxd_lib_path = libxxd.at(0);
 
+        std::regex libPattern("libxxd_binary_content\\.so");
+        std::string event_lib_path = std::regex_replace(xxd_lib_path, libPattern, "libsysdarft_event_vec.so");
+
         // Create an instance of the ScreenEmulator class
-        py::object AmberScreen = AmberScreen_t(xxd_lib_path.c_str());
+        py::object AmberScreen = AmberScreen_t(xxd_lib_path.c_str(), event_lib_path.c_str());
 
         // Start the emulator (calls the start_service method)
         if (AmberScreen.attr("start_service")().cast<int>() == -1) {
             throw std::runtime_error("Error when starting service loop!");
         }
 
-        // Optionally, query the input stream
-        auto input_stream = convert_input_stream(AmberScreen.attr("query_input_stream")());
-
         // Use the emulator (display and sleep functions)
         AmberScreen.attr("display_char")(0, 0, '$');
-        AmberScreen.attr("sleep")(1);
+
+        py::gil_scoped_release release;
+        std::this_thread::sleep_for(std::chrono::seconds(3));
+        py::gil_scoped_acquire acquire;
 
         // Stop the emulator service
         if (AmberScreen.attr("stop_service")().cast<int>() == -1) {
