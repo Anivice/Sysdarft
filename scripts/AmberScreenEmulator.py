@@ -294,6 +294,7 @@ class AmberScreenEmulator:
         return ret
 
 # Screen = AmberScreenEmulator("/tmp/build/libxxd_binary_content.so", "(Untitled)")
+# print(Screen.get_current_config())
 # Screen.start_service()
 # Screen.display_char(0, 0, '_')
 # Screen.display_char(0, 1, '>')
@@ -306,6 +307,5 @@ class AmberScreenEmulator:
 # Screen.display_char(0, 8, 'f')
 # Screen.display_char(0, 9, 't')
 # Screen.display_char(24, 67, '#')
-# print(Screen.get_current_config())
 # Screen.sleep(3)
 # Screen.stop_service()

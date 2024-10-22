@@ -187,6 +187,7 @@ sysdarft_add_test(res_packer utests/res_packer_test.cpp "sysdarft_resource_packe
 add_library(sysdarft_tools SHARED
         include/tools.h
         src/tools/obtain_xxd_lib_path.cpp)
+target_link_libraries(sysdarft_tools PUBLIC sysdarft_debug)
 sysdarft_add_test(get_xxd_lib_path utests/get_lib_path_test.cpp sysdarft_tools)
 
 # Amber Screen Display

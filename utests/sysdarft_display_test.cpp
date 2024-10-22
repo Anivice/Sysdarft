@@ -1,10 +1,11 @@
 #include <iostream>
 #include <sysdarft_display.h>
+#include <thread>
 
-int main()
+int display()
 {
     try {
-        // sysdarft_display.set_cursors_visibility(true);
+        sysdarft_display.initialize();
         sysdarft_display.display_char(2, 0, '_');
         sysdarft_display.display_char(2, 1, '>');
         sysdarft_display.display_char(2, 2, 'J');
@@ -29,9 +30,17 @@ int main()
         sysdarft_display.display_char(2, 21, '!');
         std::cout << sysdarft_display.get_char_at_pos(2, 0) << std::endl;
         sysdarft_display.sleep(3);
+        sysdarft_display.cleanup();
         return 0;
     } catch (py::error_already_set & err) {
         std::cerr << err.what() << std::endl;
         return 1;
     }
+}
+
+int main()
+{
+    // display();
+    std::thread Thread(display);
+    Thread.join();
 }
