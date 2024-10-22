@@ -7,7 +7,22 @@
 #include <chrono>
 #include <res_packer.h>
 
-sysdarft_display_t sysdarft_display;
+// Function to convert a Python list of lists to a std::vector<std::pair<std::string, int>>
+std::vector<std::pair<std::string, int>> convert_list(const py::list & pyList)
+{
+    std::vector<std::pair<std::string, int>> result;
+    for (auto item : pyList) {
+        // Cast each item to py::list to access by index
+        py::list inner_list = py::cast<py::list>(item);
+
+        // Access elements within the inner list
+        std::string key = py::cast<std::string>(inner_list[0]);
+        int value = py::cast<int>(inner_list[1]);
+
+        result.emplace_back(key, value);
+    }
+    return result;
+}
 
 // Function to convert Python object (list) to std::map<std::string, std::map<std::string, std::string>>
 std::map<std::string, std::map<std::string, std::string>>
@@ -121,6 +136,7 @@ input_stream_t sysdarft_display_t::query_input()
     py::gil_scoped_acquire acquire;
     auto ret = convert_input_stream(AmberScreen->attr("query_input_stream")());
     py::gil_scoped_release release;
+    return ret;
 }
 
 void sysdarft_display_t::input_stream_pop_first_element()
@@ -162,7 +178,77 @@ std::string sysdarft_display_t::get_char_at_pos(int x, int y)
 std::vector < std::pair< std::string, int> > sysdarft_display_t::get_current_config()
 {
     py::gil_scoped_acquire acquire;
-    auto ret = AmberScreen->attr("get_current_config")().cast < std::vector < std::pair< std::string, int> > >();
+    auto ret = convert_list(AmberScreen->attr("get_current_config")());
     py::gil_scoped_release release;
     return ret;
+}
+
+void sysdarft_gpu_t::initialize()
+{
+    gpuFutureObj = gpuExitSignal.get_future();
+    gui_display.initialize();
+
+    for (const auto & pair : gui_display.get_current_config())
+    {
+        if (pair.first == "Columns") {
+            col = pair.second;
+        }
+
+        if (pair.first == "Rows") {
+            row = pair.second;
+        }
+    }
+
+    std::vector < std::vector < char > > local_vm;
+    for (int row_index = 0; row_index < row; row_index++)
+    {
+        std::vector <char> current_row;
+        for (int col_index = 0; col_index < col; col_index++) {
+            current_row.emplace_back(' ');
+        }
+        local_vm.emplace_back(current_row);
+    }
+
+    video_memory.store(local_vm);
+
+    start_sysdarft_gpu_service_loop();
+}
+
+void sysdarft_gpu_t::refresh_screen()
+{
+    auto local_video_memory = video_memory.load();
+    for (int row_index = 0; row_index < row; row_index++)
+    {
+        for (int col_index = 0; col_index < col; col_index++) {
+            gui_display.display_char(row_index, col_index, local_video_memory[row_index][col_index]);
+        }
+    }
+}
+
+void sysdarft_gpu_t::start_sysdarft_gpu_service_loop()
+{
+    auto service_loop = [&]()->void
+    {
+        while (should_gpu_service_be_running) {
+            refresh_screen();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000 / 30));
+        }
+        gpuExitSignal.set_value();
+    };
+
+    should_gpu_service_be_running = true;
+    std::thread Thread(service_loop);
+    Thread.detach();
+}
+
+void sysdarft_gpu_t::stop_sysdarft_gpu_service_loop()
+{
+    should_gpu_service_be_running = false;
+    gpuFutureObj.wait();
+}
+
+void sysdarft_gpu_t::sleep_without_blocking(unsigned long int sec)
+{
+    py::gil_scoped_release release;
+    std::this_thread::sleep_for(std::chrono::milliseconds(sec));
 }
