@@ -1,5 +1,6 @@
 #include <event_vector.h>
 #include <cstdio>
+#include <pygame_keys.h>
 
 #define MAX_VECTOR 1024
 #define CACHE_SIZE (1024 * 256)
@@ -20,23 +21,37 @@ int interruption_name(void *parameter_buffer, int parameter_length)             
 MASS_DEF_INTERRUPTION_HANDLER(sample_handler, parameter_buffer, parameter_length)
 {
     printf("Handler invoked! Parameter count: %d\n", parameter_length);
-    printf("                 Parameters:\n");
-    for (int i = 0; i < parameter_length; i++) {
-        printf("                                %d\n", static_cast <int*>(parameter_buffer)[i]);
-    }
-
-    return 0;
-}
-
-MASS_DEF_INTERRUPTION_HANDLER(keyboard_interruption, parameter_buffer, parameter_length)
-{
-    printf("Keyboard interruption! Parameter count: %d\n", parameter_length);
-    printf("Parameters: ");
+    printf("                 Parameters: ");
     for (int i = 0; i < parameter_length; i++) {
         printf("%d, ", static_cast <int*>(parameter_buffer)[i]);
     }
     printf("\n");
     fflush(stdout);
+    return 0;
+}
+
+MASS_DEF_INTERRUPTION_HANDLER(keyboard_interruption, parameter_buffer, parameter_length)
+{
+    // Note that this function need to be changed for proper keyboard interruption handling in CPU!!!
+    if (parameter_length <= 0) {
+        return -1;
+    }
+
+    if (static_cast<int*>(parameter_buffer)[0] == 0) // normal input
+    {
+        printf("%c", static_cast<char>(static_cast<int*>(parameter_buffer)[1]));
+    }
+    else if (static_cast<int*>(parameter_buffer)[0] == 1) // mod input (combination keys/controls)
+    {
+        // [1] is mod and [2] is the key
+        printf("mod: %d, key: %d\n", static_cast<int*>(parameter_buffer)[1],
+            static_cast<int*>(parameter_buffer)[2]);
+    }
+    else // unrecognized input type
+    {
+        return -1;
+    }
+
     return 0;
 }
 

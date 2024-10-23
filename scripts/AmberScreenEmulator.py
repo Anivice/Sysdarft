@@ -105,6 +105,8 @@ class AmberScreenEmulator:
         self.clock = pygame.time.Clock()
         self.FPS = _fps  # Reduced FPS for better CPU efficiency
 
+        self.keys_pressed = set()
+
     def invoke_interruption(self, interruption_code, parameter_list):
         IntArrayType = ctypes.c_int * len(parameter_list)
         int_array = IntArrayType(*parameter_list)
@@ -212,21 +214,35 @@ class AmberScreenEmulator:
             self.running_verification_flag = False
             self.running_event.clear()
 
+
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running_event.clear()
+
             elif event.type == pygame.TEXTINPUT:
                 character = event.text[0]
-                if ord(character) in range(0, 256):
+                if ord(character) in range(0, 256):  # Only handle ASCII range
                     self.invoke_interruption(KEYBOARD_INTERRUPTION,
                                              [KEYBOARD_INTERRUPTION_NORMAL_INPUT,
                                               int(ord(turn_upper_case(character)[0]))])
+
             elif event.type == pygame.KEYDOWN:
-                mods = pygame.key.get_mods()
                 key = event.key
-                self.invoke_interruption(KEYBOARD_INTERRUPTION,
-                                         [KEYBOARD_INTERRUPTION_MOD_INPUT, int(mods), int(key)])
+                mods = pygame.key.get_mods()
+
+                # Only trigger once when key is pressed (avoid repetition)
+                if key not in self.keys_pressed:
+                    self.keys_pressed.add(key)
+                    # Handle key combination (use mods and key together)
+                    self.invoke_interruption(KEYBOARD_INTERRUPTION,
+                                             [KEYBOARD_INTERRUPTION_MOD_INPUT, int(mods), int(key)])
+
+            elif event.type == pygame.KEYUP:
+                # Remove key from the set when released
+                key = event.key
+                if key in self.keys_pressed:
+                    self.keys_pressed.remove(key)
 
     def cleanup(self):
         pygame.key.stop_text_input()
