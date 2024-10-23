@@ -49,28 +49,10 @@ py::object load_class_from_script(const unsigned char *script, size_t size, cons
     return py_class;
 }
 
-// Singleton class to ensure that the interpreter is initialized only once
-class PythonInterpreter {
-public:
-    static PythonInterpreter& getInstance() {
-        static PythonInterpreter instance;
-        return instance;
-    }
-
-private:
-    py::scoped_interpreter guard; // Scoped interpreter
-    PythonInterpreter() : guard(true) {} // Private constructor to initialize interpreter
-    ~PythonInterpreter() = default; // Destructor ensures cleanup
-
-    // Delete copy constructor and assignment operator
-    PythonInterpreter(const PythonInterpreter&) = delete;
-    PythonInterpreter& operator=(const PythonInterpreter&) = delete;
-};
-
 int main()
 {
     try {
-        PythonInterpreter& interpreter = PythonInterpreter::getInstance();
+        py::scoped_interpreter guard{};
 
         // Manually invoke Python garbage collection
         py::module gc = py::module::import("gc");
@@ -112,17 +94,8 @@ int main()
         }
 
         AmberScreen.attr("join_service_loop")();
-
         // Explicitly delete the `AmberScreen` object to release it
-        AmberScreen.release();
-
-        // Manually trigger garbage collection to ensure all Python objects are cleaned up
-        gc.attr("collect")();
-
-        // Clear the global namespace to avoid memory leaks
-        py::dict globals = py::globals();
-        globals.clear();
-
+        // AmberScreen.release();
     } catch (const std::exception &e) {
         sysdarft_log::log(sysdarft_log::LOG_ERROR, "Error: ", e.what(), "\n");
         return 1;

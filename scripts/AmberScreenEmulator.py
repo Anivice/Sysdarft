@@ -59,8 +59,6 @@ class AmberScreenEmulator:
         pygame.init()
         pygame.font.init()
 
-        self.running_verification_flag = False
-
         # Screen settings
         self.screen_width = _screen_width
         self.screen_height = _screen_height
@@ -168,8 +166,6 @@ class AmberScreenEmulator:
         return any(self.decay_timer[row][col] > 0 for row in range(self.rows) for col in range(self.cols))
 
     def service_loop(self):
-        self.running_verification_flag = True
-
         try:
             while self.running_event.is_set():
                 screen_updated = False
@@ -211,9 +207,7 @@ class AmberScreenEmulator:
         finally:
             # Clean up properly when the loop is stopped
             self.cleanup()
-            self.running_verification_flag = False
             self.running_event.clear()
-
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -265,14 +259,14 @@ class AmberScreenEmulator:
 
     def stop_service(self):
         try:
-            pygame.event.post(pygame.event.Event(pygame.QUIT))
+            if not self.running_event.is_set():
+                return 0
 
             # Signal the service loop to stop
             self.running_event.clear()
 
             # Wait for the service loop to finish
-            if self.service_thread:
-                self.service_thread.join()
+            self.join_service_loop()
 
             return 0
         except Exception as err:
@@ -317,5 +311,5 @@ class AmberScreenEmulator:
 # Screen.display_char(0, 8, 'f')
 # Screen.display_char(0, 9, 't')
 # Screen.display_char(24, 67, '#')
-# Screen.sleep(10)
+# Screen.join_service_loop()
 # Screen.stop_service()
