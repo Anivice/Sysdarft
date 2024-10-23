@@ -62,7 +62,7 @@ void pulseaudio_connection_t::append_buffer(const std::vector < char > & data_bu
     size_t num_chunks = (data_buffer.size() + chunk_size - 1) / chunk_size;
 
     // Resulting vector of arrays
-    std::vector<std::array<char, 128>> packed_data_buffer(num_chunks);
+    std::vector< char [128] > packed_data_buffer(num_chunks);
 
     // Fill the packed data buffer
     for (size_t i = 0; i < num_chunks; ++i)
@@ -72,11 +72,9 @@ void pulseaudio_connection_t::append_buffer(const std::vector < char > & data_bu
         size_t copy_size = std::min(chunk_size, data_buffer.size() - start_index);
 
         // Copy the data from the flat buffer into the chunk
-        std::copy_n(data_buffer.begin() + start_index, copy_size, packed_data_buffer[i].begin());
-
-        // Optionally fill the remainder of the chunk with zeros if needed
+        std::memcpy(packed_data_buffer[i], data_buffer.data() + start_index, copy_size);
         if (copy_size < chunk_size) {
-            std::fill(packed_data_buffer[i].begin() + copy_size, packed_data_buffer[i].end(), 0);
+            std::memset(packed_data_buffer[i] + copy_size, 0, chunk_size - copy_size);
         }
     }
 
@@ -90,7 +88,7 @@ void pulseaudio_connection_t::append_buffer(const std::vector < char > & data_bu
             return;
         }
 
-        if (pa_simple_write(sample, chunk.data(), chunk.size(), &error) < 0)
+        if (pa_simple_write(sample, chunk, 128, &error) < 0)
         {
             pa_simple_free(sample);
             sample = nullptr;
