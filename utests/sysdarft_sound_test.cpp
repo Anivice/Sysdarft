@@ -1,52 +1,30 @@
-#include <pulse/simple.h>
-#include <pulse/error.h>
-#include <cstdio>
-#include <cstdlib>
 #include <res_packer.h>
 #include <sysdarft_speaker.h>
-
-// Example PCM parameters: 16-bit signed, little-endian, 44.1kHz, mono
-#define SAMPLE_RATE 44100
-#define SAMPLE_FORMAT PA_SAMPLE_S16LE // 16-bit signed little-endian
-#define CHANNELS 1
+#include <thread>
 
 int main()
 {
     initialize_resource_filesystem();
-
     auto file = get_res_file_list().at("scripts_res_sound_hdd_failure.wav");
+    auto file2 = get_res_file_list().at("scripts_res_sound_hdd_noise.wav");
+    auto pcm_data = extractPcmDataFromWav(file.file_content, file.file_length);
+    auto pcm_data2 = extractPcmDataFromWav(file2.file_content, file2.file_length);
+    std::vector<char> vector_data(pcm_data.data, pcm_data.data + pcm_data.data_len);
+    std::vector<char> vector_data2(pcm_data2.data, pcm_data2.data + pcm_data2.data_len);
 
-    // PulseAudio parameters
-    pa_sample_spec ss;
-    ss.format = SAMPLE_FORMAT;
-    ss.rate = SAMPLE_RATE;
-    ss.channels = CHANNELS;
-
-    // Initialize PulseAudio connection
-    int error;
-    pa_simple *s = pa_simple_new(nullptr, "PCM Player", PA_STREAM_PLAYBACK, nullptr, "playback", &ss, nullptr, nullptr, &error);
-    if (!s) {
-        fprintf(stderr, "PulseAudio connection failed: %s\n", pa_strerror(error));
-        return 1;
-    }
-
-    // Write PCM data to PulseAudio
-    if (pa_simple_write(s, file.file_content + 44, file.file_length - 44, &error) < 0)
-    {
-        fprintf(stderr, "Failed to play PCM data: %s\n", pa_strerror(error));
-        pa_simple_free(s);
-        return 1;
-    }
-
-    // Ensure all data is played
-    if (pa_simple_drain(s, &error) < 0) {
-        fprintf(stderr, "Failed to drain: %s\n", pa_strerror(error));
-        pa_simple_free(s);
-        return 1;
-    }
-
-    // Cleanup
-    pa_simple_free(s);
+    auto audio = [&](pulseaudio_connection_t * player, const std::vector<char> & buffer) {
+        player->initialize();
+        player->append_buffer(buffer);
+        player->cleanup();
+    };
+    pulseaudio_connection_t player1, player2;
+    std::thread Thread(audio, &player1, vector_data),
+                Thread2(audio, &player2, vector_data2);
+    Thread.detach();
+    Thread2.detach();
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+    player1.cleanup();
+    player2.cleanup();
     printf("PCM data played successfully.\n");
     return 0;
 }

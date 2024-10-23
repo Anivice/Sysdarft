@@ -1,6 +1,5 @@
 #include <debug.h>
 #include <sstream>
-#include <strstream>
 #include <cstring>
 
 const char * sysdarft_errors[] = {
@@ -11,6 +10,11 @@ const char * sysdarft_errors[] = {
     "FUSE service failed to stop",
     "Filesystem create directories failed",
     "Failed to obtain dynamic libraries",
+    "Invalid wav file",
+    "Cannot connect to pulseaudio instance",
+    "Failed to append PCM buffer",
+    "Failed to drain PCM buffer",
+    "Failed to flash the remaining buffer"
 };
 
 inline std::string init_error_msg(const sysdarft_error_t::error_types_t types)
