@@ -216,5 +216,16 @@ sysdarft_add_test(amber_phosphor_screen_test utests/amber_phosphor_screen_test.c
 add_executable(mount.prjres utils/mount_project_resource.cpp include/fuse_operations.h)
 target_link_libraries(mount.prjres PUBLIC sysdarft_resource_packer)
 
+# Sound support
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PULSE REQUIRED libpulse-simple libpulse)
+add_library(sysdarft_speaker SHARED
+        include/sysdarft_speaker.h
+        src/speaker/sysdarft_speaker.cpp
+)
+target_include_directories(sysdarft_speaker PUBLIC ${PULSE_INCLUDE_DIRS})
+target_link_libraries(sysdarft_speaker PUBLIC sysdarft_debug ${PULSE_LIBRARIES})
+sysdarft_add_test(sysdarft_speaker utests/sysdarft_sound_test.cpp "sysdarft_resource_packer;sysdarft_speaker")
+
 # Automatically update README.md
 execute_process(COMMAND ${CMAKE_SOURCE_DIR}/scripts/generate_readme.bash "${CMAKE_SOURCE_DIR}")

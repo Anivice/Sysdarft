@@ -25,7 +25,7 @@ message(STATUS "Installing dependencies...")
 console_reset_color()
 
 # Define packages for different distributions
-set(debian_packages python3 python3-dev python3-venv fuse3 libfuse-dev vim)
+set(debian_packages python3 python3-dev python3-venv fuse3 libfuse-dev vim libpulse-dev)
 set(fedora_packages python3 python3-devel python3-virtualenv fuse3 fuse3-devel fuse fuse-devel vim)
 
 # Function to execute package installation
