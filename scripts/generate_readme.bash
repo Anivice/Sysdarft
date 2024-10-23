@@ -14,6 +14,10 @@ do
         continue; # skip
     fi
 
+    if echo $FILE | grep sound > /dev/null 2> /dev/null; then # a sound file
+        continue; # skip
+    fi
+
     ((lines +=$(wc -l < "$FILE" )));
     ((size += $(du "$FILE" | awk '{print $1}')));
 done;
