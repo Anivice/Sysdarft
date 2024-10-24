@@ -97,7 +97,7 @@ char key_to_ascii(int key)
 
 MASS_DEF_INTERRUPTION_HANDLER(keyboard_interruption, parameter)
 {
-    std::cout << key_to_ascii(get_parameter1(parameter)) << std::flush;
+    std::cout << (unsigned)get_parameter1(parameter) << " " << std::flush;
     return 0;
 }
 
@@ -116,7 +116,7 @@ void general_interruption_handler(int signal, siginfo_t* info, void*)
             return;
         }
 
-        interruption_vector[interruption_number](data);
+        int ret = interruption_vector[interruption_number](data);
     }
 
     // Reserved
@@ -132,12 +132,9 @@ void initialize_interruption_handler()
 
     // Set up the signal handler to handle SIGUSR1 signal
     struct sigaction action;
-    sigset_t block_set;
 
     action.sa_sigaction = general_interruption_handler;
-    sigemptyset(&block_set);
-    sigaddset(&block_set, SIGUSR1);  // Block SIGUSR1 during handling
-    action.sa_mask = block_set;
+    sigemptyset(&action.sa_mask);
     action.sa_flags = SA_SIGINFO;
 
     if (sigaction(SIGUSR1, &action, nullptr) == -1)

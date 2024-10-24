@@ -28,58 +28,10 @@ private:
 public:
     void initialize();
     void cleanup();
-    sysdarft_display_t& operator=(const sysdarft_display_t&) = delete;
-    input_stream_t query_input();
     void display_char(int row, int col, char _char);
-    void join_service_loop();
-    std::vector < std::pair< std::string, int> > get_current_config();
+    void unblocked_sleep(unsigned int);
 
-private:
-    // Wait for the service thread to complete before cleanup
-    void wait_for_service_to_stop();
-};
-
-class sysdarft_gpu_t
-{
-public:
-    class SafeVideoMemory
-    {
-    public:
-        using VideoMemoryType = std::vector<std::vector<char>>;
-
-        // Store a new value for video memory
-        void store(const VideoMemoryType& new_memory) {
-            std::lock_guard<std::mutex> lock(mutex_);
-            video_memory_ = new_memory;
-        }
-
-        // Load the current value of video memory
-        VideoMemoryType load() const {
-            std::lock_guard<std::mutex> lock(mutex_);
-            return video_memory_;
-        }
-
-    private:
-        VideoMemoryType video_memory_; // The actual video memory storage
-        mutable std::mutex mutex_;     // Mutex for synchronizing access
-    } video_memory;
-
-private:
-    sysdarft_display_t gui_display;
-    int row = 0;
-    int col = 0;
-
-    std::promise < void >   gpuExitSignal;
-    std::future < void >    gpuFutureObj;
-    std::atomic < bool >    should_gpu_service_be_running = false;
-    void start_sysdarft_gpu_service_loop();
-    void stop_sysdarft_gpu_service_loop();
-
-    void refresh_screen();
-public:
-    void initialize();
-    void sleep_without_blocking(unsigned long int);
-    void cleanup();
+    sysdarft_display_t& operator=(const sysdarft_display_t&) = delete;
 };
 
 #endif // SYSDARFT_AMBER_PHOSPHOR_SCREEN_H

@@ -48,16 +48,6 @@ convert_input_stream(const py::list & py_list)
     return cpp_map;
 }
 
-void sysdarft_display_t::wait_for_service_to_stop()
-{
-    try {
-        // Wait for the Python service loop to terminate
-        AmberScreen->attr("join_service_loop")();  // Calls the Python method to join the thread
-    } catch (const std::exception& e) {
-        std::cerr << "Error while waiting for service loop to stop: " << e.what() << std::endl;
-    }
-}
-
 // Function to load the script from memory and get the class
 py::object load_class_from_script(const unsigned char *script, size_t size, const std::string &class_name)
 {
@@ -103,52 +93,29 @@ void sysdarft_display_t::initialize()
 
 void sysdarft_display_t::cleanup()
 {
-    if (did_i_cleanup) {
+    if (did_i_cleanup || !guard || !AmberScreen) {
         return;
     }
 
-    try {
-        {
+    try { {
             py::gil_scoped_acquire acquire;
+
             // Stop the service
             if (AmberScreen->attr("stop_service")().cast<int>() == -1) {
                 std::cerr << "Service failed to stop correctly." << std::endl;
             }
 
-            // Ensure the service thread exited
-            wait_for_service_to_stop();
-
-            const auto gc = py::module::import("gc");
-            // Manually invoke garbage collection
-            gc.attr("collect")();
-
-            // Clear the global namespace to avoid memory leaks
-            py::dict globals = py::globals();
-            globals.clear();
-
-            if (AmberScreen) {
-                delete AmberScreen;
-                AmberScreen = nullptr;
-            }
+            delete AmberScreen;
+            AmberScreen = nullptr;
         }
 
-        if (guard) {
-            delete guard;
-            guard = nullptr;
-        }
+        delete guard;
+        guard = nullptr;
 
         did_i_cleanup = true;
     } catch (const std::exception& e) {
         std::cerr << "Error during cleanup: " << e.what() << std::endl;
     }
-}
-
-input_stream_t sysdarft_display_t::query_input()
-{
-    py::gil_scoped_acquire acquire;
-    auto ret = convert_input_stream(AmberScreen->attr("query_input_stream")());
-    py::gil_scoped_release release;
-    return ret;
 }
 
 void sysdarft_display_t::display_char(int row, int col, char _char)
@@ -158,93 +125,8 @@ void sysdarft_display_t::display_char(int row, int col, char _char)
     py::gil_scoped_release release;
 }
 
-void sysdarft_display_t::join_service_loop()
-{
-    py::gil_scoped_acquire acquire;
-    AmberScreen->attr("join_service_loop")();
-    py::gil_scoped_release release;
-}
-
-std::vector < std::pair< std::string, int> > sysdarft_display_t::get_current_config()
-{
-    py::gil_scoped_acquire acquire;
-    auto ret = convert_list(AmberScreen->attr("get_current_config")());
-    py::gil_scoped_release release;
-    return ret;
-}
-
-void sysdarft_gpu_t::initialize()
-{
-    gpuFutureObj = gpuExitSignal.get_future();
-    gui_display.initialize();
-
-    for (const auto & pair : gui_display.get_current_config())
-    {
-        if (pair.first == "Columns") {
-            col = pair.second;
-        }
-
-        if (pair.first == "Rows") {
-            row = pair.second;
-        }
-    }
-
-    std::vector < std::vector < char > > local_vm;
-    for (int row_index = 0; row_index < row; row_index++)
-    {
-        std::vector <char> current_row;
-        for (int col_index = 0; col_index < col; col_index++) {
-            current_row.emplace_back(' ');
-        }
-        local_vm.emplace_back(current_row);
-    }
-
-    video_memory.store(local_vm);
-
-    start_sysdarft_gpu_service_loop();
-}
-
-void sysdarft_gpu_t::refresh_screen()
-{
-    auto local_video_memory = video_memory.load();
-    for (int row_index = 0; row_index < row; row_index++)
-    {
-        for (int col_index = 0; col_index < col; col_index++) {
-            gui_display.display_char(row_index, col_index, local_video_memory[row_index][col_index]);
-        }
-    }
-}
-
-void sysdarft_gpu_t::start_sysdarft_gpu_service_loop()
-{
-    auto service_loop = [&]()->void
-    {
-        while (should_gpu_service_be_running) {
-            refresh_screen();
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000 / 30));
-        }
-        gpuExitSignal.set_value();
-    };
-
-    should_gpu_service_be_running = true;
-    std::thread Thread(service_loop);
-    Thread.detach();
-}
-
-void sysdarft_gpu_t::stop_sysdarft_gpu_service_loop()
-{
-    should_gpu_service_be_running = false;
-    gpuFutureObj.wait();
-    gui_display.cleanup();
-}
-
-void sysdarft_gpu_t::sleep_without_blocking(unsigned long int sec)
+void sysdarft_display_t::unblocked_sleep(unsigned int sec)
 {
     py::gil_scoped_release release;
     std::this_thread::sleep_for(std::chrono::milliseconds(sec));
-}
-
-void sysdarft_gpu_t::cleanup()
-{
-    stop_sysdarft_gpu_service_loop();
 }
