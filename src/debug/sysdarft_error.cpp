@@ -14,7 +14,9 @@ const char * sysdarft_errors[] = {
     "Cannot connect to pulseaudio instance",
     "Failed to append PCM buffer",
     "Failed to drain PCM buffer",
-    "Failed to flash the remaining buffer"
+    "Failed to flash the remaining buffer",
+    "Failed to create signal action",
+    "Failed to allocate needed memory",
 };
 
 inline std::string init_error_msg(const sysdarft_error_t::error_types_t types)

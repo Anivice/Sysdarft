@@ -26,7 +26,6 @@ console_reset_color()
 
 # Define packages for different distributions
 set(debian_packages python3 python3-dev python3-venv fuse3 libfuse-dev vim libpulse-dev)
-set(fedora_packages python3 python3-devel python3-virtualenv fuse3 fuse3-devel fuse fuse-devel vim)
 
 # Function to execute package installation
 function(install_packages package_manager packages)
@@ -48,16 +47,10 @@ if (DISTRO MATCHES "ubuntu|debian")
     console_reset_color()
 
     install_packages("apt" "${debian_packages}")
-
-elseif (DISTRO MATCHES "fedora|rhel|centos")
-    console_turn_yellow()
-    message(STATUS "Detected Fedora/RHEL-based system")
-    console_reset_color()
-
-    install_packages("dnf" "${fedora_packages}")
-
 else()
-    message(FATAL_ERROR "Unsupported Linux distribution: ${DISTRO}")
+    message(WARNING "Unsupported Linux distribution: ${DISTRO}\n"
+                    "You can still try to compile this with these corresponding dependencies, "
+                    "meaning, ${debian_packages}, but the stability is NOT guaranteed!")
 endif()
 
 message(STATUS "CMake Module Dependencies Automatic Installation loading completed")

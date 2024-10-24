@@ -79,6 +79,7 @@ private:
 public:
     void initialize();
     void sleep_without_blocking(unsigned long int);
+    void cleanup();
 };
 
 #endif // SYSDARFT_AMBER_PHOSPHOR_SCREEN_H

@@ -46,6 +46,8 @@ public:
         PULSEAUDIO_BUFFER_APPEND_FAILED,
         PULSEAUDIO_BUFFER_DRAIN_FAILED,
         PULSEAUDIO_BUFFER_FLUSH_FAILED,
+        SIGNAL_SIGACTION_REGISTRATION_FAILED,
+        MALLOC_FAILED,
     };
 
     explicit sysdarft_error_t(error_types_t);

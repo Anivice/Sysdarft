@@ -32,6 +32,7 @@ int display()
         local_vm[2][21] = '!';
         gpu.video_memory.store(local_vm);
         gpu.sleep_without_blocking(3000);
+        gpu.cleanup();
         return 0;
     } catch (py::error_already_set & err) {
         std::cerr << err.what() << std::endl;

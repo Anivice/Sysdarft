@@ -6,6 +6,7 @@
 #include <tools.h>
 #include <chrono>
 #include <res_packer.h>
+#include <event_vector.h>
 
 // Function to convert a Python list of lists to a std::vector<std::pair<std::string, int>>
 std::vector<std::pair<std::string, int>> convert_list(const py::list & pyList)
@@ -70,6 +71,7 @@ py::object load_class_from_script(const unsigned char *script, size_t size, cons
 void sysdarft_display_t::initialize()
 {
     initialize_resource_filesystem();
+    initialize_interruption_handler();
 
     guard = new pybind11::scoped_interpreter();
     auto file = get_res_file_list().at("scripts_AmberScreenEmulator.py");
@@ -86,6 +88,7 @@ void sysdarft_display_t::initialize()
         AmberScreen_t(
             xxd_lib_path.c_str(),
             event_lib_path.c_str(),
+            getpid(),
             "Sysdarft Emulator Screen"
         )
     );
@@ -232,10 +235,16 @@ void sysdarft_gpu_t::stop_sysdarft_gpu_service_loop()
 {
     should_gpu_service_be_running = false;
     gpuFutureObj.wait();
+    gui_display.cleanup();
 }
 
 void sysdarft_gpu_t::sleep_without_blocking(unsigned long int sec)
 {
     py::gil_scoped_release release;
     std::this_thread::sleep_for(std::chrono::milliseconds(sec));
+}
+
+void sysdarft_gpu_t::cleanup()
+{
+    stop_sysdarft_gpu_service_loop();
 }

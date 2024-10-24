@@ -206,11 +206,11 @@ add_library(sysdarft_amber_phosphor_screen SHARED
         include/sysdarft_display.h
         src/display/sysdarft_display.cpp
 )
-target_link_libraries(sysdarft_amber_phosphor_screen PUBLIC pybind11::embed Python3::Python sysdarft_resource_packer sysdarft_debug sysdarft_tools)
-sysdarft_add_test(sysdarft_display utests/sysdarft_display_test.cpp "sysdarft_resource_packer;sysdarft_amber_phosphor_screen;sysdarft_debug;sysdarft_tools")
+target_link_libraries(sysdarft_amber_phosphor_screen PUBLIC pybind11::embed Python3::Python sysdarft_resource_packer sysdarft_debug sysdarft_tools sysdarft_event_vec)
+sysdarft_add_test(sysdarft_display utests/sysdarft_display_test.cpp "sysdarft_resource_packer;sysdarft_amber_phosphor_screen;sysdarft_debug;sysdarft_tools;sysdarft_event_vec")
 
 # Amber Phosphor Screen Unit Test
-sysdarft_add_test(amber_phosphor_screen_test utests/amber_phosphor_screen_test.cpp "sysdarft_resource_packer;sysdarft_debug;pybind11::embed;Python3::Python;sysdarft_tools")
+sysdarft_add_test(amber_phosphor_screen_test utests/amber_phosphor_screen_test.cpp "sysdarft_resource_packer;sysdarft_debug;pybind11::embed;Python3::Python;sysdarft_tools;sysdarft_event_vec")
 
 # Mount Project Resource Utility
 add_executable(mount.prjres utils/mount_project_resource.cpp include/fuse_operations.h)

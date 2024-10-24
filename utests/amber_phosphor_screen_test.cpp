@@ -4,7 +4,8 @@
 #include <string>
 #include <debug.h>
 #include <tools.h>
-
+#include <unistd.h>
+#include <event_vector.h>
 namespace py = pybind11;
 
 // Function to convert Python object (list) to std::map<std::string, std::map<std::string, std::string>>
@@ -58,6 +59,7 @@ int main()
         py::module gc = py::module::import("gc");
 
         initialize_resource_filesystem();
+        initialize_interruption_handler();
 
         auto file = get_res_file_list().at("scripts_AmberScreenEmulator.py");
         auto AmberScreen_t = load_class_from_script(file.file_content,
@@ -74,7 +76,10 @@ int main()
         std::string event_lib_path = std::regex_replace(xxd_lib_path, libPattern, "libsysdarft_event_vec.so");
 
         // Create an instance of the ScreenEmulator class
-        py::object AmberScreen = AmberScreen_t(xxd_lib_path.c_str(), event_lib_path.c_str());
+        py::object AmberScreen = AmberScreen_t(
+            xxd_lib_path.c_str(),
+            event_lib_path.c_str(),
+            getpid());
 
         // Start the emulator (calls the start_service method)
         if (AmberScreen.attr("start_service")().cast<int>() == -1) {

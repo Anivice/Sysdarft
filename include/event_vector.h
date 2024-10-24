@@ -3,7 +3,10 @@
 
 extern "C" {
     void initialize_interruption_handler();
-    int call_interruption_handler(int interruption_number,
+    int call_interruption_handler(
+        int target_pid,
+        int interruption_number,
+        int flags,
         void * interruption_parameter_list,
         unsigned int interruption_parameter_length);
 }
