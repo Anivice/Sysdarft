@@ -2,7 +2,7 @@
 
 void f3(int)
 {
-    throw SysdarftBaseError("Base error test", SYSDARFT_OK);
+    throw SysdarftBaseError("Base error test");
 }
 
 void f2(const int a)

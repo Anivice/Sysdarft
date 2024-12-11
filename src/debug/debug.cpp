@@ -172,8 +172,6 @@ debug::cmd_status debug::_exec_command(const std::string& cmd, const std::vector
  *
  * @param msg A descriptive message explaining the error.
  * @param _errno The system error number (errno), typically set when a system call fails.
- * @param code The application-specific error code. Should correspond to an entry in
- *             the `ERROR_CODE_TO_STRING` map.
  * @param if_perform_code_backtrace A boolean flag indicating whether to include backtrace
  *                                  information in the generated message.
  *
@@ -197,7 +195,6 @@ debug::cmd_status debug::_exec_command(const std::string& cmd, const std::vector
 std::string initialize_error_msg(
     const std::string& msg,
     const int _errno,
-    const int code,
     const bool if_perform_code_backtrace)
 {
     std::ostringstream err_msg;
@@ -208,15 +205,14 @@ std::string initialize_error_msg(
 
     err_msg << _RED_ << _BOLD_
             << "Exception Thrown at " << current_time
-            << " Code=" << code << "(" << ERROR_CODE_TO_STRING[code] << ")"
             << _REGULAR_ << "\n";
 
     // Combine error code and errno color settings into a single check
-    err_msg << ((code == 0 && _errno == 0) ? _GREEN_ : _RED_);
+    err_msg << ((_errno == 0) ? _GREEN_ : _RED_);
 
     // Consolidate the error description
     err_msg << _BOLD_
-            << "Error description: error=" << code << ": " << ERROR_CODE_TO_STRING[code] << ": " << msg << "\n"
+            << "Error description: " << msg << "\n"
             << "System Error: errno=" << _errno << ": " << strerror(_errno) << _REGULAR_ << "\n";
 
     // Backtrace section
@@ -271,17 +267,15 @@ std::string initialize_error_msg(
     return err_msg.str();
 }
 
-SysdarftBaseError::SysdarftBaseError(const std::string& msg, const int _code, const bool if_perform_code_backtrace)
+SysdarftBaseError::SysdarftBaseError(const std::string& msg, const bool if_perform_code_backtrace)
 :
     runtime_error(
         initialize_error_msg(
             msg,
             errno,
-            _code,
             if_perform_code_backtrace
         )
     ),
-    code(_code),
     cur_errno(errno)
 {
 }

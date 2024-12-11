@@ -4,6 +4,7 @@ project(Sysdarft C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_C_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Universal compiler and linker flags
 set(compiler_options
@@ -99,7 +100,7 @@ endfunction()
 include_directories(src/include)
 
 add_library(sysdarft_debug SHARED
-    src/debug/debug.cpp src/include/debug.h
+    src/debug/debug.cpp src/include/debug.h src/include/debug.inl
 )
 add_unit_test(test.log tests/test.log.cpp sysdarft_debug)
 add_unit_test(test.sysdarft_error tests/test.sysdarft_error.cpp sysdarft_debug)

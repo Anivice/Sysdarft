@@ -405,32 +405,36 @@ namespace debug
     void log(const Args&... args);
 }
 
-enum __ERROR_CODES__
-{
-    SYSDARFT_OK = 0,
-    BACKTRACK_FAILED = 1,
-};
-
-const std::string ERROR_CODE_TO_STRING[] = {
-    "SYSDARFT OK",
-    "Backtrace Failed"
-};
-
+/**
+ * @brief SysdarftBaseError is a base error class to which all error classes are derivative
+ */
 class SysdarftBaseError : public std::runtime_error
 {
 protected:
-    int code;
-    int cur_errno;
+    int cur_errno;  // system errno
 public:
-    explicit SysdarftBaseError(const std::string& msg, int _code, bool if_perform_code_backtrace = true);
+    /**
+     * @brief SysdarftBaseError is not meant to be called by user, but automatically
+     * invoked by derivatives.
+     *
+     * @param msg error message
+     * @param if_perform_code_backtrace is backtrace will be performed
+     */
+    explicit SysdarftBaseError(const std::string& msg, bool if_perform_code_backtrace = true);
 };
 
-class BacktraceError : public SysdarftBaseError
+/**
+ * @brief Error class BacktraceError, throw when back trace failed
+ */
+class BacktraceError final : public SysdarftBaseError
 {
     public:
+    /**
+     * 
+     * @param msg error message
+     */
     explicit BacktraceError(const std::string & msg) : SysdarftBaseError(
         std::string("Backtrace Failed: ") + msg,
-        BACKTRACK_FAILED,
         false)
     { }
 };
