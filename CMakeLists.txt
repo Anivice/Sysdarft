@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.29)
 
 project(Sysdarft C CXX)
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_C_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_C_STANDARD 23)
 
 # Universal compiler and linker flags
 set(compiler_options
@@ -18,21 +18,25 @@ set(compiler_options
 
         # Debugging and stack protection
         -g3                                  # Maximum debug information, including macro expansions
-        -O1
+        -O0
         -fstack-usage                        # Generate stack usage info for each function
         -fstack-protector-all                # Protect all functions with a stack canary to prevent stack overflow attacks
-        -D_FORTIFY_SOURCE=2                  # Buffer overflow detection on safer libc functions (e.g., memcpy)
-        -gdwarf-4
+#        -D_FORTIFY_SOURCE=2                  # Buffer overflow detection on safer libc functions (e.g., memcpy).
+                                             # You need to enable optimization for _FORTIFY_SOURCE to work!
+        -gdwarf-4                            # Generate DWARF version 4 debug information
+
+        -fno-eliminate-unused-debug-types
+        -fno-omit-frame-pointer
 
         # Sanitize memory and thread issues
         -fsanitize=address                   # Detect illegal memory access such as buffer overflows and use-after-free
         -fsanitize=undefined                 # Detect undefined behavior like integer overflows and null dereferencing
-        #        -fsanitize=thread                    # Ensure thread safety by detecting data races
+        # Uncomment if debugging threading issues:
+        # -fsanitize=thread                   # Ensure thread safety by detecting data races
 
-        # Linker options
-        #        -Wl,--verbose                        # Verbose linker output to show linking process details
-        -flto                                # Enable Link-Time Optimization, but keep it compatible with debug builds
-        -fprofile-arcs -ftest-coverage
+        # Code coverage options
+        -fprofile-arcs                       # Enable code coverage instrumentation
+        -ftest-coverage                      # Generate coverage test data
 )
 
 set(linker_options
@@ -44,23 +48,34 @@ set(linker_options
         -Wl,-z,now                              # Fully resolve all symbols during the link time for extra safety
         -Wl,-z,noexecstack                      # Prevent execution of code on the stack (security hardening)
         -Wl,-z,defs                             # Ensure all symbols are defined, and prevent undefined symbols
-        -Wl,-O1                                 # Optimize the linking process while maintaining debuggability
+        -Wl,-O0
 
-        -gdwarf-4
+        -gdwarf-4                               # Generate detailed debug information for the linker
+        -fno-eliminate-unused-debug-types
+        -fno-omit-frame-pointer
 
-        # AddressSanitizer and ThreadSanitizer linking (to ensure proper linking of sanitizers)
+        # AddressSanitizer and UndefinedBehaviorSanitizer linking
         -fsanitize=address                      # Link the AddressSanitizer runtime for memory integrity
-        # -fsanitize=thread                       # Link the ThreadSanitizer runtime for thread safety
         -fsanitize=undefined                    # Link the UndefinedBehaviorSanitizer for detecting undefined behavior
+        # Uncomment if debugging threading issues:
+        # -fsanitize=thread                       # Link the ThreadSanitizer runtime for thread safety
 
-        # Stack protection and LTO options
+        # Stack protection
         -fstack-protector-all                   # Link with stack protection for all functions
-        -flto                                   # Enable link-time optimization (can be disabled during debug for clarity)
-        -fprofile-arcs -ftest-coverage
+
+        # Code coverage options
+        -fprofile-arcs                          # Enable code coverage instrumentation
+        -ftest-coverage                         # Generate coverage test data
 )
 
 add_compile_options(${compiler_options})
 add_link_options(${linker_options})
+
+# ccache can significantly speed up compiling process
+find_program(CCACHE_PROGRAM ccache REQUIRED)
+if(CCACHE_PROGRAM)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+endif()
 
 enable_testing()
 
