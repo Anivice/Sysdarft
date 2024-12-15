@@ -63,19 +63,21 @@ debug::backtrace_info debug::obtain_stack_frame()
 
 std::string debug::get_current_date_time()
 {
+    using namespace std::chrono;
+
+    // Get current time
+    const auto now = system_clock::now();
+    const auto now_time_t = system_clock::to_time_t(now);
+    const std::tm local_time = *std::localtime(&now_time_t);
+
+    // Calculate milliseconds part
+    const auto now_ms = time_point_cast<milliseconds>(now);
+    const auto ms = duration_cast<milliseconds>(now_ms - time_point_cast<seconds>(now_ms)).count();
+
+    // Format output
     std::ostringstream ret;
-
-    const auto now = std::chrono::system_clock::now();
-    const auto now_as_time_t = std::chrono::system_clock::to_time_t(now);
-    const auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
-    const auto epoch = now_ms.time_since_epoch();
-    const auto value = std::chrono::duration_cast<std::chrono::milliseconds>(epoch);
-    const long duration = value.count();
-    const long ms = duration % 10000000000000;
-    const std::tm* local_time = std::localtime(&now_as_time_t);
-
-    ret << std::put_time(local_time, "%Y-%m-%d %H:%M:%S");
-    ret << '.' << std::setfill('0') << std::setw(13) << ms;
+    ret << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S")
+        << '.' << std::setfill('0') << std::setw(3) << ms;
 
     return ret.str();
 }
