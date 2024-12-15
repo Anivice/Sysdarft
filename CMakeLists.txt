@@ -120,3 +120,17 @@ target_link_libraries(sysdarft_modular PUBLIC sysdarft_msg_map sysdarft_debug)
 add_unit_test(test.modular tests/test.modular.cpp sysdarft_modular)
 
 add_subdirectory(modules)
+
+# Config
+add_library(sysdarft_config SHARED
+        src/config/config.cpp)
+target_link_libraries(sysdarft_config PUBLIC sysdarft_debug)
+add_unit_test(test.config tests/test.config.cpp sysdarft_config)
+
+add_custom_target(CopyConfigFiles ALL
+        COMMAND cp "${CMAKE_CURRENT_SOURCE_DIR}/tests/good_example.conf" "${CMAKE_CURRENT_BINARY_DIR}"
+        COMMAND cp "${CMAKE_CURRENT_SOURCE_DIR}/tests/bad_example.conf" "${CMAKE_CURRENT_BINARY_DIR}"
+        VERBATIM
+        DEPENDS tests/good_example.conf tests/bad_example.conf
+        COMMENT "Copying config files..."
+)
