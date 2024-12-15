@@ -430,7 +430,6 @@ class BacktraceError final : public SysdarftBaseError
 {
     public:
     /**
-     * 
      * @param msg error message
      */
     explicit BacktraceError(const std::string & msg) : SysdarftBaseError(

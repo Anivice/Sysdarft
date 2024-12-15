@@ -38,6 +38,7 @@ set(compiler_options
         # Code coverage options
         -fprofile-arcs                       # Enable code coverage instrumentation
         -ftest-coverage                      # Generate coverage test data
+        -lasan -lubsan
 )
 
 set(linker_options
@@ -67,6 +68,7 @@ set(linker_options
         # Code coverage options
         -fprofile-arcs                          # Enable code coverage instrumentation
         -ftest-coverage                         # Generate coverage test data
+        -lasan -lubsan
 )
 
 add_compile_options(${compiler_options})
@@ -100,7 +102,12 @@ endfunction()
 include_directories(src/include)
 
 add_library(sysdarft_debug SHARED
-    src/debug/debug.cpp src/include/debug.h src/include/debug.inl
+        src/debug/debug.cpp src/include/debug.h src/include/debug.inl
 )
 add_unit_test(test.log tests/test.log.cpp sysdarft_debug)
 add_unit_test(test.sysdarft_error tests/test.sysdarft_error.cpp sysdarft_debug)
+
+add_library(sysdarft_msg_map SHARED src/include/msg_map.h)
+set_target_properties(sysdarft_msg_map PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(sysdarft_msg_map PUBLIC sysdarft_debug)
+add_unit_test(test.msgmap tests/test.msgmap.cpp sysdarft_debug)
