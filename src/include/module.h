@@ -22,8 +22,10 @@ private:
     void * handle = nullptr;
 
 public:
+    Module() = default;
+    Module & operator=(const Module &) = default;
+
     explicit Module(const std::string & module_path);
-    ~Module();
 
     template < typename Ret, typename... Args >
     std::any call(const std::string & function_name, const Args &... args)

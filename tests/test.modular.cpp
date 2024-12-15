@@ -14,6 +14,7 @@ int main()
             return 0;
         }
 
+        ExampleModule.unload();
         return 1;
     } catch (SysdarftBaseError & err) {
         std::cerr << err.what() << std::endl;

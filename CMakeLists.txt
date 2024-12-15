@@ -74,7 +74,17 @@ set(linker_options
 add_compile_options(${compiler_options})
 add_link_options(${linker_options})
 
-# ccache can significantly speed up compiling process
+set(information_file "${CMAKE_CURRENT_SOURCE_DIR}/sysdarft_info.txt")
+set_property(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        APPEND
+        PROPERTY CMAKE_CONFIGURE_DEPENDS "${information_file}")
+file(READ "${information_file}" SYSDARFT_INFO_CONTENT)
+string(REPLACE "\n" "\\n" SYSDARFT_INFO_CONTENT_ESCAPED "${SYSDARFT_INFO_CONTENT}")
+
+add_compile_definitions(SYSDARFT_VERSION="0.0.1")
+add_compile_definitions(SYSDARFT_INFORMATION="${SYSDARFT_INFO_CONTENT_ESCAPED}")
+
+# use ccache to significantly speed up compiling process
 find_program(CCACHE_PROGRAM ccache REQUIRED)
 if(CCACHE_PROGRAM)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
@@ -134,3 +144,18 @@ add_custom_target(CopyConfigFiles ALL
         DEPENDS tests/good_example.conf tests/bad_example.conf
         COMMENT "Copying config files..."
 )
+
+# CLI
+find_package(PkgConfig REQUIRED)
+add_library(sysdarft_cli SHARED src/cli/cli.cpp src/include/cli.h)
+pkg_check_modules(READLINE REQUIRED readline)
+target_include_directories(sysdarft_cli PUBLIC ${READLINE_INCLUDE_DIRS})
+target_link_directories(sysdarft_cli PUBLIC ${READLINE_LIBRARY_DIRS})
+add_definitions(${READLINE_CFLAGS_OTHER})
+target_link_libraries(sysdarft_cli PUBLIC sysdarft_debug sysdarft_modular ${READLINE_LIBRARIES})
+add_unit_test(test.cli tests/test.cli.cpp sysdarft_cli)
+
+# Console
+add_executable(sysdarft src/main.cpp)
+target_link_libraries(sysdarft PUBLIC
+        sysdarft_debug sysdarft_msg_map sysdarft_modular sysdarft_config sysdarft_cli)

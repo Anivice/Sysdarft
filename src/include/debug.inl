@@ -72,63 +72,6 @@ void debug::_log(const ParamType &param, const Args &...args)
 template <typename... Args> void debug::log(const Args &...args)
 {
     std::lock_guard lock(log_mutex);
-
-    // output timestamp
-    debug::_log(debug::get_current_date_time(), ": ");
-
-    // obtain the stack trace
-    auto [backtrace_symbols, backtrace_frames] = debug::obtain_stack_frame();
-
-    // extract the caller's function name (third frame in the backtrace)
-    std::string caller_function_backtrace_info, addr2line_caller_info;
-    if (!backtrace_symbols.empty() && backtrace_symbols.size() > 2) {
-        caller_function_backtrace_info = backtrace_symbols[2];
-    }
-
-    if (!caller_function_backtrace_info.empty())
-    {
-        const std::regex pattern(R"(([^\(]+)\(([^\)]*)\) \[([^\]]+)\])");
-        std::smatch matches;
-        if (std::regex_search(caller_function_backtrace_info, matches,
-                              pattern) &&
-            matches.size() > 3)
-        {
-            const std::string &executable_path = matches[1].str();
-            const std::string &traced_address = matches[2].str();
-            const std::string &traced_runtime_address = matches[3].str();
-
-            auto generate_addr2line_trace_info =
-                [&](const std::string &address) -> std::string
-            {
-                auto [fd_stdout, fd_stderr, exit_status] =
-                    debug::exec_command("addr2line", "--demangle", "-f", "-e",
-                                        executable_path, address);
-
-                if (exit_status != 0) {
-                    return "";
-                }
-
-                return fd_stdout;
-            };
-
-            if (traced_address.empty()) {
-                addr2line_caller_info =
-                    generate_addr2line_trace_info(traced_runtime_address);
-            } else {
-                addr2line_caller_info =
-                    generate_addr2line_trace_info(traced_address);
-            }
-        }
-
-        std::string caller =
-            debug::separate_before_slash(addr2line_caller_info);
-        std::erase(caller, '\n');
-
-        if (!caller.empty()) {
-            debug::_log(caller, ": ");
-        }
-    }
-
     debug::_log(args...);
 }
 

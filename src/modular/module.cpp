@@ -12,11 +12,6 @@ Module::Module(const std::string & module_path)
     }
 }
 
-Module::~Module()
-{
-    unload();
-}
-
 void Module::unload()
 {
     if (handle)
