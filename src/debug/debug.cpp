@@ -27,6 +27,7 @@
 #define _REGULAR_ "\033[0m"
 
 std::mutex debug::log_mutex;
+bool debug::verbose = false;
 
 std::string debug::separate_before_slash(const std::string& input)
 {
@@ -214,7 +215,7 @@ std::string initialize_error_msg(
 
     // Consolidate the error description
     err_msg << _BOLD_
-            << "Error description: " << msg << "\n"
+            << "Error description:\n" << msg << "\n"
             << "System Error: errno=" << _errno << ": " << strerror(_errno) << _REGULAR_ << "\n";
 
     // Backtrace section
@@ -263,6 +264,13 @@ std::string initialize_error_msg(
         }
         err_msg << _YELLOW_ << _BOLD_ << "Backtrace ends here.\n" << _REGULAR_;
     }
+
+    err_msg << "\n" << _BLUE_ _BOLD_
+            << "If you see this message, but the program continues to work,\n"
+            << "it means it's in debug mode, and some error handling functions are missing.\n"
+            << "If you see this message, and the program crashed, then this means it has unhandled BUGs.\n"
+            << "You need to refer to the backtrace to find out what that BUG is.\n"
+            << _REGULAR_ << "\n";
 
     err_msg << "=================================================================\n";
 

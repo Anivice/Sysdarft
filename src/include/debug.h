@@ -384,6 +384,8 @@ namespace debug
      */
     std::string separate_before_slash(const std::string& input);
 
+    extern bool verbose;
+
     /**
      * @brief Logs a message with a timestamp to the standard output.
      *

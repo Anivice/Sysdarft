@@ -71,6 +71,7 @@ void print_help(const char * program_name)
     << "    -h, --help        Show this help message\n"
     << "    -v, --version     Show version information\n"
     << "    -c, --config      Load a configuration file\n"
+    << "    -V, --verbose     Enable verbose mode. Additional debug message will be printed\n"
     << std::endl;
 }
 
@@ -81,14 +82,7 @@ void print_version()
     << SYSDARFT_INFORMATION << std::endl;
 }
 
-class cleanup_handler_ {
-public:
-    void destroy()
-    {
-        debug::log("Requesting termination...\n");
-        exit(EXIT_SUCCESS);
-    }
-} cleanup_handler;
+
 
 int main(int argc, char** argv)
 {
@@ -96,6 +90,7 @@ int main(int argc, char** argv)
         {"help",        no_argument,       nullptr, 'h'},
         {"version",     no_argument,       nullptr, 'v'},
         {"config",      no_argument,       nullptr, 'c'},
+        {"verbose",     no_argument,       nullptr, 'V'},
         {nullptr,       0,                 nullptr,  0 }
     };
 
@@ -111,10 +106,11 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    Cli screen;
+    if (args.first.contains("verbose")) {
+        debug::verbose = true;
+    }
 
-    screen.GlobalEventProcessor.install_instance(GLOBAL_INSTANCE_NAME, &cleanup_handler,
-        GLOBAL_DESTROY_METHOD_NAME, &cleanup_handler_::destroy);
+    Cli screen;
 
     while (true) {
         std::this_thread::sleep_for(std::chrono::hours(3600));

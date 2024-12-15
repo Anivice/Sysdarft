@@ -13,6 +13,9 @@
 #define INPUT_METHOD_NAME "Input"
 
 std::vector<std::string> commands = {"help", "exit", "load_module", "unload_module", "list_modules"};
+std::map < std::string, Module > loaded_modules;
+
+// TODO: Better prompt
 
 bool is_command(const std::string& input)
 {
@@ -104,7 +107,14 @@ void Cli::run()
     GlobalEventProcessor("Global", "destroy")();
 }
 
-std::map < std::string, Module > loaded_modules;
+class cleanup_handler_ {
+public:
+    void destroy()
+    {
+        debug::log("Requesting termination...\n");
+        exit(EXIT_SUCCESS);
+    }
+} cleanup_handler;
 
 class input_processor_ {
 public:
@@ -120,7 +130,8 @@ public:
                "help                        print this help menu\n"
                "exit                        exit program\n"
                "load_module [Module Path]   load module\n"
-               "unload_module [Module]      load module\n");
+               "unload_module [Module]      load module\n"
+               "list_modules [Module]       list modules\n");
         }
         else if (args.at(0) == "exit")
         {
@@ -187,6 +198,8 @@ Cli::Cli()
 {
     GlobalEventProcessor.install_instance(INPUT_INSTANCE_NAME, &input_processor,
         INPUT_METHOD_NAME, &input_processor_::process_input);
+    GlobalEventProcessor.install_instance(GLOBAL_INSTANCE_NAME, &cleanup_handler,
+        GLOBAL_DESTROY_METHOD_NAME, &cleanup_handler_::destroy);
 
     std::thread CliWorkThread(&Cli::run, this);
     CliWorkThread.detach();
