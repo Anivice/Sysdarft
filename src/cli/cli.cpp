@@ -8,25 +8,99 @@
 #include <readline/history.h>
 #include <debug.h>
 #include <cmath>
+#include <vector>
+#include <string>
+#include <cstring>
+#include <sstream>
+#include <iterator>
+#include <algorithm>
+#include <filesystem>
 
 #define INPUT_INSTANCE_NAME "InputProcessor"
 #define INPUT_METHOD_NAME "Input"
 
-std::vector<std::string> commands = {"help", "exit", "load_module", "unload_module", "list_modules"};
 std::map < std::string, Module > loaded_modules;
 
-// TODO: Better prompt
 
-bool is_command(const std::string& input)
-{
-    for (const auto& cmd : commands) {
-        if (input == cmd) return true;
+// A structure for argument behavior
+struct ArgumentInfo {
+    bool use_file_completion;                  // If true, use file completion
+    std::vector<std::string> static_completions; // A fixed set of completions for this argument
+    bool dynamic_completions;                  // If true, generate completions dynamically at runtime
+};
+
+// A structure for command behavior
+struct CommandInfo {
+    std::string name;
+    // Each argument position can have different behavior
+    std::vector<ArgumentInfo> arguments;
+};
+
+std::vector<CommandInfo> commands = {
+    {
+        "help", { }
+    },
+    {
+        "exit", { }
+    },
+    {
+        "load_module",
+        {
+            {true, {}, false},
+            {true, {}, false},
+        }
+    },
+    {
+        "unload_module",
+        {
+            {false, {}, true}
+        }
+    },
+    {
+        "list_modules", { }
     }
-    return false;
+};
+
+std::vector<std::string> get_command_names()
+{
+    std::vector<std::string> names;
+    for (const auto& c : commands) {
+        names.push_back(c.name);
+    }
+    return names;
 }
 
-// Custom completer for commands
-char* command_completer(const char* text, int state)
+const CommandInfo* find_command_info(const std::string& name)
+{
+    for (const auto& command : commands) {
+        if (command.name == name) return &command;
+    }
+    return nullptr;
+}
+
+// A helper function to produce dynamic completions based on command context
+// Here we customize results depending on previously entered arguments.
+std::vector<std::string> get_dynamic_completions(const std::string& cmd_name,
+                                                 const std::vector<std::string>& words,
+                                                 int arg_index)
+{
+    std::vector<std::string> results;
+
+    if (cmd_name == "unload_module") {
+        for (const auto& module : loaded_modules) {
+            results.emplace_back(module.first);
+        }
+    }
+
+    return results;
+}
+
+// We'll store context for dynamic completions so that the completer can access it.
+static std::string current_cmd;
+static std::vector<std::string> current_words;
+static int current_arg_index;
+
+char* dynamic_arg_completer(const char* text, int state)
 {
     static std::vector<std::string> matches;
     static size_t match_index = 0;
@@ -35,34 +109,143 @@ char* command_completer(const char* text, int state)
         matches.clear();
         match_index = 0;
 
-        const std::string text_str(text);
-        for (const auto& cmd : commands)
-        {
-            if (std::string(cmd).find(text_str) == 0) {
-                matches.push_back(cmd);
+        std::string prefix(text);
+        // Use the command and words to get command-specific dynamic completions
+        auto dynamic = get_dynamic_completions(current_cmd, current_words, current_arg_index);
+
+        // Filter completions by prefix
+        for (const auto& candidate : dynamic) {
+            if (candidate.rfind(prefix, 0) == 0) {
+                matches.push_back(candidate);
             }
         }
     }
 
-    if (match_index >= matches.size()) {
-        return nullptr;
-    } else {
+    if (match_index < matches.size()) {
         return strdup(matches[match_index++].c_str());
+    } else {
+        return nullptr;
     }
 }
 
-// Custom readline completion function
-char** custom_completion(const char* text, int start, int end)
+char* static_arg_completer(const char* text, int state, const std::vector<std::string>& completions)
 {
-    char **matches = nullptr;
+    static std::vector<std::string> matches;
+    static size_t match_index = 0;
 
-    if (start == 0) {
-        matches = rl_completion_matches(text, command_completer);
-    } else {
-        rl_attempted_completion_over = 0; // Let Readline handle file completion
+    if (state == 0) {
+        matches.clear();
+        match_index = 0;
+        std::string prefix(text);
+        for (const auto& c : completions) {
+            if (c.rfind(prefix, 0) == 0) {
+                matches.push_back(c);
+            }
+        }
     }
 
-    return matches;
+    if (match_index < matches.size()) {
+        return strdup(matches[match_index++].c_str());
+    } else {
+        return nullptr;
+    }
+}
+
+char* command_name_completer(const char* text, int state)
+{
+    static std::vector<std::string> cmd_matches;
+    static size_t match_index = 0;
+
+    if (state == 0) {
+        cmd_matches.clear();
+        match_index = 0;
+        std::string prefix(text);
+        for (auto& cmd : get_command_names()) {
+            if (cmd.rfind(prefix, 0) == 0) {
+                cmd_matches.push_back(cmd);
+            }
+        }
+    }
+
+    if (match_index < cmd_matches.size()) {
+        return strdup(cmd_matches[match_index++].c_str());
+    } else {
+        return nullptr;
+    }
+}
+
+static const std::vector<std::string>* current_completions = nullptr;
+static const char * empty_string = "";
+
+char* static_completions_proxy(const char* t, int s)
+{
+    if (current_completions) {
+        return static_arg_completer(t, s, *current_completions);
+    } else {
+        return const_cast<char *>(empty_string);
+    }
+}
+
+// Main completion function
+char** custom_completion(const char* text, int start, int end)
+{
+    // Parse the line
+    char* buffer = strndup(rl_line_buffer, end);
+    std::string input(buffer);
+    free(buffer);
+
+    std::istringstream iss(input);
+    std::vector<std::string> words{std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>{}};
+
+    // If we're completing the first word (command)
+    if (words.empty() || (words.size() == 1 && start == 0)) {
+        rl_attempted_completion_over = 1;
+        return rl_completion_matches(text, command_name_completer);
+    }
+
+    // Identify the command and argument
+    const CommandInfo* cmd_info = find_command_info(words[0]);
+    if (!cmd_info) {
+        // Unknown command
+        rl_attempted_completion_over = 1;
+        return nullptr;
+    }
+
+    int arg_index = static_cast<int>(words.size()) - 1;
+    if (arg_index < 0 || arg_index >= (int)cmd_info->arguments.size()) {
+        // No argument info defined at this position
+        rl_attempted_completion_over = 1;
+        return nullptr;
+    }
+
+    const ArgumentInfo& arg_info = cmd_info->arguments[arg_index];
+
+    // Store context for dynamic completion
+    current_cmd = words[0];
+    current_words = words;
+    current_arg_index = arg_index;
+
+    // File completion
+    if (arg_info.use_file_completion) {
+        rl_attempted_completion_over = 0; // Allow default filename completion
+        return nullptr;
+    }
+
+    // Static completion
+    if (!arg_info.static_completions.empty()) {
+        rl_attempted_completion_over = 1;
+        current_completions = &arg_info.static_completions;
+        return rl_completion_matches(text, static_completions_proxy);
+    }
+
+    // Dynamic completion
+    if (arg_info.dynamic_completions) {
+        rl_attempted_completion_over = 1;
+        return rl_completion_matches(text, dynamic_arg_completer);
+    }
+
+    rl_attempted_completion_over = 1;
+    return nullptr;
 }
 
 std::vector<std::string> splitAndDiscardEmpty(const std::string& str)
@@ -111,7 +294,15 @@ class cleanup_handler_ {
 public:
     void destroy()
     {
-        debug::log("Requesting termination...\n");
+        debug::log("Cleaning up...\n");
+        debug::log("Stage 1: unloading modules...\n");
+        for (auto& module : loaded_modules) {
+            debug::log("Unloading module ", module.first, "...\n");
+            module.second.unload();
+            debug::log("...done\n");
+        }
+
+        debug::log("All stage completed!\n");
         exit(EXIT_SUCCESS);
     }
 } cleanup_handler;
@@ -145,15 +336,34 @@ public:
                 return;
             }
 
-            if (loaded_modules.contains(args.at(1))) {
+            auto path_to_name = [](const std::string & module_name)->std::string
+            {
+                std::regex pattern(R"(.*lib([A-Za-z0-9_]+)\.so$)");
+                std::smatch matches;
+                if (std::regex_match(module_name, matches, pattern)) {
+                    if (matches.empty()) {
+                        return "";
+                    }
+
+                    return matches[1];
+                }
+
+                return "";
+            };
+
+            const std::string module_path = args.at(1);
+            const std::string module_name = path_to_name(args.at(1));
+
+            if (loaded_modules.contains(module_name)) {
                 debug::log("Module already loaded\n");
                 return;
             }
 
-            debug::log("Loading module: ", args.at(1), "\n");
+            debug::log("Loading module: ", module_path, "...\n");
             try {
-                Module module(args.at(1));
-                loaded_modules.emplace(args.at(1), module);
+                Module module(module_path);
+                loaded_modules.emplace(module_name, module);
+                debug::log("Module '", module_name, "' loaded.\n");
             } catch (const SysdarftBaseError & err) {
                 debug::log("Error encountered during loading module: ", err.what(), "\n");
             }
@@ -181,7 +391,7 @@ public:
         }
         else if (args.at(0) == "list_modules")
         {
-            debug::log("A total of ", loaded_modules.size(), " modules loaded.\n");
+            debug::log("A total of ", loaded_modules.size(), " module(s) loaded.\n");
             for (const auto& module : loaded_modules) {
                 debug::log(module.first, "\n");
             }
