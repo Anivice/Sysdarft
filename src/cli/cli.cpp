@@ -218,6 +218,7 @@ public:
             }
 
             module.init();
+            module.disable_delete();
             loaded_modules.emplace(module_name, module);
             module_list_reference.emplace(module_name, deps);
             debug::log("Module '", module_name, "' loaded.\n");

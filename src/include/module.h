@@ -20,10 +20,16 @@ class EXPORT Module
 {
 private:
     void * handle = nullptr;
+    bool dont_delete = false;
 
 public:
     Module() = default;
     Module & operator=(const Module &) = default;
+
+    // disable its ability to deconstruct
+    void disable_delete() { dont_delete = true; }
+    // auto close if error is thrown and before initialization
+    ~Module() { if (!dont_delete) { close_only(); } }
 
     explicit Module(const std::string & module_path);
 
