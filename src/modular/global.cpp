@@ -2,3 +2,4 @@
 
 MsgMap GlobalEventProcessor;
 std::mutex GlobalEventMutex;
+GlobalConfig_ GlobalConfig;

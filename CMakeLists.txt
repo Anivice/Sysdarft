@@ -157,7 +157,13 @@ pkg_check_modules(READLINE REQUIRED readline)
 target_include_directories(sysdarft_cli PUBLIC ${READLINE_INCLUDE_DIRS})
 target_link_directories(sysdarft_cli PUBLIC ${READLINE_LIBRARY_DIRS})
 add_definitions(${READLINE_CFLAGS_OTHER})
-target_link_libraries(sysdarft_cli PUBLIC sysdarft_debug sysdarft_modular sysdarft_global ${READLINE_LIBRARIES})
+target_link_libraries(sysdarft_cli PUBLIC
+        sysdarft_debug
+        sysdarft_msg_map
+        sysdarft_modular
+        sysdarft_global
+        sysdarft_config
+        ${READLINE_LIBRARIES})
 add_unit_test(test.cli tests/test.cli.cpp sysdarft_cli)
 
 # Console

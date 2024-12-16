@@ -3,14 +3,25 @@
 
 #include <msg_map.h>
 #include <mutex>
+#include <vector>
+#include <string>
+#include <config.h>
 
-#define GLOBAL_INSTANCE_NAME "Global"
-#define GLOBAL_DESTROY_METHOD_NAME "destroy"
-
-#define INPUT_INSTANCE_NAME "InputProcessor"
-#define INPUT_METHOD_NAME "Input"
+#define GLOBAL_INSTANCE_NAME            "Global"
+#define GLOBAL_DESTROY_METHOD_NAME      "destroy"
+#define GLOBAL_INPUT_METHOD_NAME        "Input"
+#define GLOBAL_GET_CONFIG_METHOD_NAME   "get_config"
+#define GLOBAL_SET_CONFIG_METHOD_NAME   "set_config"
 
 extern MsgMap GlobalEventProcessor;
-extern std::mutex GlobalEventMutex;
+
+extern class GlobalConfig_ {
+private:
+    std::mutex mutex_;
+    config_t GlobalConfigVector;
+public:
+    config_t get_config() { std::lock_guard lock(mutex_); return GlobalConfigVector; }
+    void set_config(const config_t & config) { std::lock_guard lock(mutex_); GlobalConfigVector = config; }
+} GlobalConfig;
 
 #endif //GLOBAL_EVENT_H

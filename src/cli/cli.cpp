@@ -17,10 +17,13 @@
 #include <filesystem>
 #include <csignal>
 #include <atomic>
+#include <fstream>
 
 std::unordered_map< std::string, Module > loaded_modules;
 std::atomic<bool> gSigintReceived(false);
 std::string prefix = "sysdarft> ";
+std::string history_file;
+std::vector<std::string> history_lines;
 
 // A structure for argument behavior
 struct ArgumentInfo {
@@ -59,7 +62,16 @@ std::vector<CommandInfo> commands = {
     },
     {
         "list_modules", { }
-    }
+    },
+    {
+        "load_config", {
+            {true, {}, false},
+            {true, {}, false},
+        }
+    },
+    {
+        "show_config", { }
+    },
 };
 
 std::vector<std::string> get_command_names()
@@ -298,6 +310,29 @@ void Cli::run()
         prefix = _RED_ _BOLD_ _FLASH_ "(VERBOSE) " _REGULAR_ "sysdarft> ";
     }
 
+    const char* home = std::getenv("HOME");
+
+    if (home == nullptr) {
+        debug::log("HOME not set!\n");
+
+    } else {
+        history_file = home;
+        history_file += "/.sysdarft";
+    }
+
+    std::ifstream hfile(history_file, std::ios::in);
+    while (hfile.is_open() && hfile.eof() == false) {
+        std::string line;
+        std::getline(hfile, line);
+        if (!line.empty()) {
+            add_history(line.c_str());
+        }
+    }
+
+    if (hfile.is_open()) {
+        hfile.close();
+    }
+
     char* input;
     while ((input = readline(prefix.c_str())) != nullptr)
     {
@@ -310,13 +345,23 @@ void Cli::run()
         if (*input)
         {
             std::lock_guard lock(access_mutex);
-            std::lock_guard global_lock(GlobalEventMutex);
-            GlobalEventProcessor(INPUT_INSTANCE_NAME,
-                INPUT_METHOD_NAME)(splitAndDiscardEmpty(input));
+            auto cleaned_vec = splitAndDiscardEmpty(input);
+            GlobalEventProcessor(GLOBAL_INSTANCE_NAME,
+                GLOBAL_INPUT_METHOD_NAME)(cleaned_vec);
 
-            if (last_command != input) {
-                last_command = input;
-                add_history(input);
+            std::string current;
+            for (const auto& word : cleaned_vec) {
+                current += word + " ";
+            }
+
+            if (!current.empty()) {
+                current.pop_back();
+            }
+
+            if (current != last_command) {
+                last_command = current;
+                history_lines.emplace_back(current);
+                add_history(current.c_str());
             }
         }
 
@@ -325,8 +370,7 @@ void Cli::run()
 
     debug::log("Console input turned off, exiting...\n");
     std::lock_guard lock(access_mutex);
-    std::lock_guard global_lock(GlobalEventMutex);
-    GlobalEventProcessor("Global", "destroy")();
+    GlobalEventProcessor(GLOBAL_INSTANCE_NAME, GLOBAL_DESTROY_METHOD_NAME)();
 }
 
 class cleanup_handler_ {
@@ -335,11 +379,22 @@ public:
     {
         debug::log("Cleaning up...\n");
         debug::log("Stage 1: unloading modules...\n");
-        int index = 0;
+        int index = 1;
         for (auto&[fst, snd] : loaded_modules)
         {
             debug::log("Unloading module ", fst, " ", index, " of ", loaded_modules.size(), "\n");
             snd.unload();
+        }
+
+        debug::log("Stage 2: saving history...\n");
+        std::ofstream ohfile(history_file, std::ios::out | std::ios::app);
+        if (ohfile.is_open())
+        {
+            for (const auto & hist : history_lines) {
+                ohfile << hist << std::endl;
+            }
+
+            ohfile.close();
         }
 
         debug::log("All stage completed!\n");
@@ -362,12 +417,15 @@ public:
                "exit                        exit program\n"
                "load_module [Module Path]   load module\n"
                "unload_module [Module]      load module\n"
-               "list_modules [Module]       list modules\n");
+               "list_modules [Module]       list modules\n"
+               "load_config [Config Path]   load config\n"
+               "show_config                 show config\n"
+               );
         }
         else if (args.at(0) == "exit")
         {
             debug::log("Console requested termination. Exiting...\n");
-            exit(EXIT_SUCCESS);
+            GlobalEventProcessor(GLOBAL_INSTANCE_NAME, GLOBAL_DESTROY_METHOD_NAME)();
         }
         else if (args.at(0) == "load_module")
         {
@@ -474,7 +532,7 @@ public:
                 module.unload();
                 loaded_modules.erase(args.at(1));
             } catch (const SysdarftBaseError & err) {
-                debug::log("Error encountered during loading module: ", err.what(), "\n");
+                debug::log("Error encountered during loading module:\n", err.what(), "\n");
             }
         }
         else if (args.at(0) == "list_modules")
@@ -507,6 +565,48 @@ public:
                 }
             }
         }
+        else if (args.at(0) == "load_config")
+        {
+            if (args.size() != 2) {
+                debug::log("load_config [Config Path]\n");
+                return;
+            }
+
+            try {
+                auto conf = load_config(args.at(1));
+                GlobalEventProcessor.invoke_instance(
+                    GLOBAL_INSTANCE_NAME,
+                    GLOBAL_SET_CONFIG_METHOD_NAME,
+                    { conf }
+                );
+            }
+            catch (const ConfigError & err)
+            {
+                if (debug::verbose) {
+                    debug::log("Configuration error:\n", err.what(), "\n");
+                    return;
+                }
+
+                std::cout << "Error encountered when loading the configuration" << std::endl;
+            } catch (const std::exception & err) {
+                std::cout << "Error:" << err.what() << std::endl;
+            }
+        }
+        else if (args.at(0) == "show_config")
+        {
+            auto conf = std::any_cast<config_t>(GlobalEventProcessor.invoke_instance(
+                GLOBAL_INSTANCE_NAME,
+                GLOBAL_GET_CONFIG_METHOD_NAME, { }));
+
+            debug::log("Configuration:\n");
+
+            for (const auto &[fst, snd] : conf) {
+                debug::log("Section: ", fst, "\n");
+                for (const auto & [Key, Val] : snd) {
+                    debug::log("         " , Key, " : ", Val, "\n");
+                }
+            }
+        }
         else
         {
             debug::log("Unknown command: ", args.at(0), "\n");
@@ -517,12 +617,18 @@ public:
 
 Cli::Cli()
 {
-    std::lock_guard global_lock(GlobalEventMutex);
-
-    GlobalEventProcessor.install_instance(INPUT_INSTANCE_NAME, &input_processor,
-        INPUT_METHOD_NAME, &input_processor_::process_input);
+    // input
+    GlobalEventProcessor.install_instance(GLOBAL_INSTANCE_NAME, &input_processor,
+        GLOBAL_INPUT_METHOD_NAME, &input_processor_::process_input);
+    // destroy
     GlobalEventProcessor.install_instance(GLOBAL_INSTANCE_NAME, &cleanup_handler,
         GLOBAL_DESTROY_METHOD_NAME, &cleanup_handler_::destroy);
+    // get_config
+    GlobalEventProcessor.install_instance(GLOBAL_INSTANCE_NAME, &GlobalConfig,
+        GLOBAL_GET_CONFIG_METHOD_NAME, &GlobalConfig_::get_config);
+    // set_config
+    GlobalEventProcessor.install_instance(GLOBAL_INSTANCE_NAME, &GlobalConfig,
+        GLOBAL_SET_CONFIG_METHOD_NAME, &GlobalConfig_::set_config);
 
     std::thread CliWorkThread(&Cli::run, this);
     CliWorkThread.detach();

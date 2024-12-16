@@ -210,7 +210,8 @@ std::string initialize_error_msg(
             << "System Error: errno=" << _errno << ": " << strerror(_errno) << _REGULAR_ << "\n";
 
     // Backtrace section
-    if (if_perform_code_backtrace) {
+    if (if_perform_code_backtrace && debug::verbose)
+    {
         const std::regex pattern(R"(([^\(]+)\(([^\)]*)\) \[([^\]]+)\])");
         std::smatch matches;
 
