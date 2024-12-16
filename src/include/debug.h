@@ -8,6 +8,16 @@
 #include <map>
 #include <unordered_map>
 
+#define _RED_     "\033[31m"
+#define _GREEN_   "\033[32m"
+#define _BLUE_    "\033[34m"
+#define _PURPLE_  "\033[35m"
+#define _YELLOW_  "\033[33m"
+#define _CYAN_    "\033[36m"
+#define _CLEAR_   "\033[0m"
+#define _BOLD_    "\033[1m"
+#define _REGULAR_ "\033[0m"
+
 namespace debug
 {
     /**

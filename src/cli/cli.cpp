@@ -15,12 +15,15 @@
 #include <iterator>
 #include <algorithm>
 #include <filesystem>
+#include <csignal>
+#include <atomic>
 
 #define INPUT_INSTANCE_NAME "InputProcessor"
 #define INPUT_METHOD_NAME "Input"
 
-std::map < std::string, Module > loaded_modules;
-
+std::unordered_map< std::string, Module > loaded_modules;
+std::atomic<bool> gSigintReceived(false);
+std::string prefix = "sysdarft> ";
 
 // A structure for argument behavior
 struct ArgumentInfo {
@@ -53,7 +56,8 @@ std::vector<CommandInfo> commands = {
     {
         "unload_module",
         {
-            {false, {}, true}
+            {false, {}, true},
+            {false, {}, true},
         }
     },
     {
@@ -218,7 +222,8 @@ char** custom_completion(const char* text, int start, int end)
         return nullptr;
     }
 
-    const ArgumentInfo& arg_info = cmd_info->arguments[arg_index];
+    const auto&[use_file_completion, static_completions, dynamic_completions] =
+        cmd_info->arguments[arg_index];
 
     // Store context for dynamic completion
     current_cmd = words[0];
@@ -226,20 +231,20 @@ char** custom_completion(const char* text, int start, int end)
     current_arg_index = arg_index;
 
     // File completion
-    if (arg_info.use_file_completion) {
+    if (use_file_completion) {
         rl_attempted_completion_over = 0; // Allow default filename completion
         return nullptr;
     }
 
     // Static completion
-    if (!arg_info.static_completions.empty()) {
+    if (!static_completions.empty()) {
         rl_attempted_completion_over = 1;
-        current_completions = &arg_info.static_completions;
+        current_completions = &static_completions;
         return rl_completion_matches(text, static_completions_proxy);
     }
 
     // Dynamic completion
-    if (arg_info.dynamic_completions) {
+    if (dynamic_completions) {
         rl_attempted_completion_over = 1;
         return rl_completion_matches(text, dynamic_arg_completer);
     }
@@ -248,8 +253,7 @@ char** custom_completion(const char* text, int start, int end)
     return nullptr;
 }
 
-std::vector<std::string> splitAndDiscardEmpty(const std::string& str)
-{
+std::vector<std::string> splitAndDiscardEmpty(const std::string& str) {
     std::vector<std::string> tokens;
     std::istringstream iss(str);
     std::string token;
@@ -263,12 +267,42 @@ std::vector<std::string> splitAndDiscardEmpty(const std::string& str)
     return tokens;
 }
 
+// Signal handler function
+void handle_sigint(int signum)
+{
+    if (signum == SIGINT)
+    {
+        gSigintReceived.store(true);
+        // Optionally, write a message directly to STDOUT to avoid using non-signal-safe functions
+        const std::string local_prefix = "\n" + prefix;
+        write(STDOUT_FILENO, local_prefix.c_str(), local_prefix.size());
+
+        // Inform Readline to abort the current input
+        rl_done = 1;
+    }
+}
+
 void Cli::run()
 {
+    // Setup sigaction for SIGINT
+    struct sigaction sa{};
+    sa.sa_handler = handle_sigint;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0; // You can set SA_RESTART if desired
+
+    if (sigaction(SIGINT, &sa, nullptr) == -1) {
+        throw SysdarftBaseError("Installing signal handler failed!");
+    }
+
     rl_attempted_completion_function = custom_completion;
+    rl_catch_signals = 0;
+
+    if (debug::verbose) {
+        prefix = _RED_ "(VERBOSE) sysdarft> " _REGULAR_;
+    }
 
     char* input;
-    while ((input = readline("sysdarft> ")) != nullptr)
+    while ((input = readline(prefix.c_str())) != nullptr)
     {
         if (*input)
         {
@@ -296,9 +330,10 @@ public:
     {
         debug::log("Cleaning up...\n");
         debug::log("Stage 1: unloading modules...\n");
-        for (auto& module : loaded_modules) {
-            debug::log("Unloading module ", module.first, "...\n");
-            module.second.unload();
+        for (auto&[fst, snd] : loaded_modules)
+        {
+            debug::log("Unloading module ", fst, "...\n");
+            snd.unload();
             debug::log("...done\n");
         }
 
@@ -351,7 +386,7 @@ public:
                 return "";
             };
 
-            const std::string module_path = args.at(1);
+            const std::string& module_path = args.at(1);
             const std::string module_name = path_to_name(args.at(1));
 
             if (loaded_modules.contains(module_name)) {
@@ -362,10 +397,40 @@ public:
             debug::log("Loading module: ", module_path, "...\n");
             try {
                 Module module(module_path);
+                auto deps = std::any_cast<std::vector<std::string>>(
+                    module.call<std::vector<std::string>>("module_dependencies"));
+
+                for (const auto & dep : deps)
+                {
+                    if (!loaded_modules.contains(dep)) {
+                        debug::log("Module dependency ", dep, " missing!\n");
+                        module.close_only();
+                        return;
+                    }
+                }
+
                 loaded_modules.emplace(module_name, module);
+                module.init();
                 debug::log("Module '", module_name, "' loaded.\n");
+            } catch (const LibraryLoadError & err) {
+                if (debug::verbose) {
+                    debug::log("Library load error:\n", err.what());
+                } else {
+                    debug::log("Library load error!\nUse verbose mode to see trace info.\n");
+                }
+            } catch (const ModuleResolutionError & err) {
+                if (debug::verbose) {
+                    debug::log("Library load error:\n", err.what());
+                } else {
+                    debug::log("Library load error! Missing definition!\nUse verbose mode to see trace info.\n");
+                }
             } catch (const SysdarftBaseError & err) {
-                debug::log("Error encountered during loading module: ", err.what(), "\n");
+                if (debug::verbose) {
+                    debug::log("Library load error:\n", err.what());
+                } else {
+                    debug::log("Unknown error encountered during loading module!\n"
+                        "Use verbose mode to see trace info.\n");
+                }
             }
         }
         else if (args.at(0) == "unload_module")
@@ -376,13 +441,31 @@ public:
             }
 
             if (!loaded_modules.contains(args.at(1))) {
-                debug::log("Module not loaded\n");
+                debug::log("Module not found\n");
                 return;
             }
 
+            // dependency check
+            for (auto & module : loaded_modules)
+            {
+                auto deps = std::any_cast<std::vector < std::string >>(
+                    module.second.call<std::vector<std::string>>("module_dependencies"));
+
+                for (const auto & dep : deps)
+                {
+                    if (dep == args.at(1)) { // at least this module depends on module pending to unload
+                        std::cout << "At least " << module.first << " requires " << args.at(1) << "!" << std::endl;
+                        std::cout << "use `list_modules` to see the detailed dependencies." << std::endl;
+                        std::cout << "Module not unloaded!" << std::endl;
+                        return;
+                    }
+                }
+            }
+
+            Module module = loaded_modules.at(args.at(1));
+
             debug::log("Unloading module: ", args.at(1), "\n");
             try {
-                Module module = loaded_modules.at(args.at(1));
                 module.unload();
                 loaded_modules.erase(args.at(1));
             } catch (const SysdarftBaseError & err) {
@@ -392,8 +475,31 @@ public:
         else if (args.at(0) == "list_modules")
         {
             debug::log("A total of ", loaded_modules.size(), " module(s) loaded.\n");
-            for (const auto& module : loaded_modules) {
-                debug::log(module.first, "\n");
+
+            uint32_t index = 0;
+
+            for (auto& module : loaded_modules)
+            {
+                std::stringstream index_str;
+                index_str << "#" << index++;
+
+                // show name
+                debug::log(index_str.str(), ": ", module.first, "\n");
+
+                // show dependencies
+                auto deps = std::any_cast<std::vector<std::string>>(
+                    module.second.call<std::vector<std::string>>("module_dependencies"));
+                for (auto it = deps.begin(); it != deps.end(); ++it)
+                {
+                    std::string empty(index_str.str().size(), ' ');
+                    std::string prefix = empty + "  ├── ";
+
+                    if (it == deps.end() - 1) {
+                        prefix = empty + "  └── ";
+                    }
+
+                    debug::log(prefix, *it, "\n");
+                }
             }
         }
         else

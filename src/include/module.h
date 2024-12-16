@@ -50,6 +50,9 @@ public:
     }
 
     void unload();
+    void init();
+
+    void close_only();
 };
 
 #endif //MODULE_H

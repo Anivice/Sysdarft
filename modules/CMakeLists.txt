@@ -72,4 +72,7 @@ set(linker_options
 add_compile_options(${compiler_options})
 add_link_options(${linker_options})
 
-add_library(example SHARED example.cpp)
+add_library(example             SHARED example.cpp)
+add_library(example_dep1        SHARED example_dep1.cpp)
+add_library(example_dep2        SHARED example_dep2.cpp)
+add_library(example_dep_of_dep1 SHARED example_dep_of_dep1.cpp)
