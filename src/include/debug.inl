@@ -76,7 +76,7 @@ template <typename... Args> void debug::log(const Args &...args)
     if (verbose)
     {
         // output timestamp
-        debug::_log(debug::get_current_date_time(), ": ");
+        _log(_CYAN_, _BOLD_, get_current_date_time(), _REGULAR_, ": ");
 
         // obtain the stack trace
         auto [backtrace_symbols, backtrace_frames] = debug::obtain_stack_frame();
@@ -122,12 +122,22 @@ template <typename... Args> void debug::log(const Args &...args)
                 }
             }
 
-            std::string caller =
-                debug::separate_before_slash(addr2line_caller_info);
+            std::string caller = separate_before_slash(addr2line_caller_info);
             std::erase(caller, '\n');
 
-            if (!caller.empty()) {
-                debug::_log(caller, ": ");
+            std::string before;
+
+            if (const size_t pos = caller.find('('); pos != std::string::npos) {
+                before = caller.substr(0, pos);
+            }
+
+            if (!caller.empty())
+            {
+                if (before.empty()) {
+                    _log(_BLUE_, _BOLD_, caller, _REGULAR_, ": ");
+                } else {
+                    _log(_BLUE_, _BOLD_, before, _REGULAR_, ": ");
+                }
             }
         }
     }

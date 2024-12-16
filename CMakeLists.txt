@@ -129,7 +129,7 @@ add_library(sysdarft_modular SHARED
 target_link_libraries(sysdarft_modular PUBLIC sysdarft_msg_map sysdarft_debug)
 add_unit_test(test.modular tests/test.modular.cpp sysdarft_modular)
 
-add_subdirectory(modules)
+add_subdirectory(example_modules)
 
 # Config
 add_library(sysdarft_config SHARED
@@ -145,6 +145,11 @@ add_custom_target(CopyConfigFiles ALL
         COMMENT "Copying config files..."
 )
 
+# Global Event
+add_library(sysdarft_global
+        SHARED src/include/global_event.h src/modular/global.cpp)
+target_link_libraries(sysdarft_global PUBLIC sysdarft_msg_map)
+
 # CLI
 find_package(PkgConfig REQUIRED)
 add_library(sysdarft_cli SHARED src/cli/cli.cpp src/include/cli.h)
@@ -152,7 +157,7 @@ pkg_check_modules(READLINE REQUIRED readline)
 target_include_directories(sysdarft_cli PUBLIC ${READLINE_INCLUDE_DIRS})
 target_link_directories(sysdarft_cli PUBLIC ${READLINE_LIBRARY_DIRS})
 add_definitions(${READLINE_CFLAGS_OTHER})
-target_link_libraries(sysdarft_cli PUBLIC sysdarft_debug sysdarft_modular ${READLINE_LIBRARIES})
+target_link_libraries(sysdarft_cli PUBLIC sysdarft_debug sysdarft_modular sysdarft_global ${READLINE_LIBRARIES})
 add_unit_test(test.cli tests/test.cli.cpp sysdarft_cli)
 
 # Console

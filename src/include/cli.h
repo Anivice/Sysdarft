@@ -4,9 +4,7 @@
 #include <msg_map.h>
 #include <string>
 #include <mutex>
-
-#define GLOBAL_INSTANCE_NAME "Global"
-#define GLOBAL_DESTROY_METHOD_NAME "destroy"
+#include <global_event.h>
 
 class Cli {
 private:
@@ -16,8 +14,6 @@ private:
     std::mutex access_mutex;
 
 public:
-    MsgMap GlobalEventProcessor;
-
     Cli();
 };
 

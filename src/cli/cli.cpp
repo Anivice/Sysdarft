@@ -18,9 +18,6 @@
 #include <csignal>
 #include <atomic>
 
-#define INPUT_INSTANCE_NAME "InputProcessor"
-#define INPUT_METHOD_NAME "Input"
-
 std::unordered_map< std::string, Module > loaded_modules;
 std::atomic<bool> gSigintReceived(false);
 std::string prefix = "sysdarft> ";
@@ -298,15 +295,22 @@ void Cli::run()
     rl_catch_signals = 0;
 
     if (debug::verbose) {
-        prefix = _RED_ "(VERBOSE) sysdarft> " _REGULAR_;
+        prefix = _RED_ _BOLD_ _FLASH_ "(VERBOSE) " _REGULAR_ "sysdarft> ";
     }
 
     char* input;
     while ((input = readline(prefix.c_str())) != nullptr)
     {
+        if (gSigintReceived.load()) {
+            gSigintReceived.store(false);
+            free(input);
+            continue;
+        }
+
         if (*input)
         {
             std::lock_guard lock(access_mutex);
+            std::lock_guard global_lock(GlobalEventMutex);
             GlobalEventProcessor(INPUT_INSTANCE_NAME,
                 INPUT_METHOD_NAME)(splitAndDiscardEmpty(input));
 
@@ -321,6 +325,7 @@ void Cli::run()
 
     debug::log("Console input turned off, exiting...\n");
     std::lock_guard lock(access_mutex);
+    std::lock_guard global_lock(GlobalEventMutex);
     GlobalEventProcessor("Global", "destroy")();
 }
 
@@ -330,11 +335,11 @@ public:
     {
         debug::log("Cleaning up...\n");
         debug::log("Stage 1: unloading modules...\n");
+        int index = 0;
         for (auto&[fst, snd] : loaded_modules)
         {
-            debug::log("Unloading module ", fst, "...\n");
+            debug::log("Unloading module ", fst, " ", index, " of ", loaded_modules.size(), "\n");
             snd.unload();
-            debug::log("...done\n");
         }
 
         debug::log("All stage completed!\n");
@@ -512,6 +517,8 @@ public:
 
 Cli::Cli()
 {
+    std::lock_guard global_lock(GlobalEventMutex);
+
     GlobalEventProcessor.install_instance(INPUT_INSTANCE_NAME, &input_processor,
         INPUT_METHOD_NAME, &input_processor_::process_input);
     GlobalEventProcessor.install_instance(GLOBAL_INSTANCE_NAME, &cleanup_handler,
