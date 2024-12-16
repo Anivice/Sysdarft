@@ -8,13 +8,14 @@
 #include <atomic>
 #include <ncurses.h>
 
+std::atomic<bool> needs_refresh;
+
 void ui_curses::run()
 {
     // Target 30 FPS
     constexpr int targetFPS = 30;
     const auto frameDuration = std::chrono::milliseconds(1000 / targetFPS);
     uint32_t current_frame_within_seconds = 0;
-    auto lastFrameTime = std::chrono::steady_clock::now();
 
     while (running_thread_current_status.load())
     {
@@ -37,7 +38,7 @@ void ui_curses::run()
             char_at_cursor_pos_is_not_cursor = true;
         }
 
-        if (video_memory_changed.load())
+        if (needs_refresh.load() || video_memory_changed.load())
         {
             std::lock_guard lock(memory_access_mutex);
 
@@ -47,8 +48,10 @@ void ui_curses::run()
                 }
             }
 
+            curs_set(FALSE);
             refresh();
             video_memory_changed.store(false);
+            needs_refresh.store(false);
         }
 
         auto end = std::chrono::steady_clock::now();
@@ -59,11 +62,6 @@ void ui_curses::run()
         {
             std::this_thread::sleep_for(sleepDuration);
         }
-
-        // Update frame timing
-        auto actualFrameDuration = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - lastFrameTime);
-        lastFrameTime = std::chrono::steady_clock::now();
     }
 
     running_thread_current_exited.store(true);
@@ -82,6 +80,16 @@ void ui_curses::monitor_input()
     monitor_input_exited.store(true);
 }
 
+void sig_handle(int sig)
+{
+    if (sig == SIGWINCH) {
+        endwin();
+        refresh();
+        clear();
+        needs_refresh = true;
+    }
+}
+
 void ui_curses::initialize()
 {
     memory_access_mutex.lock();
@@ -97,6 +105,7 @@ void ui_curses::initialize()
     // Initialize ncurses
     initscr();
     noecho();
+    cbreak();
     curs_set(FALSE);
     keypad(stdscr, TRUE);
 
@@ -159,12 +168,19 @@ void ui_curses::display_char(int x, int y, int ch)
 {
     std::lock_guard lock(memory_access_mutex);
 
-    if (x = cursor_pos.x, y = cursor_pos.y) {
+    if (x == cursor_pos.x && y == cursor_pos.y)
+    {
+        // If we're writing at the cursor position
         if (char_at_cursor_pos_is_not_cursor) {
             video_memory[x][y] = ch;
         } else {
             char_at_cursor_position = ch;
         }
+    }
+    else
+    {
+        // If we're writing at a position that is not the cursor position
+        video_memory[x][y] = ch;
     }
 
     video_memory_changed.store(true);
