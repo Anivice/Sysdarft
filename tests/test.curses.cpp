@@ -3,14 +3,25 @@
 
 class input_processor {
 public:
-    void input_monitor(int key) {
-        if (key != ERR) {
-            int ch = 'S';
-            GlobalEventProcessor.invoke_instance(
-                UI_INSTANCE_NAME,
-                UI_DISPLAY_CHAR_METHOD_NAME,
-                { 1, 3, ch });
+    void input_monitor(int key)
+    {
+        if (key == ERR) {
+            return;
         }
+
+        auto cursor_pos = std::any_cast<cursor_position_t>(
+            GlobalEventProcessor(UI_INSTANCE_NAME, UI_GET_CURSOR_METHOD_NAME)());
+        GlobalEventProcessor(UI_INSTANCE_NAME, UI_DISPLAY_CHAR_METHOD_NAME)(
+            cursor_pos.x, cursor_pos.y, key);
+
+        int linear = cursor_pos.y * WIDTH + cursor_pos.x;
+        linear++;
+        const auto cursor_pos_y = (linear / WIDTH) & 31;
+        const auto cursor_pos_x = (linear % WIDTH) & 127;
+        cursor_pos = { .x = cursor_pos_x, .y = cursor_pos_y };
+
+        GlobalEventProcessor(UI_INSTANCE_NAME, UI_SET_CURSOR_METHOD_NAME)(
+            cursor_pos.x, cursor_pos.y);
     }
 };
 
@@ -41,7 +52,8 @@ int main()
     GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
         UI_SET_CURSOR_VISIBILITY_METHOD_NAME, &ui_curses::set_cursor_visibility);
 
-    curses.initialize();
-    pause();
-    curses.cleanup();
+    GlobalEventProcessor(UI_INSTANCE_NAME, UI_INITIALIZE_METHOD_NAME)();
+    GlobalEventProcessor(UI_INSTANCE_NAME, UI_SET_CURSOR_VISIBILITY_METHOD_NAME)(true);
+    __asm__ __volatile__("jmp .");
+    GlobalEventProcessor(UI_INSTANCE_NAME, UI_CLEANUP_METHOD_NAME)();
 }
