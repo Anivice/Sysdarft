@@ -24,7 +24,11 @@ public:
     ArgumentMismatch() : SysdarftBaseError("Argument count mismatch") { }
 };
 
-// Helper function to cast a vector of std::any to a tuple of arguments
+// Forward declaration of the helper
+template <typename... Args, std::size_t... I>
+std::tuple<Args...> any_cast_tuple_impl(const std::vector<std::any>& args, std::index_sequence<I...>);
+
+// Primary template function
 template <typename... Args>
 std::tuple<Args...> any_cast_tuple(const std::vector<std::any>& args)
 {
@@ -32,16 +36,19 @@ std::tuple<Args...> any_cast_tuple(const std::vector<std::any>& args)
         throw ArgumentMismatch();
     }
 
-    // Use a lambda to convert each element of args to the corresponding type
-    return std::tuple<Args...>(std::any_cast<Args>(args[0])...); // expanded with the number of Args
+    return any_cast_tuple_impl<Args...>(args, std::make_index_sequence<sizeof...(Args)>{});
+}
+
+template <typename... Args, std::size_t... I>
+std::tuple<Args...> any_cast_tuple_impl(const std::vector<std::any>& args, std::index_sequence<I...>)
+{
+    return std::tuple<Args...>(std::any_cast<Args>(args[I])...);
 }
 
 template <typename Func, typename... Args>
 std::any invoke_with_any(Func func, const std::vector<std::any>& args)
 {
-    // Convert std::vector<std::any> to std::tuple<Args...>
     auto tuple_args = any_cast_tuple<Args...>(args);
-    // Call std::apply to invoke func with the unpacked tuple
     if constexpr (std::is_void_v<std::invoke_result_t<Func, Args...>>) {
         std::apply(func, tuple_args);
         return std::any{};

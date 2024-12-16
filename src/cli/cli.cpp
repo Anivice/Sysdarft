@@ -18,6 +18,7 @@
 #include <csignal>
 #include <atomic>
 #include <fstream>
+#include <ui_curses.h>
 
 std::unordered_map< std::string, Module > loaded_modules;
 std::atomic<bool> gSigintReceived(false);

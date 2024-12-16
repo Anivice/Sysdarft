@@ -5,6 +5,7 @@ project(Sysdarft C CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Universal compiler and linker flags
 set(compiler_options
@@ -165,6 +166,14 @@ target_link_libraries(sysdarft_cli PUBLIC
         sysdarft_config
         ${READLINE_LIBRARIES})
 add_unit_test(test.cli tests/test.cli.cpp sysdarft_cli)
+
+# Curses
+find_package(Curses REQUIRED)
+add_library(sysdarft_ncurses SHARED
+        src/ui/ncurses.cpp src/include/ui_curses.h)
+target_link_libraries(sysdarft_ncurses PUBLIC sysdarft_debug ${CURSES_LIBRARIES} sysdarft_global)
+target_link_libraries(sysdarft_cli PUBLIC sysdarft_ncurses)
+add_unit_test(test.curses tests/test.curses.cpp sysdarft_ncurses)
 
 # Console
 add_executable(sysdarft src/main.cpp)
