@@ -6,17 +6,17 @@
 #include <dlfcn.h>
 #include <debug.h>
 
-class LibraryLoadError final : public SysdarftBaseError {
+class EXPORT LibraryLoadError final : public SysdarftBaseError {
 public:
     explicit LibraryLoadError(const std::string & msg) : SysdarftBaseError("Cannot load library: " + msg) { }
 };
 
-class ModuleResolutionError final : public SysdarftBaseError {
+class EXPORT ModuleResolutionError final : public SysdarftBaseError {
 public:
     explicit ModuleResolutionError(const std::string & msg) : SysdarftBaseError("Cannot resolve function: " + msg) { }
 };
 
-class Module
+class EXPORT Module
 {
 private:
     void * handle = nullptr;

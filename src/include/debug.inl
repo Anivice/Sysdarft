@@ -6,6 +6,7 @@
 #include <cstring>
 #include <exception>
 #include <concepts>
+#include <string_view>
 
 template <typename... Strings>
 debug::cmd_status debug::exec_command(const std::string &cmd,
@@ -131,12 +132,31 @@ template <typename... Args> void debug::log(const Args &...args)
                 before = caller.substr(0, pos);
             }
 
+            auto shorten_caller_when_fit = [&](const std::string& input,
+                                     const std::size_t max_length = 64,
+                                     const std::size_t prefix_length = 5,
+                                     const std::string& ellipsis = "...")-> std::string
+            {
+                if (input.size() <= max_length) {
+                    return input;
+                }
+
+                const std::size_t suffix_length = max_length - prefix_length - ellipsis.size();
+
+                // Create views for prefix and suffix
+                const auto prefix = input.substr(0, prefix_length);
+                const auto suffix = input.substr(input.size() - suffix_length, suffix_length);
+
+                // Concatenate to form the shortened string
+                return prefix + ellipsis + suffix;
+            };
+
             if (!caller.empty())
             {
                 if (before.empty()) {
-                    _log(_BLUE_, _BOLD_, caller, _REGULAR_, ": ");
+                    _log(_BLUE_, _BOLD_, shorten_caller_when_fit(caller), _REGULAR_, ": ");
                 } else {
-                    _log(_BLUE_, _BOLD_, before, _REGULAR_, ": ");
+                    _log(_BLUE_, _BOLD_, shorten_caller_when_fit(before), _REGULAR_, ": ");
                 }
             }
         }

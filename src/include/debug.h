@@ -8,6 +8,8 @@
 #include <map>
 #include <unordered_map>
 
+#define EXPORT __attribute__((visibility("default")))
+
 #define _RED_     "\033[31m"
 #define _GREEN_   "\033[32m"
 #define _BLUE_    "\033[34m"
@@ -93,7 +95,7 @@ namespace debug
      * std::cout << "Exit Status: " << result.exit_status << std::endl;
      * @endcode
      */
-    cmd_status _exec_command(const std::string& cmd, const std::vector<std::string>& args);
+    cmd_status EXPORT _exec_command(const std::string& cmd, const std::vector<std::string>& args);
 
     /**
      * @brief Executes a system command with variadic string arguments.
@@ -130,7 +132,7 @@ namespace debug
      *       objects if avoiding unnecessary copies is critical.
      */
     template < typename... Strings >
-    cmd_status exec_command(const std::string& cmd, Strings&&... args);
+    cmd_status EXPORT exec_command(const std::string& cmd, Strings&&... args);
 
     /**
      * @brief Retrieves the current date and time formatted with high precision.
@@ -157,7 +159,7 @@ namespace debug
      *
      * @return std::string Formatted current date and time as a string.
      */
-    std::string get_current_date_time();
+    std::string EXPORT get_current_date_time();
 
     /**
      * @brief Trait to determine if a type is a container.
@@ -301,7 +303,7 @@ namespace debug
     /**
      * @brief Mutex to guard log operations for multi-thread environment
      */
-    extern std::mutex log_mutex;
+    extern EXPORT std::mutex log_mutex;
 
     /**
      * @brief Struct to hold detailed information about a program's stack trace.
@@ -380,7 +382,7 @@ namespace debug
      *
      * @throws BacktraceError if the `backtrace_symbols` function fails to provide a symbol table.
      */
-    backtrace_info obtain_stack_frame();
+    backtrace_info EXPORT obtain_stack_frame();
 
     /**
      * @brief Separates the part of the string before the first '/'.
@@ -392,9 +394,9 @@ namespace debug
      * @param input The input string to be processed.
      * @return A substring of `input` containing all characters before the first '/'.
      */
-    std::string separate_before_slash(const std::string& input);
+    std::string EXPORT separate_before_slash(const std::string& input);
 
-    extern bool verbose;
+    extern EXPORT bool verbose;
 
     /**
      * @brief Logs a message with a timestamp to the standard output.
@@ -414,13 +416,13 @@ namespace debug
      *
      */
     template<typename... Args>
-    void log(const Args&... args);
+    void EXPORT log(const Args&... args);
 }
 
 /**
  * @brief SysdarftBaseError is a base error class to which all error classes are derivative
  */
-class SysdarftBaseError : public std::runtime_error
+class EXPORT SysdarftBaseError : public std::runtime_error
 {
 protected:
     int cur_errno;  // system errno
@@ -438,7 +440,7 @@ public:
 /**
  * @brief Error class BacktraceError, throw when back trace failed
  */
-class BacktraceError final : public SysdarftBaseError
+class EXPORT BacktraceError final : public SysdarftBaseError
 {
     public:
     /**

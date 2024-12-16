@@ -55,6 +55,9 @@ const std::vector<CommandInfo> commands = {
     {
         "test_curses", { }
     },
+    {
+        "ls", { }
+    },
 };
 
 std::vector<std::string> splitAndDiscardEmpty(const std::string& str);

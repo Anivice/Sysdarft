@@ -5,6 +5,7 @@
 #include <mutex>
 #include <atomic>
 #include <ncurses.h>
+#include <debug.h>
 
 struct cursor_position_t {
     int x;
@@ -14,7 +15,7 @@ struct cursor_position_t {
 #define WIDTH   127
 #define HEIGHT  31
 
-class ui_curses {
+class EXPORT ui_curses {
 private:
     cursor_position_t cursor_pos = {};
 

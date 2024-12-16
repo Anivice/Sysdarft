@@ -57,7 +57,7 @@ std::any invoke_with_any(Func func, const std::vector<std::any>& args)
     }
 }
 
-class MsgMap
+class EXPORT MsgMap
 {
 private:
     class wrapper

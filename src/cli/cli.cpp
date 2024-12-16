@@ -10,6 +10,7 @@
 #include <atomic>
 #include <map>
 #include <unordered_map>
+#include <filesystem>
 #include "cli_local.h"
 #include "ModuleForest.h"
 
@@ -144,7 +145,7 @@ public:
         debug::log("Stage 3: Cleaning up UI...\n");
         GlobalEventProcessor(UI_INSTANCE_NAME, UI_CLEANUP_METHOD_NAME)();
 
-        debug::log("All stage completed!\n");
+        debug::log("All stages completed!\n");
         exit(EXIT_SUCCESS);
     }
 } cleanup_handler;
@@ -161,7 +162,8 @@ public:
             "list_modules [Module]       list modules\n"
             "load_config [Config Path]   load config\n"
             "show_config                 show config\n"
-            "test_curses                 test functionality of curses\n");
+            "test_curses                 test functionality of curses and then exit\n"
+            "ls                          list entries under current directory\n");
     }
 
     void do_exit()
@@ -337,6 +339,28 @@ public:
         GlobalEventProcessor(UI_INSTANCE_NAME, UI_SET_CURSOR_VISIBILITY_METHOD_NAME)(true);
         sleep(1);
         GlobalEventProcessor(UI_INSTANCE_NAME, UI_CLEANUP_METHOD_NAME)();
+        GlobalEventProcessor(GLOBAL_INSTANCE_NAME, GLOBAL_DESTROY_METHOD_NAME)();
+    }
+
+    void do_ls()
+    {
+        std::string path = ".";
+        std::stringstream ss;
+        try
+        {
+            for(const auto& entry : std::filesystem::directory_iterator(path))
+            {
+                ss << entry.path().filename().string();
+                if(entry.is_directory()) {
+                    ss << '/';
+                }
+                ss << "\n";
+            }
+
+            debug::log(ss.str());
+        } catch(const std::exception & err) {
+            debug::log("Error: ", err.what(), '\n');
+        }
     }
 
     void process_input(const std::vector < std::string > & args)
@@ -361,6 +385,8 @@ public:
             do_show_config();
         } else if (args.at(0) == "test_curses") {
             do_test_curses();
+        } else if (args.at(0) == "ls") {
+            do_ls();
         }
         else
         {

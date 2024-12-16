@@ -22,9 +22,9 @@
 #define UI_SET_CURSOR_VISIBILITY_METHOD_NAME    "set_cursor_visibility"
 #define UI_INPUT_MONITOR_METHOD_NAME            "input_monitor"
 
-extern MsgMap GlobalEventProcessor;
+extern EXPORT MsgMap GlobalEventProcessor;
 
-extern class GlobalConfig_ {
+extern class EXPORT GlobalConfig_ {
 private:
     std::mutex mutex_;
     config_t GlobalConfigVector;

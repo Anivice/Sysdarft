@@ -7,11 +7,11 @@
 
 typedef std::map < std::string /* section */, std::map < std::string /* key */, std::string /* value */> > config_t;
 
-class ConfigError final : public SysdarftBaseError {
+class EXPORT ConfigError final : public SysdarftBaseError {
 public:
     ConfigError() : SysdarftBaseError("Config error") { }
 };
 
-config_t load_config(const std::string & file_name) noexcept(false);
+config_t EXPORT load_config(const std::string & file_name) noexcept(false);
 
 #endif //CONFIG_H

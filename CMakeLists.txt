@@ -7,6 +7,8 @@ set(CMAKE_C_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_VISIBILITY_PRESET default)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN 0)
 
 # Universal compiler and linker flags
 set(compiler_options
@@ -21,10 +23,10 @@ set(compiler_options
 
         # Debugging and stack protection
         -g3                                  # Maximum debug information, including macro expansions
-        -O0
+        -O1
         -fstack-usage                        # Generate stack usage info for each function
         -fstack-protector-all                # Protect all functions with a stack canary to prevent stack overflow attacks
-        #        -D_FORTIFY_SOURCE=2                  # Buffer overflow detection on safer libc functions (e.g., memcpy).
+        -D_FORTIFY_SOURCE=2                  # Buffer overflow detection on safer libc functions (e.g., memcpy).
         # You need to enable optimization for _FORTIFY_SOURCE to work!
         -gdwarf-4                            # Generate DWARF version 4 debug information
 
@@ -52,7 +54,7 @@ set(linker_options
         -Wl,-z,now                              # Fully resolve all symbols during the link time for extra safety
         -Wl,-z,noexecstack                      # Prevent execution of code on the stack (security hardening)
         -Wl,-z,defs                             # Ensure all symbols are defined, and prevent undefined symbols
-        -Wl,-O0
+        -Wl,-O1
 
         -gdwarf-4                               # Generate detailed debug information for the linker
         -fno-eliminate-unused-debug-types
@@ -70,7 +72,7 @@ set(linker_options
         # Code coverage options
         -fprofile-arcs                          # Enable code coverage instrumentation
         -ftest-coverage                         # Generate coverage test data
-        -lasan -lubsan -fPIC --pie
+        -lasan -lubsan -fPIC --pie --whole-file
 )
 
 add_compile_options(${compiler_options})
@@ -100,39 +102,30 @@ include_directories(src/include)
 add_library(sysdarft_debug OBJECT src/debug/debug.cpp)
 target_include_directories(sysdarft_debug PUBLIC src/include)
 
-
 # Message Map:
 add_library(sysdarft_msg_map OBJECT src/modular/msg_map.cpp)
 target_include_directories(sysdarft_msg_map PUBLIC src/include)
-target_link_libraries(sysdarft_msg_map PUBLIC sysdarft_debug)
 
 # Modular:
 add_library(sysdarft_modular OBJECT
         src/modular/module.cpp)
 target_include_directories(sysdarft_modular PUBLIC src/include)
-target_link_libraries(sysdarft_modular PUBLIC sysdarft_msg_map sysdarft_debug)
 
 add_subdirectory(example_modules)
 
 # Config:
-add_library(sysdarft_config OBJECT
-        src/config/config.cpp)
+add_library(sysdarft_config OBJECT src/config/config.cpp)
 target_include_directories(sysdarft_config PUBLIC src/include)
-target_link_libraries(sysdarft_config PUBLIC sysdarft_debug)
-
 add_custom_target(CopyConfigFiles ALL
         COMMAND cp "${CMAKE_CURRENT_SOURCE_DIR}/tests/good_example.conf" "${CMAKE_CURRENT_BINARY_DIR}"
         COMMAND cp "${CMAKE_CURRENT_SOURCE_DIR}/tests/bad_example.conf" "${CMAKE_CURRENT_BINARY_DIR}"
         VERBATIM
         DEPENDS tests/good_example.conf tests/bad_example.conf
-        COMMENT "Copying config files..."
-)
+        COMMENT "Copying config files...")
 
 # Global Event:
-add_library(sysdarft_global OBJECT
-        src/modular/global.cpp)
+add_library(sysdarft_global OBJECT src/modular/global.cpp)
 target_include_directories(sysdarft_global PUBLIC src/include)
-target_link_libraries(sysdarft_global PUBLIC sysdarft_msg_map)
 
 # CLI:
 find_package(PkgConfig REQUIRED)
@@ -143,21 +136,14 @@ add_library(sysdarft_cli OBJECT
         src/cli/utils.cpp
         src/cli/ModuleForest.cpp)
 target_include_directories(sysdarft_cli PUBLIC src/include ${READLINE_INCLUDE_DIRS})
-target_link_libraries(sysdarft_cli PUBLIC
-        sysdarft_debug
-        sysdarft_msg_map
-        sysdarft_modular
-        sysdarft_global
-        sysdarft_config
-        ${READLINE_LIBRARIES})
+target_link_libraries(sysdarft_cli PUBLIC ${READLINE_LIBRARIES})
 
 # Curses:
 find_package(Curses REQUIRED)
 add_library(sysdarft_ncurses OBJECT
         src/ui/ncurses.cpp)
 target_include_directories(sysdarft_ncurses PUBLIC src/include)
-target_link_libraries(sysdarft_ncurses PUBLIC sysdarft_debug ${CURSES_LIBRARIES} sysdarft_global)
-target_link_libraries(sysdarft_cli PUBLIC sysdarft_ncurses)
+target_link_libraries(sysdarft_ncurses PUBLIC ${CURSES_LIBRARIES})
 
 # Sysdarft Shared Library:
 add_library(sysdarft SHARED src/sysdarft.cpp)

@@ -6,7 +6,7 @@
 #include <mutex>
 #include <global_event.h>
 
-class Cli {
+class EXPORT Cli {
 private:
     void run();
 

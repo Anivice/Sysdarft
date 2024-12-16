@@ -3,6 +3,9 @@ project(Module C CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+set(CMAKE_CXX_VISIBILITY_PRESET default)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN 0)
 
 # Universal compiler and linker flags
 set(compiler_options
@@ -17,10 +20,10 @@ set(compiler_options
 
         # Debugging and stack protection
         -g3                                  # Maximum debug information, including macro expansions
-        -O0
+        -O3
         -fstack-usage                        # Generate stack usage info for each function
         -fstack-protector-all                # Protect all functions with a stack canary to prevent stack overflow attacks
-        #        -D_FORTIFY_SOURCE=2                  # Buffer overflow detection on safer libc functions (e.g., memcpy).
+        -D_FORTIFY_SOURCE=2                  # Buffer overflow detection on safer libc functions (e.g., memcpy).
         # You need to enable optimization for _FORTIFY_SOURCE to work!
         -gdwarf-4                            # Generate DWARF version 4 debug information
 
@@ -36,7 +39,7 @@ set(compiler_options
         # Code coverage options
         -fprofile-arcs                       # Enable code coverage instrumentation
         -ftest-coverage                      # Generate coverage test data
-        -lasan -lubsan
+        -lasan -lubsan -flto
 )
 
 set(linker_options
@@ -48,7 +51,7 @@ set(linker_options
         -Wl,-z,now                              # Fully resolve all symbols during the link time for extra safety
         -Wl,-z,noexecstack                      # Prevent execution of code on the stack (security hardening)
         -Wl,-z,defs                             # Ensure all symbols are defined, and prevent undefined symbols
-        -Wl,-O0
+        -Wl,-O3
 
         -gdwarf-4                               # Generate detailed debug information for the linker
         -fno-eliminate-unused-debug-types
@@ -66,7 +69,7 @@ set(linker_options
         # Code coverage options
         -fprofile-arcs                          # Enable code coverage instrumentation
         -ftest-coverage                         # Generate coverage test data
-        -lasan -lubsan
+        -lasan -lubsan -flto
 )
 
 add_compile_options(${compiler_options})
