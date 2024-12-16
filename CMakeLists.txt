@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Universal compiler and linker flags
 set(compiler_options
@@ -23,8 +24,8 @@ set(compiler_options
         -O0
         -fstack-usage                        # Generate stack usage info for each function
         -fstack-protector-all                # Protect all functions with a stack canary to prevent stack overflow attacks
-#        -D_FORTIFY_SOURCE=2                  # Buffer overflow detection on safer libc functions (e.g., memcpy).
-                                             # You need to enable optimization for _FORTIFY_SOURCE to work!
+        #        -D_FORTIFY_SOURCE=2                  # Buffer overflow detection on safer libc functions (e.g., memcpy).
+        # You need to enable optimization for _FORTIFY_SOURCE to work!
         -gdwarf-4                            # Generate DWARF version 4 debug information
 
         -fno-eliminate-unused-debug-types
@@ -39,7 +40,7 @@ set(compiler_options
         # Code coverage options
         -fprofile-arcs                       # Enable code coverage instrumentation
         -ftest-coverage                      # Generate coverage test data
-        -lasan -lubsan
+        -lasan -lubsan -fPIC --pie
 )
 
 set(linker_options
@@ -69,12 +70,13 @@ set(linker_options
         # Code coverage options
         -fprofile-arcs                          # Enable code coverage instrumentation
         -ftest-coverage                         # Generate coverage test data
-        -lasan -lubsan
+        -lasan -lubsan -fPIC --pie
 )
 
 add_compile_options(${compiler_options})
 add_link_options(${linker_options})
 
+# Read and process the information file
 set(information_file "${CMAKE_CURRENT_SOURCE_DIR}/sysdarft_info.txt")
 set_property(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         APPEND
@@ -85,58 +87,38 @@ string(REPLACE "\n" "\\n" SYSDARFT_INFO_CONTENT_ESCAPED "${SYSDARFT_INFO_CONTENT
 add_compile_definitions(SYSDARFT_VERSION="0.0.1")
 add_compile_definitions(SYSDARFT_INFORMATION="${SYSDARFT_INFO_CONTENT_ESCAPED}")
 
-# use ccache to significantly speed up compiling process
+# Use ccache to significantly speed up compiling process
 find_program(CCACHE_PROGRAM ccache REQUIRED)
 if(CCACHE_PROGRAM)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
 endif()
 
-enable_testing()
-
-function(add_unit_test
-        TARGET_NAME
-        TEST_FILE
-        LINKED_LIBRARIES
-)
-    add_executable(${TARGET_NAME} ${TEST_FILE})
-
-    foreach(lib IN LISTS LINKED_LIBRARIES)
-        target_link_libraries(${TARGET_NAME} PUBLIC ${lib})
-        add_dependencies(${TARGET_NAME} ${lib})
-    endforeach()
-
-    add_test(NAME "unit_test_${TARGET_NAME}"
-            COMMAND ${CMAKE_BINARY_DIR}/${TARGET_NAME}
-    )
-endfunction()
-
+# Define include directories globally (can be refined per target)
 include_directories(src/include)
 
 # Debug:
-add_library(sysdarft_debug SHARED
-        src/debug/debug.cpp src/include/debug.h src/include/debug.inl)
-add_unit_test(test.log tests/test.log.cpp sysdarft_debug)
-add_unit_test(test.sysdarft_error tests/test.sysdarft_error.cpp sysdarft_debug)
+add_library(sysdarft_debug OBJECT src/debug/debug.cpp)
+target_include_directories(sysdarft_debug PUBLIC src/include)
+
 
 # Message Map:
-add_library(sysdarft_msg_map STATIC src/include/msg_map.h)
-set_target_properties(sysdarft_msg_map PROPERTIES LINKER_LANGUAGE CXX)
+add_library(sysdarft_msg_map OBJECT src/modular/msg_map.cpp)
+target_include_directories(sysdarft_msg_map PUBLIC src/include)
 target_link_libraries(sysdarft_msg_map PUBLIC sysdarft_debug)
-add_unit_test(test.msgmap tests/test.msgmap.cpp sysdarft_msg_map)
 
 # Modular:
-add_library(sysdarft_modular SHARED
-        src/include/module.h src/modular/module.cpp)
+add_library(sysdarft_modular OBJECT
+        src/modular/module.cpp)
+target_include_directories(sysdarft_modular PUBLIC src/include)
 target_link_libraries(sysdarft_modular PUBLIC sysdarft_msg_map sysdarft_debug)
-add_unit_test(test.modular tests/test.modular.cpp sysdarft_modular)
 
 add_subdirectory(example_modules)
 
-# Config
-add_library(sysdarft_config SHARED
+# Config:
+add_library(sysdarft_config OBJECT
         src/config/config.cpp)
+target_include_directories(sysdarft_config PUBLIC src/include)
 target_link_libraries(sysdarft_config PUBLIC sysdarft_debug)
-add_unit_test(test.config tests/test.config.cpp sysdarft_config)
 
 add_custom_target(CopyConfigFiles ALL
         COMMAND cp "${CMAKE_CURRENT_SOURCE_DIR}/tests/good_example.conf" "${CMAKE_CURRENT_BINARY_DIR}"
@@ -146,21 +128,21 @@ add_custom_target(CopyConfigFiles ALL
         COMMENT "Copying config files..."
 )
 
-# Global Event
-add_library(sysdarft_global
-        SHARED src/include/global_event.h src/modular/global.cpp)
+# Global Event:
+add_library(sysdarft_global OBJECT
+        src/modular/global.cpp)
+target_include_directories(sysdarft_global PUBLIC src/include)
 target_link_libraries(sysdarft_global PUBLIC sysdarft_msg_map)
 
-# CLI
+# CLI:
 find_package(PkgConfig REQUIRED)
-add_library(sysdarft_cli SHARED
-        src/cli/cli.cpp src/include/cli.h src/cli/cli_local.h
-        src/cli/auto_completion.cpp src/cli/utils.cpp
-        src/cli/ModuleForest.cpp src/cli/ModuleForest.h)
 pkg_check_modules(READLINE REQUIRED readline)
-target_include_directories(sysdarft_cli PUBLIC ${READLINE_INCLUDE_DIRS})
-target_link_directories(sysdarft_cli PUBLIC ${READLINE_LIBRARY_DIRS})
-add_definitions(${READLINE_CFLAGS_OTHER})
+add_library(sysdarft_cli OBJECT
+        src/cli/cli.cpp
+        src/cli/auto_completion.cpp
+        src/cli/utils.cpp
+        src/cli/ModuleForest.cpp)
+target_include_directories(sysdarft_cli PUBLIC src/include ${READLINE_INCLUDE_DIRS})
 target_link_libraries(sysdarft_cli PUBLIC
         sysdarft_debug
         sysdarft_msg_map
@@ -168,17 +150,47 @@ target_link_libraries(sysdarft_cli PUBLIC
         sysdarft_global
         sysdarft_config
         ${READLINE_LIBRARIES})
-add_unit_test(test.cli tests/test.cli.cpp sysdarft_cli)
 
-# Curses
+# Curses:
 find_package(Curses REQUIRED)
-add_library(sysdarft_ncurses SHARED
-        src/ui/ncurses.cpp src/include/ui_curses.h)
+add_library(sysdarft_ncurses OBJECT
+        src/ui/ncurses.cpp)
+target_include_directories(sysdarft_ncurses PUBLIC src/include)
 target_link_libraries(sysdarft_ncurses PUBLIC sysdarft_debug ${CURSES_LIBRARIES} sysdarft_global)
 target_link_libraries(sysdarft_cli PUBLIC sysdarft_ncurses)
-add_unit_test(test.curses tests/test.curses.cpp sysdarft_ncurses)
 
-# Console
-add_executable(sysdarft src/main.cpp)
+# Sysdarft Shared Library:
+add_library(sysdarft SHARED src/sysdarft.cpp)
+target_include_directories(sysdarft PUBLIC src/include)
 target_link_libraries(sysdarft PUBLIC
-        sysdarft_debug sysdarft_msg_map sysdarft_modular sysdarft_config sysdarft_cli)
+        sysdarft_debug
+        sysdarft_msg_map
+        sysdarft_modular
+        sysdarft_config
+        sysdarft_global
+        sysdarft_cli
+        sysdarft_ncurses)
+
+enable_testing()
+
+# Function to add unit tests
+function(add_unit_test
+        TARGET_NAME
+        TEST_FILE
+)
+    add_executable(${TARGET_NAME} ${TEST_FILE})
+    target_link_libraries(${TARGET_NAME} PUBLIC sysdarft)
+    add_test(NAME "unit_test_${TARGET_NAME}" COMMAND $<TARGET_FILE:${TARGET_NAME}>)
+endfunction()
+
+add_unit_test(test.log tests/test.log.cpp)
+add_unit_test(test.sysdarft_error tests/test.sysdarft_error.cpp)
+add_unit_test(test.msgmap tests/test.msgmap.cpp)
+add_unit_test(test.modular tests/test.modular.cpp)
+add_unit_test(test.config tests/test.config.cpp)
+add_unit_test(test.cli tests/test.cli.cpp)
+add_unit_test(test.curses tests/test.curses.cpp)
+
+# Console Executable:
+add_executable(sysdarft-system src/main.cpp)
+target_link_libraries(sysdarft-system PUBLIC sysdarft)
