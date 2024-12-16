@@ -27,7 +27,7 @@ private:
     std::atomic<bool> monitor_input_exited = false;
     std::atomic<bool> running_thread_current_exited = false;
     std::atomic<bool> cursor_visibility = false; // 0 = invisible
-
+    std::atomic<bool> if_i_cleaned_up = true;
     std::atomic<int> char_at_cursor_position = ' ';
     std::atomic<int> cursor_char = '_';
 

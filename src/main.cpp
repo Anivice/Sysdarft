@@ -7,6 +7,7 @@
 #include <debug.h>
 #include <cli.h>
 #include <thread>
+#include <ui_curses.h>
 
 std::pair < std::map<std::string, std::string>, std::vector<std::string> >
 get_args(int argc, char **argv, struct option long_options[])
@@ -82,7 +83,12 @@ void print_version()
     << SYSDARFT_INFORMATION << std::endl;
 }
 
-
+class dummy_ {
+public:
+    void dummy_input_handler(int) {
+        return;
+    }
+} dummy;
 
 int main(int argc, char** argv)
 {
@@ -111,6 +117,22 @@ int main(int argc, char** argv)
     }
 
     Cli screen;
+    ui_curses curses;
+
+    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &dummy,
+        UI_INPUT_MONITOR_METHOD_NAME, &dummy_::dummy_input_handler);
+    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
+        UI_CLEANUP_METHOD_NAME, &ui_curses::cleanup);
+    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
+        UI_INITIALIZE_METHOD_NAME, &ui_curses::initialize);
+    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
+        UI_SET_CURSOR_METHOD_NAME, &ui_curses::set_cursor);
+    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
+        UI_GET_CURSOR_METHOD_NAME, &ui_curses::get_cursor);
+    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
+        UI_DISPLAY_CHAR_METHOD_NAME, &ui_curses::display_char);
+    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
+        UI_SET_CURSOR_VISIBILITY_METHOD_NAME, &ui_curses::set_cursor_visibility);
 
     while (true) {
         std::this_thread::sleep_for(std::chrono::hours(3600));

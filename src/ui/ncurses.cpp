@@ -92,6 +92,8 @@ void sig_handle(int sig)
 
 void ui_curses::initialize()
 {
+    if_i_cleaned_up = false;
+
     memory_access_mutex.lock();
     for (unsigned int y = 0; y < HEIGHT; y++)
     {
@@ -125,6 +127,10 @@ void ui_curses::initialize()
 
 void ui_curses::cleanup()
 {
+    if (if_i_cleaned_up) {
+        return;
+    }
+
     std::lock_guard lock(memory_access_mutex);
 
     monitor_input_status.store(false);

@@ -153,7 +153,10 @@ target_link_libraries(sysdarft_global PUBLIC sysdarft_msg_map)
 
 # CLI
 find_package(PkgConfig REQUIRED)
-add_library(sysdarft_cli SHARED src/cli/cli.cpp src/include/cli.h)
+add_library(sysdarft_cli SHARED
+        src/cli/cli.cpp src/include/cli.h src/cli/cli_local.h
+        src/cli/auto_completion.cpp src/cli/utils.cpp
+        src/cli/ModuleForest.cpp src/cli/ModuleForest.h)
 pkg_check_modules(READLINE REQUIRED readline)
 target_include_directories(sysdarft_cli PUBLIC ${READLINE_INCLUDE_DIRS})
 target_link_directories(sysdarft_cli PUBLIC ${READLINE_LIBRARY_DIRS})
