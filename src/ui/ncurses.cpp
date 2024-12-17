@@ -12,52 +12,38 @@ std::atomic<bool> needs_refresh;
 
 void ui_curses::run()
 {
-    // Target 30 FPS
-    constexpr int targetFPS = 30;
+    constexpr int targetFPS = 120;
     const auto frameDuration = std::chrono::milliseconds(1000 / targetFPS);
-    uint32_t current_frame_within_seconds = 0;
-    unsigned int new_cols = WIDTH, new_rows = HEIGHT;
 
     while (running_thread_current_status.load())
     {
         auto start = std::chrono::steady_clock::now();
-        current_frame_within_seconds++;
-
-        if (cursor_visibility && current_frame_within_seconds == 15)
-        {
-            std::lock_guard lock(memory_access_mutex);
-            video_memory[cursor_pos.x][cursor_pos.y] = cursor_char.load();
-            video_memory_changed = true;
-            char_at_cursor_pos_is_not_cursor = false;
-        }
-        else if (current_frame_within_seconds == 30)
-        {
-            current_frame_within_seconds = 0;
-            std::lock_guard lock(memory_access_mutex);
-            video_memory[cursor_pos.x][cursor_pos.y] = char_at_cursor_position.load();
-            video_memory_changed = true;
-            char_at_cursor_pos_is_not_cursor = true;
-        }
 
         if (needs_refresh.load())
         {
             needs_refresh.store(false);
 
-            // Ask ncurses to resize according to the new terminal size
+            // Get new dimensions
+            int new_rows, new_cols;
             getmaxyx(stdscr, new_rows, new_cols);
 
-            // If you must ensure the curses structures match the new size:
-            // You can check if resizing is needed and then call:
-            resize_term(new_rows, new_cols);
+            // Adjust ncurses internal structures
+            if (is_term_resized(new_rows, new_cols)) {
+                resize_term(new_rows, new_cols);
+            }
 
-            // After resizing, clear and redraw everything:
+            // Clear and redraw
             clear();
-            // Redraw from video_memory (up to the new_cols and new_rows,
-            // or the original WIDTH and HEIGHT if still valid)
-            for (unsigned int y = 0; y < std::min(static_cast<unsigned int>(HEIGHT), new_rows); y++) {
-                for (unsigned int x = 0; x < std::min(static_cast<unsigned int>(WIDTH), new_cols); x++) {
-                    mvaddch(y, x, video_memory[x][y]);
+            {
+                std::lock_guard lock(memory_access_mutex);
+                // Draw only up to new_rows, new_cols to avoid out-of-bounds
+                for (unsigned int y = 0; y < HEIGHT && y < (unsigned int)new_rows; y++) {
+                    for (unsigned int x = 0; x < WIDTH && x < (unsigned int)new_cols; x++) {
+                        mvaddch(y, x, video_memory[x][y]);
+                    }
                 }
+
+                move(cursor_pos.y, cursor_pos.x);
             }
 
             refresh();
@@ -67,21 +53,24 @@ void ui_curses::run()
         {
             std::lock_guard lock(memory_access_mutex);
 
-            for (unsigned int y = 0; y < std::min(static_cast<unsigned int>(HEIGHT), new_rows); y++) {
-                for (unsigned int x = 0; x < std::min(static_cast<unsigned int>(WIDTH), new_cols); x++) {
+            // Get current window size to avoid out-of-bounds
+            int max_rows, max_cols;
+            getmaxyx(stdscr, max_rows, max_cols);
+
+            for (unsigned int y = 0; y < HEIGHT && y < (unsigned int)max_rows; y++) {
+                for (unsigned int x = 0; x < WIDTH && x < (unsigned int)max_cols; x++) {
                     mvaddch(y, x, video_memory[x][y]);
                 }
             }
 
-            curs_set(FALSE);
+            curs_set(TRUE);
+            move(cursor_pos.y, cursor_pos.x);
             refresh();
             video_memory_changed.store(false);
-            needs_refresh.store(false);
         }
 
         auto end = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
         if (auto sleepDuration = frameDuration - elapsed;
             sleepDuration > std::chrono::milliseconds(0))
         {
@@ -94,17 +83,23 @@ void ui_curses::run()
 
 void ui_curses::monitor_input()
 {
+    nodelay(stdscr, TRUE);
+
     while (monitor_input_status.load())
     {
-        nodelay(stdscr, TRUE);
         int input = getch();
+
         if (input == KEY_RESIZE) {
             needs_refresh.store(true);
+        } else if (input == ERR) {
+            continue;
+        } else {
+            GlobalEventProcessor(UI_INSTANCE_NAME, UI_INPUT_MONITOR_METHOD_NAME)(input);
         }
-        // Ensure thread-safety of event processor as needed
-        GlobalEventProcessor(UI_INSTANCE_NAME, UI_INPUT_MONITOR_METHOD_NAME)(input);
+
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+
     monitor_input_exited.store(true);
 }
 
@@ -113,7 +108,7 @@ void ui_curses::start_curses()
     initscr();
     noecho();
     cbreak();
-    curs_set(FALSE);
+    curs_set(TRUE);
     keypad(stdscr, TRUE);
 }
 
@@ -142,7 +137,15 @@ void ui_curses::initialize()
     start_curses();
     refresh();
 
-    signal(SIGWINCH, sig_handle);
+    // Setup sigaction for SIGWINCH
+    struct sigaction sa{};
+    sa.sa_handler = sig_handle;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+
+    if (sigaction(SIGWINCH, &sa, nullptr) == -1) {
+        throw SysdarftBaseError("Installing signal handler failed!");
+    }
 
     set_cursor(0, 0);
     set_cursor_visibility(false);
@@ -185,14 +188,6 @@ void ui_curses::cleanup()
 void ui_curses::set_cursor(const int x, const int y)
 {
     std::lock_guard lock(memory_access_mutex);
-
-    if (!char_at_cursor_pos_is_not_cursor) {
-        video_memory[cursor_pos.x][cursor_pos.y] = char_at_cursor_position; // write char from backup
-    }
-
-    char_at_cursor_position = video_memory[x][y];
-    video_memory_changed = true;
-
     // update position
     cursor_pos.x = x;
     cursor_pos.y = y;
@@ -207,27 +202,12 @@ cursor_position_t ui_curses::get_cursor()
 void ui_curses::display_char(int x, int y, int ch)
 {
     std::lock_guard lock(memory_access_mutex);
-
-    if (x == cursor_pos.x && y == cursor_pos.y)
-    {
-        // If we're writing at the cursor position
-        if (char_at_cursor_pos_is_not_cursor) {
-            video_memory[x][y] = ch;
-        } else {
-            char_at_cursor_position = ch;
-        }
-    }
-    else
-    {
-        // If we're writing at a position that is not the cursor position
-        video_memory[x][y] = ch;
-    }
-
+    video_memory[x][y] = ch;
     video_memory_changed.store(true);
 }
 
 void ui_curses::set_cursor_visibility(bool visible)
 {
     std::lock_guard lock(memory_access_mutex);
-    cursor_visibility = visible;
+    curs_set(visible);
 }

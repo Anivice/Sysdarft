@@ -5,10 +5,6 @@ class input_processor {
 public:
     void input_monitor(int key)
     {
-        if (key == ERR) {
-            return;
-        }
-
         auto cursor_pos = std::any_cast<cursor_position_t>(
             GlobalEventProcessor(UI_INSTANCE_NAME, UI_GET_CURSOR_METHOD_NAME)());
         GlobalEventProcessor(UI_INSTANCE_NAME, UI_DISPLAY_CHAR_METHOD_NAME)(
@@ -54,6 +50,6 @@ int main()
 
     GlobalEventProcessor(UI_INSTANCE_NAME, UI_INITIALIZE_METHOD_NAME)();
     GlobalEventProcessor(UI_INSTANCE_NAME, UI_SET_CURSOR_VISIBILITY_METHOD_NAME)(true);
-    sleep(3600);
+    // __asm__ __volatile__("jmp .");
     GlobalEventProcessor(UI_INSTANCE_NAME, UI_CLEANUP_METHOD_NAME)();
 }
