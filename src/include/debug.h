@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <map>
 #include <unordered_map>
+#include <pthread.h>
 
 #define EXPORT __attribute__((visibility("default")))
 
@@ -451,6 +452,10 @@ class EXPORT BacktraceError final : public SysdarftBaseError
         false)
     { }
 };
+
+inline void set_thread_name(const std::string& name) {
+    pthread_setname_np(pthread_self(), name.c_str());
+}
 
 #include "debug.inl"
 

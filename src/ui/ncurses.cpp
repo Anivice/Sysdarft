@@ -7,11 +7,13 @@
 #include <termios.h>
 #include <atomic>
 #include <ncurses.h>
+#include <string>
 
 std::atomic<bool> needs_refresh;
 
 void ui_curses::run()
 {
+    set_thread_name("UI Runner");
     constexpr int targetFPS = 120;
     const auto frameDuration = std::chrono::milliseconds(1000 / targetFPS);
 
@@ -43,7 +45,8 @@ void ui_curses::run()
                     }
                 }
 
-                move(cursor_pos.y, cursor_pos.x);
+                auto [x, y] = cursor_pos.load();
+                move(y, x);
             }
 
             refresh();
@@ -64,7 +67,8 @@ void ui_curses::run()
             }
 
             curs_set(TRUE);
-            move(cursor_pos.y, cursor_pos.x);
+            auto [x, y] = cursor_pos.load();
+            move(y, x);
             refresh();
             video_memory_changed.store(false);
         }
@@ -83,6 +87,7 @@ void ui_curses::run()
 
 void ui_curses::monitor_input()
 {
+    set_thread_name("UI Input Monitor");
     nodelay(stdscr, TRUE);
 
     while (monitor_input_status.load())
@@ -112,11 +117,61 @@ void ui_curses::start_curses()
     keypad(stdscr, TRUE);
 }
 
+// Define the request handler type for clarity
+using ReqHandler = std::function<void(int)>;
+
+// RequestHandler class to manage rate limiting
+class RequestHandler {
+public:
+    // Constructor takes the original handler and the masking duration
+    RequestHandler(ReqHandler handler, std::chrono::milliseconds mask_duration)
+        : handler_(std::move(handler)),
+          mask_duration_(mask_duration),
+          last_invocation_time_(std::chrono::steady_clock::time_point::min()) {}
+
+    // Operator() to handle incoming requests
+    void operator()(int request) {
+        auto now = std::chrono::steady_clock::now();
+
+        // Lock the mutex to ensure thread-safe access to last_invocation_time_
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        // Check if enough time has passed since the last invocation
+        if (now - last_invocation_time_ >= mask_duration_) {
+            // Update the last invocation time
+            last_invocation_time_ = now;
+
+            // Unlock before calling the handler to prevent blocking other requests
+            // This is achieved by creating a temporary copy of the handler
+            // and releasing the lock before invoking it
+            ReqHandler current_handler = handler_;
+            lock.~lock_guard(); // Explicitly release the lock
+
+            // Call the original handler outside the locked section
+            current_handler(request);
+        }
+        // If the request arrives within the mask_duration_, it is ignored
+    }
+
+private:
+    ReqHandler handler_;                                // Original handler
+    std::chrono::milliseconds mask_duration_;           // Masking duration
+    std::chrono::steady_clock::time_point last_invocation_time_; // Last invocation timestamp
+    std::mutex mutex_;                                   // Mutex for thread safety
+};
+
 void sig_handle(int sig)
 {
     if (sig == SIGWINCH) {
         needs_refresh.store(true);
     }
+}
+
+RequestHandler handler(sig_handle, std::chrono::milliseconds(500));
+
+void sig_handle_proxy(int sig)
+{
+    handler(sig);
 }
 
 void ui_curses::initialize()
@@ -139,7 +194,7 @@ void ui_curses::initialize()
 
     // Setup sigaction for SIGWINCH
     struct sigaction sa{};
-    sa.sa_handler = sig_handle;
+    sa.sa_handler = sig_handle_proxy;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
 
@@ -189,14 +244,14 @@ void ui_curses::set_cursor(const int x, const int y)
 {
     std::lock_guard lock(memory_access_mutex);
     // update position
-    cursor_pos.x = x;
-    cursor_pos.y = y;
+    const cursor_position_t pos = { .x = x, .y = y };
+    cursor_pos.store(pos);
 }
 
 cursor_position_t ui_curses::get_cursor()
 {
     std::lock_guard lock(memory_access_mutex);
-    return { .x = cursor_pos.x, .y = cursor_pos.y };
+    return cursor_pos.load();
 }
 
 void ui_curses::display_char(int x, int y, int ch)

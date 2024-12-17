@@ -83,15 +83,10 @@ void print_version()
     << SYSDARFT_INFORMATION << std::endl;
 }
 
-class dummy_ {
-public:
-    void dummy_input_handler(int) {
-        return;
-    }
-} dummy;
-
 int main(int argc, char** argv)
 {
+    set_thread_name("Sysdarft Watcher");
+
     static struct option long_options[] = {
         {"help",        no_argument,       nullptr, 'h'},
         {"version",     no_argument,       nullptr, 'v'},
@@ -117,25 +112,9 @@ int main(int argc, char** argv)
     }
 
     Cli screen;
-    ui_curses curses;
 
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &dummy,
-        UI_INPUT_MONITOR_METHOD_NAME, &dummy_::dummy_input_handler);
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-        UI_CLEANUP_METHOD_NAME, &ui_curses::cleanup);
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-        UI_INITIALIZE_METHOD_NAME, &ui_curses::initialize);
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-        UI_SET_CURSOR_METHOD_NAME, &ui_curses::set_cursor);
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-        UI_GET_CURSOR_METHOD_NAME, &ui_curses::get_cursor);
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-        UI_DISPLAY_CHAR_METHOD_NAME, &ui_curses::display_char);
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-        UI_SET_CURSOR_VISIBILITY_METHOD_NAME, &ui_curses::set_cursor_visibility);
-
-    while (true) {
-        std::this_thread::sleep_for(std::chrono::hours(3600));
+    while (GlobalEventNotifier != GLOBAL_QUIT_EVENT) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     return EXIT_SUCCESS;

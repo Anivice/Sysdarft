@@ -21,7 +21,7 @@ public:
     }
 };
 
-int main()
+int main(int argc, char**)
 {
     debug::verbose = true;
     input_processor processor;
@@ -50,6 +50,8 @@ int main()
 
     GlobalEventProcessor(UI_INSTANCE_NAME, UI_INITIALIZE_METHOD_NAME)();
     GlobalEventProcessor(UI_INSTANCE_NAME, UI_SET_CURSOR_VISIBILITY_METHOD_NAME)(true);
-    // __asm__ __volatile__("jmp .");
+    if (argc >= 2) {
+        __asm__ __volatile__("jmp .");
+    }
     GlobalEventProcessor(UI_INSTANCE_NAME, UI_CLEANUP_METHOD_NAME)();
 }

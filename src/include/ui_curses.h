@@ -17,16 +17,16 @@ struct cursor_position_t {
 
 class EXPORT ui_curses {
 private:
-    cursor_position_t cursor_pos = {};
-
     std::array< std::array<int, HEIGHT>, WIDTH> video_memory = { 0 };
     std::mutex memory_access_mutex;
+
     std::atomic<bool> video_memory_changed = true;
     std::atomic<bool> monitor_input_status = true;
     std::atomic<bool> running_thread_current_status = true;
     std::atomic<bool> monitor_input_exited = false;
     std::atomic<bool> running_thread_current_exited = false;
     std::atomic<bool> if_i_cleaned_up = true;
+    std::atomic < cursor_position_t > cursor_pos = {};
 
     void start_curses();
     void run();

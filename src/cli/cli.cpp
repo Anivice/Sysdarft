@@ -38,6 +38,7 @@ void handle_sigint(int signum)
 
 void Cli::run()
 {
+    set_thread_name("Sysdarft Console");
     // Setup sigaction for SIGINT
     struct sigaction sa{};
     sa.sa_handler = handle_sigint;
@@ -146,7 +147,7 @@ public:
         GlobalEventProcessor(UI_INSTANCE_NAME, UI_CLEANUP_METHOD_NAME)();
 
         debug::log("All stages completed!\n");
-        exit(EXIT_SUCCESS);
+        GlobalEventNotifier = GLOBAL_QUIT_EVENT;
     }
 } cleanup_handler;
 
@@ -397,6 +398,13 @@ public:
     }
 } input_processor;
 
+class dummy_ {
+public:
+    void dummy_input_handler(int) {
+        return;
+    }
+} dummy;
+
 Cli::Cli()
 {
     // input
@@ -411,6 +419,21 @@ Cli::Cli()
     // set_config
     GlobalEventProcessor.install_instance(GLOBAL_INSTANCE_NAME, &GlobalConfig,
         GLOBAL_SET_CONFIG_METHOD_NAME, &GlobalConfig_::set_config);
+
+    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &dummy,
+        UI_INPUT_MONITOR_METHOD_NAME, &dummy_::dummy_input_handler);
+    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
+        UI_CLEANUP_METHOD_NAME, &ui_curses::cleanup);
+    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
+        UI_INITIALIZE_METHOD_NAME, &ui_curses::initialize);
+    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
+        UI_SET_CURSOR_METHOD_NAME, &ui_curses::set_cursor);
+    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
+        UI_GET_CURSOR_METHOD_NAME, &ui_curses::get_cursor);
+    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
+        UI_DISPLAY_CHAR_METHOD_NAME, &ui_curses::display_char);
+    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
+        UI_SET_CURSOR_VISIBILITY_METHOD_NAME, &ui_curses::set_cursor_visibility);
 
     std::thread CliWorkThread(&Cli::run, this);
     CliWorkThread.detach();

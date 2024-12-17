@@ -1,6 +1,7 @@
 #ifndef GLOBAL_EVENT_H
 #define GLOBAL_EVENT_H
 
+#include <atomic>
 #include <msg_map.h>
 #include <mutex>
 #include <vector>
@@ -22,7 +23,10 @@
 #define UI_SET_CURSOR_VISIBILITY_METHOD_NAME    "set_cursor_visibility"
 #define UI_INPUT_MONITOR_METHOD_NAME            "input_monitor"
 
+#define GLOBAL_QUIT_EVENT 0x7C00
+
 extern EXPORT MsgMap GlobalEventProcessor;
+extern EXPORT std::atomic < int > GlobalEventNotifier;
 
 extern class EXPORT GlobalConfig_ {
 private:
