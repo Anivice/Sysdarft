@@ -79,7 +79,7 @@ void print_help(const char * program_name)
 void print_version()
 {
     std::cout
-    << "Sysdarft 64bit Hypothetical Architecture Version" << SYSDARFT_VERSION << std::endl
+    << "Sysdarft 64bit Hypothetical Architecture Version " << SYSDARFT_VERSION << std::endl
     << SYSDARFT_INFORMATION << std::endl;
 }
 

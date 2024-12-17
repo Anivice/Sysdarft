@@ -16,6 +16,7 @@ void ui_curses::run()
     constexpr int targetFPS = 30;
     const auto frameDuration = std::chrono::milliseconds(1000 / targetFPS);
     uint32_t current_frame_within_seconds = 0;
+    unsigned int new_cols = WIDTH, new_rows = HEIGHT;
 
     while (running_thread_current_status.load())
     {
@@ -38,12 +39,36 @@ void ui_curses::run()
             char_at_cursor_pos_is_not_cursor = true;
         }
 
-        if (needs_refresh.load() || video_memory_changed.load())
+        if (needs_refresh.load())
+        {
+            needs_refresh.store(false);
+
+            // Ask ncurses to resize according to the new terminal size
+            getmaxyx(stdscr, new_rows, new_cols);
+
+            // If you must ensure the curses structures match the new size:
+            // You can check if resizing is needed and then call:
+            resize_term(new_rows, new_cols);
+
+            // After resizing, clear and redraw everything:
+            clear();
+            // Redraw from video_memory (up to the new_cols and new_rows,
+            // or the original WIDTH and HEIGHT if still valid)
+            for (unsigned int y = 0; y < std::min(static_cast<unsigned int>(HEIGHT), new_rows); y++) {
+                for (unsigned int x = 0; x < std::min(static_cast<unsigned int>(WIDTH), new_cols); x++) {
+                    mvaddch(y, x, video_memory[x][y]);
+                }
+            }
+
+            refresh();
+        }
+
+        if (video_memory_changed.load())
         {
             std::lock_guard lock(memory_access_mutex);
 
-            for (unsigned int y = 0; y < HEIGHT; y++) {
-                for (unsigned int x = 0; x < WIDTH; x++) {
+            for (unsigned int y = 0; y < std::min(static_cast<unsigned int>(HEIGHT), new_rows); y++) {
+                for (unsigned int x = 0; x < std::min(static_cast<unsigned int>(WIDTH), new_cols); x++) {
                     mvaddch(y, x, video_memory[x][y]);
                 }
             }
@@ -73,6 +98,9 @@ void ui_curses::monitor_input()
     {
         nodelay(stdscr, TRUE);
         int input = getch();
+        if (input == KEY_RESIZE) {
+            needs_refresh.store(true);
+        }
         // Ensure thread-safety of event processor as needed
         GlobalEventProcessor(UI_INSTANCE_NAME, UI_INPUT_MONITOR_METHOD_NAME)(input);
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -80,13 +108,19 @@ void ui_curses::monitor_input()
     monitor_input_exited.store(true);
 }
 
+void ui_curses::start_curses()
+{
+    initscr();
+    noecho();
+    cbreak();
+    curs_set(FALSE);
+    keypad(stdscr, TRUE);
+}
+
 void sig_handle(int sig)
 {
     if (sig == SIGWINCH) {
-        endwin();
-        refresh();
-        clear();
-        needs_refresh = true;
+        needs_refresh.store(true);
     }
 }
 
@@ -105,13 +139,10 @@ void ui_curses::initialize()
     memory_access_mutex.unlock();
 
     // Initialize ncurses
-    initscr();
-    noecho();
-    cbreak();
-    curs_set(FALSE);
-    keypad(stdscr, TRUE);
+    start_curses();
+    refresh();
 
-    signal(SIGWINCH, SIG_IGN);
+    signal(SIGWINCH, sig_handle);
 
     set_cursor(0, 0);
     set_cursor_visibility(false);
@@ -141,11 +172,14 @@ void ui_curses::cleanup()
     for (uint32_t try_ = 0; try_ < 100; try_++)
     {
         if (running_thread_current_exited.load() && monitor_input_exited.load()) {
-            break;
+            debug::log("Ncurses normal quit...\n");
+            return;
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+
+    debug::log("Ncurses waiting for quit timed out!\n");
 }
 
 void ui_curses::set_cursor(const int x, const int y)

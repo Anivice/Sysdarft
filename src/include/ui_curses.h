@@ -32,6 +32,7 @@ private:
     std::atomic<int> char_at_cursor_position = ' ';
     std::atomic<int> cursor_char = '_';
 
+    void start_curses();
     void run();
     void monitor_input();
 
