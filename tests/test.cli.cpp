@@ -1,6 +1,7 @@
 #include <debug.h>
 #include <cli.h>
 #include <thread>
+#include <global.h>
 
 int main()
 {

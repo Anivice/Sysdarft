@@ -1,4 +1,4 @@
-#include <global_event.h>
+#include <global.h>
 
 MsgMap GlobalEventProcessor;
 std::mutex GlobalEventMutex;

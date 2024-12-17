@@ -435,6 +435,6 @@ Cli::Cli()
     GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
         UI_SET_CURSOR_VISIBILITY_METHOD_NAME, &ui_curses::set_cursor_visibility);
 
-    std::thread CliWorkThread(&Cli::run, this);
+    CliWorkThread = std::thread(&Cli::run, this);
     CliWorkThread.detach();
 }

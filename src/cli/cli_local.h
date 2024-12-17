@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <module.h>
+#include <global.h>
 
 // A structure for argument behavior
 struct ArgumentInfo {

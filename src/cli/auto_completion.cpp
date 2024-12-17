@@ -22,8 +22,8 @@ const CommandInfo* find_command_info(const std::string& name)
 // A helper function to produce dynamic completions based on command context
 // Here we customize results depending on previously entered arguments.
 std::vector<std::string> get_dynamic_completions(const std::string& cmd_name,
-                                                 const std::vector<std::string>& words,
-                                                 int arg_index)
+                                                 const std::vector<std::string>& /* words */,
+                                                 int /* arg_index */)
 {
     std::vector<std::string> results;
 

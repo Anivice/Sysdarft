@@ -141,7 +141,7 @@ target_link_libraries(sysdarft_cli PUBLIC ${READLINE_LIBRARIES})
 # Curses:
 find_package(Curses REQUIRED)
 add_library(sysdarft_ncurses OBJECT
-        src/ui/ncurses.cpp)
+        src/ui/ui_curses.cpp)
 target_include_directories(sysdarft_ncurses PUBLIC src/include)
 target_link_libraries(sysdarft_ncurses PUBLIC ${CURSES_LIBRARIES})
 

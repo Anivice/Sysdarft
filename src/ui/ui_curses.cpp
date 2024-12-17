@@ -1,7 +1,7 @@
 #include <ui_curses.h>
 #include <thread>
 #include <chrono>
-#include <global_event.h>
+#include <global.h>
 #include <csignal>
 #include <unistd.h>
 #include <termios.h>
@@ -238,6 +238,7 @@ void ui_curses::cleanup()
     }
 
     debug::log("Ncurses waiting for quit timed out!\n");
+    if_i_cleaned_up = true;
 }
 
 void ui_curses::set_cursor(const int x, const int y)

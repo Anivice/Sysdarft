@@ -1,5 +1,5 @@
 #include <ui_curses.h>
-#include <global_event.h>
+#include <global.h>
 
 class input_processor {
 public:
