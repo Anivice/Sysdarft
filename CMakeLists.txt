@@ -180,3 +180,6 @@ add_unit_test(test.curses tests/test.curses.cpp)
 # Console Executable:
 add_executable(sysdarft-system src/main.cpp)
 target_link_libraries(sysdarft-system PUBLIC sysdarft)
+
+link_libraries(sysdarft)
+add_subdirectory(gui_module)

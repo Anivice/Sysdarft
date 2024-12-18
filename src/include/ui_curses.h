@@ -6,11 +6,7 @@
 #include <atomic>
 #include <ncurses.h>
 #include <debug.h>
-
-struct cursor_position_t {
-    int x;
-    int y;
-};
+#include <global.h>
 
 #define WIDTH   127
 #define HEIGHT  31
@@ -28,7 +24,7 @@ private:
     std::atomic<bool> if_i_cleaned_up = true;
     std::atomic < cursor_position_t > cursor_pos = {};
 
-    void start_curses();
+    static void start_curses();
     void run();
     void monitor_input();
 

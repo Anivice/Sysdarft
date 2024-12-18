@@ -177,6 +177,8 @@ void sig_handle_proxy(int sig)
 void ui_curses::initialize()
 {
     if_i_cleaned_up = false;
+    running_thread_current_exited = false;
+    monitor_input_exited = false;
 
     memory_access_mutex.lock();
     for (unsigned int y = 0; y < HEIGHT; y++)

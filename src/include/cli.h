@@ -13,7 +13,6 @@ private:
 
     std::string last_command;
     std::mutex access_mutex;
-    ui_curses curses;
     std::thread CliWorkThread;
 public:
     Cli();

@@ -206,23 +206,30 @@ public:
         debug::log("Loading module: ", module_path, "...\n");
         try {
             Module module(module_path);
-            auto deps = std::any_cast<std::vector<std::string>>(
-                module.call<std::vector<std::string>>("module_dependencies"));
 
-            for (const auto & dep : deps)
-            {
-                if (!loaded_modules.contains(dep)) {
-                    debug::log("Module dependency ", dep, " missing!\n");
-                    module.close_only();
-                    return;
+            try {
+                auto deps = std::any_cast<std::vector<std::string>>(
+                    module.call<std::vector<std::string>>("module_dependencies"));
+
+                for (const auto & dep : deps)
+                {
+                    if (!loaded_modules.contains(dep)) {
+                        debug::log("Module dependency ", dep, " missing!\n");
+                        module.close_only();
+                        return;
+                    }
                 }
-            }
 
-            module.init();
-            module.disable_delete();
-            loaded_modules.emplace(module_name, module);
-            module_list_reference.emplace(module_name, deps);
-            debug::log("Module '", module_name, "' loaded.\n");
+                module.init();
+                module.disable_delete();
+                loaded_modules.emplace(module_name, module);
+                module_list_reference.emplace(module_name, deps);
+                debug::log("Module '", module_name, "' loaded.\n");
+            } catch (...) {
+                debug::log("Loading module '", module_name, "' failed!\n");
+                module.close_only();
+                throw;
+            }
         } catch (const LibraryLoadError & err) {
             if (debug::verbose) {
                 debug::log("Library load error:\n", err.what());
@@ -398,7 +405,7 @@ public:
     }
 } input_processor;
 
-class dummy_ {
+class backend {
 public:
     void dummy_input_handler(int) {
         return;
@@ -421,7 +428,7 @@ Cli::Cli()
         GLOBAL_SET_CONFIG_METHOD_NAME, &GlobalConfig_::set_config);
 
     GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &dummy,
-        UI_INPUT_MONITOR_METHOD_NAME, &dummy_::dummy_input_handler);
+        UI_INPUT_MONITOR_METHOD_NAME, &backend::dummy_input_handler);
     GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
         UI_CLEANUP_METHOD_NAME, &ui_curses::cleanup);
     GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,

@@ -7,12 +7,19 @@
 #include <vector>
 #include <string>
 #include <config.h>
+#include <debug.h>
 
 #define GLOBAL_INSTANCE_NAME            "Global"
 #define GLOBAL_DESTROY_METHOD_NAME      "destroy"
 #define GLOBAL_INPUT_METHOD_NAME        "Input"
 #define GLOBAL_GET_CONFIG_METHOD_NAME   "get_config"
 #define GLOBAL_SET_CONFIG_METHOD_NAME   "set_config"
+
+struct cursor_position_t
+{
+    int x;
+    int y;
+};
 
 #define UI_INSTANCE_NAME                        "UI"
 #define UI_CLEANUP_METHOD_NAME                  "cleanup"
@@ -25,8 +32,12 @@
 
 #define GLOBAL_QUIT_EVENT 0x7C00
 
+// avoid cross-inclusion
+class ui_curses;
+
 extern EXPORT MsgMap GlobalEventProcessor;
 extern EXPORT std::atomic < int > GlobalEventNotifier;
+extern EXPORT ui_curses curses;
 
 extern class EXPORT GlobalConfig_ {
 private:
