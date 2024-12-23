@@ -23,7 +23,8 @@
 
 #define EXPORT __attribute__((visibility("default")))
 
-struct EXPORT Number {
+struct EXPORT Number
+{
     enum Type { NaN, NumberType, FloatType } type { };
     union {
         __uint128_t unsigned_number;
@@ -31,11 +32,6 @@ struct EXPORT Number {
         long double float_number;
     } number { };
 };
-
-Number EXPORT strToNumber(const std::string& str);
-std::string EXPORT replaceAsterisks(const std::string& input, const std::string &target, const std::string &replacement);
-std::vector<std::string> EXPORT lines_to_words(const std::string& input, const std::vector<char>& delimiters);
-std::string EXPORT toUpperCaseTransform(const std::string& input);
 
 // Initialize the instruction to opcode mapping
 const std::unordered_map<std::string, std::map < std::string /* Entry Name */, uint64_t /* Entry Value */ >> instructionMap =

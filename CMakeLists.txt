@@ -23,10 +23,10 @@ set(compiler_options
 
         # Debugging and stack protection
         -g3                                  # Maximum debug information, including macro expansions
-        -O1
+        -O0
         -fstack-usage                        # Generate stack usage info for each function
         -fstack-protector-all                # Protect all functions with a stack canary to prevent stack overflow attacks
-        -D_FORTIFY_SOURCE=2                  # Buffer overflow detection on safer libc functions (e.g., memcpy).
+        #-D_FORTIFY_SOURCE=2                  # Buffer overflow detection on safer libc functions (e.g., memcpy).
         # You need to enable optimization for _FORTIFY_SOURCE to work!
         -gdwarf-4                            # Generate DWARF version 4 debug information
 
@@ -54,7 +54,7 @@ set(linker_options
         -Wl,-z,now                              # Fully resolve all symbols during the link time for extra safety
         -Wl,-z,noexecstack                      # Prevent execution of code on the stack (security hardening)
         -Wl,-z,defs                             # Ensure all symbols are defined, and prevent undefined symbols
-        -Wl,-O1
+        -Wl,-O0
 
         -gdwarf-4                               # Generate detailed debug information for the linker
         -fno-eliminate-unused-debug-types
@@ -181,7 +181,13 @@ add_unit_test(test.curses tests/test.curses.cpp)
 add_executable(sysdarft-system src/main.cpp)
 target_link_libraries(sysdarft-system PUBLIC sysdarft)
 
-add_subdirectory(utils)
+# Assembler
+add_executable(assembler
+        utils/Assembler/encode.target.cpp)
+target_include_directories(assembler PUBLIC utils/shared src/include)
+target_link_libraries(assembler PUBLIC sysdarft)
+#add_unit_test(test.encode.target utils/tests/test.encode.target.cpp)
+#target_include_directories(test.encode.target PUBLIC utils/shared)
 
 # Modules
 link_libraries(sysdarft)

@@ -1,0 +1,6 @@
+#ifndef ENCODE_TARGET_H
+#define ENCODE_TARGET_H
+
+
+
+#endif //ENCODE_TARGET_H
