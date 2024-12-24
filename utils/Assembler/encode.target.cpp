@@ -10,7 +10,6 @@
 #include <any>
 #include <cctype>
 #include <iomanip>
-#include <utility>
 
 constexpr uint8_t REGISTER_PREFIX= 0x01;
 constexpr uint8_t CONSTANT_PREFIX= 0x02;
@@ -18,8 +17,9 @@ constexpr uint8_t MEMORY_PREFIX= 0x03;
 
 // Define regex patterns
 const std::regex register_pattern(R"(^%(R[0-7]|EXR[0-7]|HER[0-7]|FER[0-7])$)");
-const std::regex constant_pattern(R"(^\$([8]|[1][6]|[3][2]|[6][4])\((.*)\)$)");
+const std::regex constant_pattern(R"(^\$\((.*)\)$)");
 const std::regex memory_pattern(R"(^\*([1]|[2]|[4]|[8]|[1][6])\((.*),(.*),(.*)\)$)");
+std::regex base16_pattern(R"(0x[0-9A-Fa-f]+)");
 
 struct parsed_target_t
 {
@@ -94,15 +94,20 @@ parsed_target_t parse(std::string input)
     parsed_target_t result { };
 
     // if it is a register
-    if (is_valid_register(input)) {
-        result.RegisterName = input.c_str() + 1; // remove '%'
+    if (is_valid_register(input))
+    {
+        result.RegisterName = input;
         result.TargetType = parsed_target_t::REGISTER;
         return result;
-    } else if (is_valid_constant(input)) {
+    }
+    else if (is_valid_constant(input))
+    {
         result.ConstantExpression = input;
         result.TargetType = parsed_target_t::CONSTANT;
         return result;
-    } else if (is_valid_memory(input)) {
+    }
+    else if (is_valid_memory(input))
+    {
         if (std::smatch matches; std::regex_search(input, matches, memory_pattern))
         {
             if (matches.size() != 5) {
@@ -123,17 +128,56 @@ parsed_target_t parse(std::string input)
     return result;
 }
 
+void process_base16(std::string & input)
+{
+    std::vector < std::pair < std::string, uint64_t > > data;
+    auto replace_all = [&input](const std::string & target, const std::string & replacement)
+    {
+        if (target.empty()) return; // Avoid infinite loop if target is empty
+
+        size_t pos = 0;
+        while ((pos = input.find(target, pos)) != std::string::npos) {
+            input.replace(pos, target.length(), replacement);
+            pos += replacement.length(); // Move past the replacement to avoid infinite loop
+        }
+    };
+
+    // fix the uppercase conversion
+    replace_all("0X", "0x");
+
+    // Create iterators to traverse all matches
+    const auto matches_begin = std::sregex_iterator(input.begin(), input.end(), base16_pattern);
+    const auto matches_end = std::sregex_iterator();
+
+    // Iterate over all matches and process them
+    for (std::sregex_iterator i = matches_begin; i != matches_end; ++i)
+    {
+        const std::smatch& match = *i;
+        std::string base16_number_str = match.str();
+
+        // Convert the hexadecimal string to an unsigned 64-bit integer
+        uint64_t number = strtoull(base16_number_str.c_str(), nullptr, 16);
+
+        // Store the pair in the data vector
+        data.emplace_back(base16_number_str, number);
+    }
+
+    for (const auto & [tag, rep] : data) {
+        replace_all(tag, std::to_string(rep));
+    }
+}
+
 std::string execute_bc(const std::string& input, const int scale = 0)
 {
     std::stringstream cmd;
     cmd << "bc <<< \"scale=" << scale << "; " << input << '"';
     const auto result = debug::exec_command("sh", "-c", cmd.str().c_str());
-
+    auto cmd_str = cmd.str();
     if (result.exit_status != 0) {
         throw TargetExpressionError(input + ": " + std::to_string(result.exit_status));
     }
 
-    return std::to_string(strtoll(result.fd_stdout.c_str(), nullptr, 10));
+    return result.fd_stdout;
 }
 
 void encode_register(std::vector<uint8_t> & buffer, const parsed_target_t & input)
@@ -153,36 +197,6 @@ void encode_register(std::vector<uint8_t> & buffer, const parsed_target_t & inpu
     push8(buffer, register_index);
 }
 
-/**
- * Splits the input string at the first occurrence of '('.
- *
- * @param input The string to split.
- * @return A pair of strings:
- *         - first: Substring before '('
- *         - second: Substring after '('
- *         If '(' is not found, second will be an empty string.
- */
-std::pair<std::string, std::string> split_at_first_parenthesis(const std::string& input)
-{
-    // Find the position of the first '('
-    size_t pos = input.find('(');
-
-    // Check if '(' was found
-    if (pos == std::string::npos) {
-        // '(' not found; return the entire string as the first part and empty second part
-        return {input, ""};
-    }
-
-    // Extract the substring before '('
-    std::string before = input.substr(0, pos);
-
-    // Extract the substring after '('
-    // Adding 1 to pos to exclude '(' itself
-    std::string after = input.substr(pos + 1);
-
-    return {before, after};
-}
-
 void encode_constant(std::vector<uint8_t> & buffer, const parsed_target_t & input)
 {
     auto tmp = input.ConstantExpression;
@@ -193,23 +207,37 @@ void encode_constant(std::vector<uint8_t> & buffer, const parsed_target_t & inpu
 
     // remove last '('
     tmp.pop_back();
+    // remove '$('
+    tmp.erase(tmp.begin());
+    tmp.erase(tmp.begin());
 
-    // split
-    auto [fst, snd] = split_at_first_parenthesis(tmp);
-    fst.erase(fst.begin());
+    // replace base 16 value to base 10 value
+    process_base16(tmp);
 
     push8(buffer, CONSTANT_PREFIX);
-    switch (strtol(fst.c_str(), nullptr, 10))
+    const auto result_from_bc = execute_bc(tmp);
+    const __int128_t result_cmp1 = strtoll(result_from_bc.c_str(), nullptr, 10);
+    const __int128_t result_cmp2 = strtoull(result_from_bc.c_str(), nullptr, 10);
+    __int128_t result;
+
+    if (result_cmp1 == result_cmp2) {
+        result = result_cmp1;
+    }
+    else // two compliments are not equal
     {
-        case 8: buffer.push_back(0x08); break;
-        case 16: buffer.push_back(0x16); break;
-        case 32: buffer.push_back(0x32); break;
-        case 64: buffer.push_back(0x64); break;
-        default: throw TargetExpressionError(input.ConstantExpression);
+        if (tmp.front() == '-') { // signed value
+            result = result_cmp1; // use the signed result
+        } else { // overflow for signed int, use the unsigned value
+            result = result_cmp2;
+        }
     }
 
-    const auto result_from_bc = execute_bc(snd);
-    const uint64_t result = strtoll(result_from_bc.c_str(), nullptr, 10);
+    if (result < 0) { // signed
+        push8(buffer, 0x01);
+    } else {
+        push8(buffer, 0x00);
+    }
+
     push<64>(buffer, &result);
 }
 
@@ -286,7 +314,7 @@ std::any pop(std::vector<uint8_t> & input)
     static_assert(LENGTH % 8 == 0);
 
     __uint128_t result = 0;
-    auto* buffer = (uint8_t*)&result;
+    auto* buffer = reinterpret_cast<uint8_t *>(&result);
 
     for (unsigned int i = 0; i < LENGTH / 8; i++) {
         buffer[i] = input[0];
@@ -332,15 +360,18 @@ void decode_register(std::vector<std::string> & output, std::vector<uint8_t> & i
 void decode_constant(std::vector<std::string> & output, std::vector<uint8_t> & input)
 {
     std::stringstream ret;
-    switch (pop8(input))
-    {
-        case 0x08:  ret << "$8("  << static_cast<int>(std::any_cast<uint8_t>(pop<8>(input))) << ")"; break;
-        case 0x16: ret << "$16(" << std::any_cast<uint16_t>(pop<16>(input)) << ")"; break;
-        case 0x32: ret << "$32(" << std::any_cast<uint32_t>(pop<32>(input)) << ")"; break;
-        case 0x64: ret << "$64(" << std::any_cast<uint64_t>(pop<64>(input)) << ")"; break;
-        default: throw TargetExpressionError("Unrecognized data width");
+    const auto sign = pop8(input);
+    const auto num = std::any_cast<uint64_t>(pop<64>(input));
+    const int64_t signed_num = *(int64_t*)(void*)&num;
+    ret << "$(";
+
+    if (sign != 0x00) {
+        ret << signed_num;
+    } else {
+        ret << "0x" << std::hex << std::uppercase << num;
     }
 
+    ret << ")";
     output.push_back(ret.str());
 }
 
@@ -363,9 +394,9 @@ void decode_memory(std::vector<std::string> & output, std::vector<uint8_t> & inp
     {
         switch(pop8(input))
         {
-        case REGISTER_PREFIX: decode_register(output, input); break;
-        case CONSTANT_PREFIX: decode_constant(output, input); break;
-        default: throw TargetExpressionError("Unrecognized parameter prefix");
+            case REGISTER_PREFIX: decode_register(output, input); break;
+            case CONSTANT_PREFIX: decode_constant(output, input); break;
+            default: throw TargetExpressionError("Unrecognized parameter prefix");
         }
     };
 
@@ -393,9 +424,12 @@ int main(int argc, char ** argv)
     debug::verbose = true;
 
     std::vector < std::string > input {
-        "*1($64(1),$64(2),$64(3))",
-        "*2(%FER0, %FER1, $64(234 / 2))",
-        "*4(%FER1, %FER2, $8(2^39))",
+        "*1($(1),$(2),$(3))",
+        "*2(%FER0, %FER1, $(234 / 2))",
+        "*4(%FER1, %FER2, $((2^64-1)-0xFF+0x12))",
+        "%R7",
+        "%HER4",
+        "$(-1)"
     };
 
     for (const auto & inp : input)
