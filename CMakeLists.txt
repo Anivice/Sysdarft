@@ -176,6 +176,7 @@ add_unit_test(test.modular tests/test.modular.cpp)
 add_unit_test(test.config tests/test.config.cpp)
 add_unit_test(test.cli tests/test.cli.cpp)
 add_unit_test(test.curses tests/test.curses.cpp)
+add_unit_test(test.pure.curse tests/test.pure.curses.cpp)
 
 # Console Executable:
 add_executable(sysdarft-system src/main.cpp)
