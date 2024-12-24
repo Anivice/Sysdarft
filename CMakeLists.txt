@@ -183,6 +183,7 @@ target_link_libraries(sysdarft-system PUBLIC sysdarft)
 
 # Assembler
 add_executable(assembler
+        utils/shared/instruction.h
         utils/Assembler/encode.target.cpp
         utils/Assembler/encode.instruction.cpp)
 target_include_directories(assembler PUBLIC utils/shared src/include)
