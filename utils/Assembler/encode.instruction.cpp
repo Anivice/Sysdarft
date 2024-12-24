@@ -4,7 +4,7 @@
 #include <regex>
 #include <iomanip>
 
-std::regex target_pattern(R"(<\s*(?:\*\s*(?:1|2|4|8|16)\s*\([^,]+,[^,]+,[^,]+\)|%(?:R|EXR|HER|FER)[0-7]|\$\s*\(\s*(?:0[xX][A-Fa-f0-9]+|\s|[+\-',*\/^%()xX0-9-])+\s*\))\s*>)");
+std::regex target_pattern(R"(<\s*(?:\*\s*(?:1|2|4|8|16)\s*\([^,]+,[^,]+,[^,]+\)|%(?:R|EXR|HER|FER)[0-7]|%(SP|SC|CC|DP|DC|ESP|ESC)|%XMM[0-7]|\$\s*\(\s*(?:0[xX][A-Fa-f0-9]+|\s|[+\-',*\/^%()xX0-9-])+\s*\))\s*>)");
 std::regex instruction_pattern(R"(([A-Z]+))");
 std::regex operation_width(R"(.8BIT|.16BIT|.32BIT|.64BIT)");
 
@@ -82,7 +82,7 @@ void encode_instruction(std::vector<uint8_t> & buffer, const std::string & instr
 
         try {
             current_ops_width = encode_width_specifier(buffer, cleaned_line[1]);
-        } catch (const InstructionExpressionError & Err) {
+        } catch (const InstructionExpressionError & /* Err */) {
             throw InstructionExpressionError("Illegal width specification for " + instruction);
         }
 
@@ -110,7 +110,8 @@ void encode_instruction(std::vector<uint8_t> & buffer, const std::string & instr
         try {
             parsed_target = encode_target(buffer, tmp);
         } catch (const TargetExpressionError & Err) {
-            throw InstructionExpressionError("Illegal Target operand expression for " + instruction + ">>>\n" + Err.what() + "<<<\n");
+            throw InstructionExpressionError("Illegal Target operand expression for " + instruction +
+                "\n>>>\n" + Err.what() + "<<<\n");
         }
 
         auto assertion = [&instruction](const bool & condition) {
@@ -129,7 +130,16 @@ void encode_instruction(std::vector<uint8_t> & buffer, const std::string & instr
                     case _8bit_prefix:  assertion(parsed_target.RegisterName[1] == 'R'); break;
                     case _16bit_prefix: assertion(parsed_target.RegisterName[1] == 'E'); break;
                     case _32bit_prefix: assertion(parsed_target.RegisterName[1] == 'H'); break;
-                    case _64bit_prefix: assertion(parsed_target.RegisterName[1] == 'F'); break;
+                    case _64bit_prefix: assertion(
+                        parsed_target.RegisterName[1] == 'F'
+                        or parsed_target.RegisterName == "%SP"
+                        or parsed_target.RegisterName == "%SC"
+                        or parsed_target.RegisterName == "%CC"
+                        or parsed_target.RegisterName == "%DP"
+                        or parsed_target.RegisterName == "%DC"
+                        or parsed_target.RegisterName == "%ESP"
+                        or parsed_target.RegisterName == "%ESC");
+                    break;
 
                     // it should never reach this:
                     default: throw InstructionExpressionError("Unknown error for " + instruction);
@@ -202,76 +212,80 @@ void decode_instruction(std::vector< std::string > & output_buffer, std::vector<
     output_buffer.emplace_back("(bad)");
 }
 
-// int main()
-// {
-//     std::vector <std::string> instructions = {
-//         "nop",
-//         "add .8bit <%R0> , <$(123/3^2+0xff)>",
-//         "add .64bit < *1 (%FER0, %fer1, $(123/3^2-0xff))>, <%FER4>",
-//         "adc .32bit <*4(%FER0, $(0), $(0))>, <$(12)>",
-//         "sub .8bit <%R0> , <$(78/23+2-0xfc)>",
-//         "sbb .32bit <%HER0> , <%HER1>",
-//         "mul .16bit <%ExR0>",
-//         "imul .64bit <%FER0>",
-//         "div  .64bit <%FER0>",
-//         "idiv .64bit <%FER0>",
-//         "Neg .32bit <*1(%FER0, %FER1, %FER2)>",
-//         "cmp .32bit <%HER0>, <$(0)>",
-//     };
-//
-//     std::vector<uint8_t> encode_buffer;
-//     for (const auto & instruction : instructions) {
-//         try {
-//             encode_instruction(encode_buffer, instruction);
-//         } catch (...) {
-//             std::cout << "Error when assembling " << instruction << std::endl;
-//             throw;
-//         }
-//     }
-//
-//     int counter = 0;
-//
-//     for (const auto & code : encode_buffer) {
-//         std::cout << std::setw(2) << std::setfill('0') << std::uppercase << std::hex
-//                   << static_cast<int>(code) << " " << std::flush;
-//         counter++;
-//         if (counter == 8) {
-//             std::cout << std::endl;
-//             counter = 0;
-//         }
-//     }
-//
-//     if (counter != 0) {
-//         std::cout << std::endl;
-//     }
-//
-//     std::vector<std::string> decode_buffer;
-//     const auto code_size = encode_buffer.size();
-//     while (!encode_buffer.empty())
-//     {
-//         std::stringstream line;
-//         line << std::setw(sizeof(uint64_t)*2) << std::setfill('0') << std::uppercase << std::hex
-//              << code_size - encode_buffer.size() << ": ";
-//         decode_buffer.emplace_back(line.str());
-//         decode_instruction(decode_buffer, encode_buffer);
-//     }
-//
-//     for (auto it = decode_buffer.begin(); it != decode_buffer.end();)
-//     {
-//         if (it != decode_buffer.end()) {
-//             std::cout << *it;
-//             ++it;
-//         } else {
-//             break;
-//         }
-//
-//         if (it != decode_buffer.end()) {
-//             std::cout << *it;
-//             ++it;
-//         } else {
-//             break;
-//         }
-//
-//         std::cout << std::endl;
-//     }
-// }
+int main()
+{
+    debug::verbose = true;
+
+    std::vector <std::string> instructions = {
+        "nop",
+        "add .8bit <%R0> , <$(123/3^2+0xff)>",
+        "add .64bit < *1 (%FER0, %fer1, $(123/3^2-0xff))>, <%FER4>",
+        "adc .32bit <*4(%FER0, $(0), $(0))>, <$(12)>",
+        "sub .8bit <%R0> , <$(78/23+2-0xfc)>",
+        "sbb .32bit <%HER0> , <%HER1>",
+        "mul .16bit <%ExR0>",
+        "imul .64bit <%FER0>",
+        "div  .64bit <%FER0>",
+        "idiv .64bit <%FER0>",
+        "Neg .32bit <*1(%FER0, %FER1, %FER2)>",
+        "cmp .32bit <%HER0>, <$(0)>",
+        "mov .64bit <%DP>, <*2(%FER2, %SP, %ESP)>",
+        "fadd <%XMM0>, <%XMM1>",
+    };
+
+    std::vector<uint8_t> encode_buffer;
+    for (const auto & instruction : instructions) {
+        try {
+            encode_instruction(encode_buffer, instruction);
+        } catch (...) {
+            std::cout << "Error when assembling " << instruction << std::endl;
+            throw;
+        }
+    }
+
+    int counter = 0;
+
+    for (const auto & code : encode_buffer) {
+        std::cout << std::setw(2) << std::setfill('0') << std::uppercase << std::hex
+                  << static_cast<int>(code) << " " << std::flush;
+        counter++;
+        if (counter == 8) {
+            std::cout << std::endl;
+            counter = 0;
+        }
+    }
+
+    if (counter != 0) {
+        std::cout << std::endl;
+    }
+
+    std::vector<std::string> decode_buffer;
+    const auto code_size = encode_buffer.size();
+    while (!encode_buffer.empty())
+    {
+        std::stringstream line;
+        line << std::setw(sizeof(uint64_t)*2) << std::setfill('0') << std::uppercase << std::hex
+             << code_size - encode_buffer.size() << ": ";
+        decode_buffer.emplace_back(line.str());
+        decode_instruction(decode_buffer, encode_buffer);
+    }
+
+    for (auto it = decode_buffer.begin(); it != decode_buffer.end();)
+    {
+        if (it != decode_buffer.end()) {
+            std::cout << *it;
+            ++it;
+        } else {
+            break;
+        }
+
+        if (it != decode_buffer.end()) {
+            std::cout << *it;
+            ++it;
+        } else {
+            break;
+        }
+
+        std::cout << std::endl;
+    }
+}

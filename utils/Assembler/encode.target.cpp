@@ -12,7 +12,7 @@
 #include <instruction.h>
 
 // Define regex patterns
-const std::regex register_pattern(R"(^%(R|EXR|HER|FER)([0-7])$)");
+const std::regex register_pattern(R"(^%(R|EXR|HER|FER)[0-7]|^%(SP|SC|CC|DP|DC|ESP|ESC)|^%XMM[0-7]$)");
 const std::regex constant_pattern(R"(^\$\((.*)\)$)");
 const std::regex memory_pattern(R"(^\*(1|2|4|8|16)\(([^,]+),([^,]+),([^,]+)\)$)");
 std::regex base16_pattern(R"(0x[0-9A-Fa-f]+)");
@@ -133,13 +133,24 @@ void encode_register(std::vector<uint8_t> & buffer, const parsed_target_t & inpu
     push8(buffer, REGISTER_PREFIX);
     switch (input.RegisterName[1])
     {
-        case 'R' : /* 8bit Register */ push8(buffer,  _8bit_prefix);  break;
-        case 'E' : /* 16bit Register */ push8(buffer, _16bit_prefix); break;
-        case 'H' : /* 32bit Register */ push8(buffer, _32bit_prefix); break;
-        case 'F' : /* 64bit Register */ push8(buffer, _64bit_prefix); break;
-        default: throw TargetExpressionError("Unrecognized register name");
+        case 'R' : /* 8bit Register */  push8(buffer,  _8bit_prefix); push8(buffer, register_index); return;
+        case 'E' : /* 16bit Register */ push8(buffer, _16bit_prefix); push8(buffer, register_index); return;
+        case 'H' : /* 32bit Register */ push8(buffer, _32bit_prefix); push8(buffer, register_index); return;
+        case 'F' : /* 64bit Register */ push8(buffer, _64bit_prefix); push8(buffer, register_index); return;
+        case 'X' : /* floating-point Register */ push8(buffer, FLOATING_POINT_PREFIX);
+                                                 push8(buffer, register_index); return;
     }
-    push8(buffer, register_index);
+
+    if (input.RegisterName == "%SP")  { push8(buffer, _64bit_prefix); push8(buffer, StackPointer); }
+    else if (input.RegisterName == "%SC")  { push8(buffer, _64bit_prefix); push8(buffer, StackConfiguration); }
+    else if (input.RegisterName == "%CC")  { push8(buffer, _64bit_prefix); push8(buffer, CodeConfiguration); }
+    else if (input.RegisterName == "%DP")  { push8(buffer, _64bit_prefix); push8(buffer, DataPointer); }
+    else if (input.RegisterName == "%DC")  { push8(buffer, _64bit_prefix); push8(buffer, DataConfiguration); }
+    else if (input.RegisterName == "%ESP") { push8(buffer, _64bit_prefix); push8(buffer, ExtendedSegmentPointer); }
+    else if (input.RegisterName == "%ESC") { push8(buffer, _64bit_prefix); push8(buffer, ExtendedSegmentConfiguration); }
+    else {
+        throw TargetExpressionError("Unknown register " + input.RegisterName);
+    }
 }
 
 void encode_constant(std::vector<uint8_t> & buffer, const parsed_target_t & input)
@@ -211,7 +222,7 @@ void encode_memory(std::vector<uint8_t> & buffer, const parsed_target_t & input)
             tmp.pop_back();
 
             // Not a 64bit register
-            if (tmp != "%FER") {
+            if (tmp != "%FER" and param != "%SP" and param != "%DP" and param != "%ESP") {
                 throw TargetExpressionError("Not a 64bit Register: " + param);
             }
 
@@ -268,8 +279,26 @@ void decode_register(std::vector<std::string> & output, std::vector<uint8_t> & i
         case _8bit_prefix:  prefix += "R"; break;
         case _16bit_prefix: prefix += "EXR"; break;
         case _32bit_prefix: prefix += "HER"; break;
-        case _64bit_prefix: prefix += "FER"; break;
-        default: throw TargetExpressionError("Unrecognized register size");
+        case _64bit_prefix:
+            if (register_index <= 7)
+            {
+                prefix += "FER";
+                break;
+            }
+
+            switch (register_index)
+            {
+                case StackPointer:          output.push_back("%SP"); return;
+                case StackConfiguration:    output.push_back("%SC"); return;
+                case CodeConfiguration:     output.push_back("%CC"); return;
+                case DataPointer:           output.push_back("%DP"); return;
+                case DataConfiguration:     output.push_back("%DC"); return;
+                case ExtendedSegmentConfiguration: output.push_back("%ESC"); return;
+                case ExtendedSegmentPointer: output.push_back("%ESP"); return;
+                default: throw TargetExpressionError("Unknown register");
+            }
+
+        case FLOATING_POINT_PREFIX: prefix += "XMM"; break;
     }
 
     ret << prefix << static_cast<int>(register_index);

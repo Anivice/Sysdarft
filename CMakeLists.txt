@@ -185,7 +185,9 @@ target_link_libraries(sysdarft-system PUBLIC sysdarft)
 add_executable(assembler
         utils/shared/instruction.h
         utils/Assembler/encode.target.cpp
-        utils/Assembler/encode.instruction.cpp)
+        utils/Assembler/encode.instruction.cpp
+        utils/Assembler/encode.misc.cpp
+)
 target_include_directories(assembler PUBLIC utils/shared src/include)
 target_link_libraries(assembler PUBLIC sysdarft)
 #add_unit_test(test.encode.target utils/tests/test.encode.target.cpp)

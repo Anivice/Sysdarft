@@ -12,6 +12,18 @@
 #define MEMORY_PREFIX   0x02
 #define CONSTANT_PREFIX 0x03
 
+// FPU
+#define FLOATING_POINT_PREFIX 0xC0
+
+// specific registers
+#define StackPointer 0xA0
+#define StackConfiguration 0xA1
+#define CodeConfiguration 0xA2
+#define DataPointer 0xA3
+#define DataConfiguration 0xA4
+#define ExtendedSegmentPointer 0xA5
+#define ExtendedSegmentConfiguration 0xA6
+
 #include <string>
 #include <iostream>
 #include <map>
@@ -19,6 +31,9 @@
 #include <algorithm>
 #include <cassert>
 #include <any>
+#include <cstdint>
+#include <vector>
+#include <debug.h>
 
 #define EXPORT __attribute__((visibility("default")))
 
@@ -381,49 +396,49 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
     { "FADD", {
             { ENTRY_OPCODE, 0x40 },
             { ENTRY_ARGUMENT_COUNT, 2 },
-            { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1 },
+            { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0 },
         }
     },
 
     { "FSUB", {
             { ENTRY_OPCODE, 0x41 },
             { ENTRY_ARGUMENT_COUNT, 2 },
-            { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1 },
+            { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0 },
         }
     },
 
     { "FMUL", {
             { ENTRY_OPCODE, 0x42 },
             { ENTRY_ARGUMENT_COUNT, 1 },
-            { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1 },
+            { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0 },
         }
     },
 
     { "FDIV", {
             { ENTRY_OPCODE, 0x43 },
             { ENTRY_ARGUMENT_COUNT, 1 },
-            { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1 },
+            { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0 },
         }
     },
 
     { "FLDI", {
             { ENTRY_OPCODE, 0x44 },
             { ENTRY_ARGUMENT_COUNT, 2 },
-            { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1 },
+            { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0 },
         }
     },
 
     { "FLDFT", {
             { ENTRY_OPCODE, 0x45 },
             { ENTRY_ARGUMENT_COUNT, 2 },
-            { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1 },
+            { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0 },
         }
     },
 
     { "FXCHG", {
             { ENTRY_OPCODE, 0x46 },
             { ENTRY_ARGUMENT_COUNT, 2 },
-            { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1 },
+            { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0 },
         }
     },
 
@@ -527,7 +542,9 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
 };
 
 parsed_target_t encode_target(std::vector<uint8_t> & buffer, const std::string& input);
+void encode_instruction(std::vector<uint8_t> & buffer, const std::string & instruction);
 void decode_target(std::vector<std::string> & output, std::vector<uint8_t> & input);
+void decode_instruction(std::vector< std::string > & output_buffer, std::vector<uint8_t> & input_buffer);
 
 inline std::string & remove_space(std::string & str)
 {
