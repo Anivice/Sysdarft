@@ -2,106 +2,219 @@
 #define INSTRUCTIONS_H
 
 // Instruction prefix
-#define _8bit_instruction_prefix  0x08
-#define _16bit_instruction_prefix 0x16
-#define _32bit_instruction_prefix 0x32
-#define _64bit_instruction_prefix 0x64
+#define _8bit_prefix  0x08
+#define _16bit_prefix 0x16
+#define _32bit_prefix 0x32
+#define _64bit_prefix 0x64
 
-// Operand Prefix
-#define OperandIsRegister   0x01
-#define OperandIsMemory     0x02
-#define OperandIsConstant   0x03
-
-// Number Prefix
-#define NUM_PREFIX '$'
+// Prefix
+#define REGISTER_PREFIX 0x01
+#define MEMORY_PREFIX   0x02
+#define CONSTANT_PREFIX 0x03
 
 #include <string>
-#include <vector>
 #include <iostream>
 #include <map>
 #include <unordered_map>
+#include <algorithm>
+#include <cassert>
+#include <any>
 
 #define EXPORT __attribute__((visibility("default")))
 
-struct EXPORT Number
+struct EXPORT parsed_target_t
 {
-    enum Type { NaN, NumberType, FloatType } type { };
-    union {
-        __uint128_t unsigned_number;
-        __int128_t signed_number;
-        long double float_number;
-    } number { };
+    enum { NOTaValidType, REGISTER, CONSTANT, MEMORY } TargetType;
+    std::string RegisterName;
+    std::string ConstantExpression;
+
+    struct {
+        std::string MemoryAccessRatio;
+        std::string MemoryBaseAddress;
+        std::string MemoryOffset1;
+        std::string MemoryOffset2;
+    } memory;
 };
 
+#define ENTRY_OPCODE "opcode"
+#define ENTRY_ARGUMENT_COUNT "argument_count"
+#define ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION "require_operation_width_specification"
+
 // Initialize the instruction to opcode mapping
-const std::unordered_map<std::string, std::map < std::string /* Entry Name */, uint64_t /* Entry Value */ >> instructionMap =
+const std::unordered_map<std::string, std::map < std::string /* Entry Name */, uint64_t /* Entry Value */ > > instruction_map =
 {
-    {"NOP",     {   { "opcode", 0x00 }, { "argc", 0 }}  },
-    {"ADD",     {   { "opcode", 0x01 }, { "argc", 2 }}  },
-    {"ADC",     {   { "opcode", 0x02 }, { "argc", 2 }}  },
-    {"SUB",     {   { "opcode", 0x03 }, { "argc", 2 }}  },
-    {"SBB",     {   { "opcode", 0x04 }, { "argc", 2 }}  },
-    {"MUL",     {   { "opcode", 0x05 }, { "argc", 1 }}  },
-    {"IMUL",    {   { "opcode", 0x06 }, { "argc", 1 }}  },
-    {"DIV",     {   { "opcode", 0x07 }, { "argc", 1 }}  },
-    {"IDIV",    {   { "opcode", 0x08 }, { "argc", 1 }}  },
-    {"NEG",     {   { "opcode", 0x09 }, { "argc", 1 }}  },
-    {"CMP",     {   { "opcode", 0x0A }, { "argc", 2 }}  },
-    {"AND",     {   { "opcode", 0x10 }, { "argc", 2 }}  },
-    {"OR",      {   { "opcode", 0x11 }, { "argc", 2 }}  },
-    {"XOR",     {   { "opcode", 0x12 }, { "argc", 2 }}  },
-    {"NOT",     {   { "opcode", 0x13 }, { "argc", 1 }}  },
-    {"SHL",     {   { "opcode", 0x14 }, { "argc", 2 }}  },
-    {"SHR",     {   { "opcode", 0x15 }, { "argc", 2 }}  },
-    {"SAL",     {   { "opcode", 0x16 }, { "argc", 2 }}  },
-    {"SAR",     {   { "opcode", 0x17 }, { "argc", 2 }}  },
-    {"ROR",     {   { "opcode", 0x18 }, { "argc", 2 }}  },
-    {"ROL",     {   { "opcode", 0x19 }, { "argc", 2 }}  },
-    {"RCL",     {   { "opcode", 0x1A }, { "argc", 2 }}  },
-    {"RCR",     {   { "opcode", 0x1B }, { "argc", 2 }}  },
-    {"MOV",     {   { "opcode", 0x20 }, { "argc", 2 }}  },
-    {"LEA",     {   { "opcode", 0x21 }, { "argc", 2 }}  },
-    {"XCHG",    {   { "opcode", 0x22 }, { "argc", 2 }}  },
-    {"ENTER",   {   { "opcode", 0x23 }, { "argc", 1 }}  },
-    {"PUSH",    {   { "opcode", 0x24 }, { "argc", 1 }}  },
-    {"POP",     {   { "opcode", 0x25 }, { "argc", 1 }}  },
-    {"MOVS",    {   { "opcode", 0x26 }, { "argc", 0 }}  },
-    {"PUSHALL", {   { "opcode", 0x27 }, { "argc", 0 }}  },
-    {"POPALL",  {   { "opcode", 0x28 }, { "argc", 0 }}  },
-    {"PUSHF",   {   { "opcode", 0x29 }, { "argc", 0 }}  },
-    {"POPF",    {   { "opcode", 0x2A }, { "argc", 0 }}  },
-    {"LEAVE",   {   { "opcode", 0x2B }, { "argc", 0 }}  },
-    {"JMP",     {   { "opcode", 0x30 }, { "argc", 1 }}  },
-    {"CALL",    {   { "opcode", 0x31 }, { "argc", 1 }}  },
-    {"RET",     {   { "opcode", 0x32 }, { "argc", 0 }}  },
-    {"LOOP",    {   { "opcode", 0x33 }, { "argc", 1 }}  },
-    {"JE",      {   { "opcode", 0x34 }, { "argc", 1 }}  },
-    {"JNE",     {   { "opcode", 0x35 }, { "argc", 1 }}  },
-    {"JB",      {   { "opcode", 0x36 }, { "argc", 1 }}  },
-    {"JL",      {   { "opcode", 0x37 }, { "argc", 1 }}  },
-    {"JBE",     {   { "opcode", 0x38 }, { "argc", 1 }}  },
-    {"JLE",     {   { "opcode", 0x39 }, { "argc", 1 }}  },
-    {"INT",     {   { "opcode", 0x3A }, { "argc", 1 }}  },
-    {"INT3",    {   { "opcode", 0x3B }, { "argc", 0 }}  },
-    {"IRET",    {   { "opcode", 0x3C }, { "argc", 0 }}  },
-    {"FADD",    {   { "opcode", 0x40 }, { "argc", 2 }}  },
-    {"FSUB",    {   { "opcode", 0x41 }, { "argc", 2 }}  },
-    {"FMUL",    {   { "opcode", 0x42 }, { "argc", 1 }}  },
-    {"FDIV",    {   { "opcode", 0x43 }, { "argc", 1 }}  },
-    {"FLDI",    {   { "opcode", 0x44 }, { "argc", 2 }}  },
-    {"FLDFT",   {   { "opcode", 0x45 }, { "argc", 2 }}  },
-    {"FXCHG",   {   { "opcode", 0x46 }, { "argc", 2 }}  },
-    {"HLT",     {   { "opcode", 0x50 }, { "argc", 0 }}  },
-    {"RDTSCP",  {   { "opcode", 0x51 }, { "argc", 0 }}  },
-    {"SYSCALL", {   { "opcode", 0x52 }, { "argc", 0 }}  },
-    {"SYSRET",  {   { "opcode", 0x53 }, { "argc", 0 }}  },
-    {"SVM",     {   { "opcode", 0x54 }, { "argc", 1 }}  },
-    {"ENTVMFCXT", { { "opcode", 0x55 }, { "argc", 1 }}  },
-    {"EXTVM",   {   { "opcode", 0x56 }, { "argc", 0 }}  },
-    {"INS",     {   { "opcode", 0x60 }, { "argc", 2 }}  },
-    {"OUTS",    {   { "opcode", 0x61 }, { "argc", 2 }}  },
-    {"LOCK",    {   { "opcode", 0x70 }, { "argc", 1 }}  },
-    {"UNLOCK",  {   { "opcode", 0x71 }, { "argc", 1 }}  },
+    { "NOP", {
+            { ENTRY_OPCODE, 0x00 },
+            { ENTRY_ARGUMENT_COUNT, 0 },
+            { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0 },
+        }
+    },
+
+    { "ADD", {
+            { ENTRY_OPCODE, 0x01 },
+            { ENTRY_ARGUMENT_COUNT, 2 },
+            { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1 },
+        }
+    },
+    //
+    // {"ADC",     {   { ENTRY_OPCODE, 0x02 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"SUB",     {   { ENTRY_OPCODE, 0x03 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"SBB",     {   { ENTRY_OPCODE, 0x04 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"MUL",     {   { ENTRY_OPCODE, 0x05 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"IMUL",    {   { ENTRY_OPCODE, 0x06 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"DIV",     {   { ENTRY_OPCODE, 0x07 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"IDIV",    {   { ENTRY_OPCODE, 0x08 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"NEG",     {   { ENTRY_OPCODE, 0x09 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"CMP",     {   { ENTRY_OPCODE, 0x0A }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"AND",     {   { ENTRY_OPCODE, 0x10 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"OR",      {   { ENTRY_OPCODE, 0x11 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"XOR",     {   { ENTRY_OPCODE, 0x12 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"NOT",     {   { ENTRY_OPCODE, 0x13 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"SHL",     {   { ENTRY_OPCODE, 0x14 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"SHR",     {   { ENTRY_OPCODE, 0x15 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"SAL",     {   { ENTRY_OPCODE, 0x16 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"SAR",     {   { ENTRY_OPCODE, 0x17 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"ROR",     {   { ENTRY_OPCODE, 0x18 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"ROL",     {   { ENTRY_OPCODE, 0x19 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"RCL",     {   { ENTRY_OPCODE, 0x1A }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"RCR",     {   { ENTRY_OPCODE, 0x1B }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"MOV",     {   { ENTRY_OPCODE, 0x20 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"LEA",     {   { ENTRY_OPCODE, 0x21 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"XCHG",    {   { ENTRY_OPCODE, 0x22 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"ENTER",   {   { ENTRY_OPCODE, 0x23 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"PUSH",    {   { ENTRY_OPCODE, 0x24 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"POP",     {   { ENTRY_OPCODE, 0x25 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"MOVS",    {   { ENTRY_OPCODE, 0x26 }, { ENTRY_ARGUMENT_COUNT, 0 }}  },
+    // {"PUSHALL", {   { ENTRY_OPCODE, 0x27 }, { ENTRY_ARGUMENT_COUNT, 0 }}  },
+    // {"POPALL",  {   { ENTRY_OPCODE, 0x28 }, { ENTRY_ARGUMENT_COUNT, 0 }}  },
+    // {"PUSHF",   {   { ENTRY_OPCODE, 0x29 }, { ENTRY_ARGUMENT_COUNT, 0 }}  },
+    // {"POPF",    {   { ENTRY_OPCODE, 0x2A }, { ENTRY_ARGUMENT_COUNT, 0 }}  },
+    // {"LEAVE",   {   { ENTRY_OPCODE, 0x2B }, { ENTRY_ARGUMENT_COUNT, 0 }}  },
+    // {"JMP",     {   { ENTRY_OPCODE, 0x30 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"CALL",    {   { ENTRY_OPCODE, 0x31 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"RET",     {   { ENTRY_OPCODE, 0x32 }, { ENTRY_ARGUMENT_COUNT, 0 }}  },
+    // {"LOOP",    {   { ENTRY_OPCODE, 0x33 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"JE",      {   { ENTRY_OPCODE, 0x34 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"JNE",     {   { ENTRY_OPCODE, 0x35 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"JB",      {   { ENTRY_OPCODE, 0x36 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"JL",      {   { ENTRY_OPCODE, 0x37 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"JBE",     {   { ENTRY_OPCODE, 0x38 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"JLE",     {   { ENTRY_OPCODE, 0x39 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"INT",     {   { ENTRY_OPCODE, 0x3A }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"INT3",    {   { ENTRY_OPCODE, 0x3B }, { ENTRY_ARGUMENT_COUNT, 0 }}  },
+    // {"IRET",    {   { ENTRY_OPCODE, 0x3C }, { ENTRY_ARGUMENT_COUNT, 0 }}  },
+    // {"FADD",    {   { ENTRY_OPCODE, 0x40 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"FSUB",    {   { ENTRY_OPCODE, 0x41 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"FMUL",    {   { ENTRY_OPCODE, 0x42 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"FDIV",    {   { ENTRY_OPCODE, 0x43 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"FLDI",    {   { ENTRY_OPCODE, 0x44 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"FLDFT",   {   { ENTRY_OPCODE, 0x45 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"FXCHG",   {   { ENTRY_OPCODE, 0x46 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"HLT",     {   { ENTRY_OPCODE, 0x50 }, { ENTRY_ARGUMENT_COUNT, 0 }}  },
+    // {"RDTSCP",  {   { ENTRY_OPCODE, 0x51 }, { ENTRY_ARGUMENT_COUNT, 0 }}  },
+    // {"SYSCALL", {   { ENTRY_OPCODE, 0x52 }, { ENTRY_ARGUMENT_COUNT, 0 }}  },
+    // {"SYSRET",  {   { ENTRY_OPCODE, 0x53 }, { ENTRY_ARGUMENT_COUNT, 0 }}  },
+    // {"SVM",     {   { ENTRY_OPCODE, 0x54 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"ENTVMFCXT", { { ENTRY_OPCODE, 0x55 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"EXTVM",   {   { ENTRY_OPCODE, 0x56 }, { ENTRY_ARGUMENT_COUNT, 0 }}  },
+    // {"INS",     {   { ENTRY_OPCODE, 0x60 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"OUTS",    {   { ENTRY_OPCODE, 0x61 }, { ENTRY_ARGUMENT_COUNT, 2 }}  },
+    // {"LOCK",    {   { ENTRY_OPCODE, 0x70 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
+    // {"UNLOCK",  {   { ENTRY_OPCODE, 0x71 }, { ENTRY_ARGUMENT_COUNT, 1 }}  },
 };
+
+parsed_target_t encode_target(std::vector<uint8_t> & buffer, const std::string& input);
+void decode_target(std::vector<std::string> & output, std::vector<uint8_t> & input);
+
+inline std::string & remove_space(std::string & str)
+{
+    std::erase(str, ' ');
+    return str;
+}
+
+// Function to convert a string to uppercase
+inline std::string & capitalization(std::string& input)
+{
+    std::ranges::transform(input, input.begin(),
+                           [](const unsigned char c) { return std::toupper(c); });
+    return input;
+}
+
+template < unsigned int LENGTH >
+void push(std::vector<uint8_t> & buffer, const void * value)
+{
+    static_assert(LENGTH % 8 == 0);
+    assert(value != nullptr);
+
+    for (unsigned int i = 0; i < LENGTH / 8; i ++) {
+        buffer.push_back(static_cast<const uint8_t*>(value)[i]);
+    }
+}
+
+inline void push8(std::vector<uint8_t> & buffer, const uint8_t value)
+{
+    push<8>(buffer, &value);
+}
+
+inline void push16(std::vector<uint8_t> & buffer, const uint16_t value)
+{
+    push<16>(buffer, &value);
+}
+
+inline void push32(std::vector<uint8_t> & buffer, const uint32_t value)
+{
+    push<32>(buffer, &value);
+}
+
+inline void push64(std::vector<uint8_t> & buffer, const uint64_t value)
+{
+    push<64>(buffer, &value);
+}
+
+class TargetExpressionError final : public SysdarftBaseError
+{
+public:
+    explicit TargetExpressionError(const std::string & message) :
+        SysdarftBaseError("Cannot parse Target expression: " + message) { }
+};
+
+template < unsigned int LENGTH >
+std::any pop(std::vector<uint8_t> & input)
+{
+    static_assert(LENGTH % 8 == 0);
+
+    __uint128_t result = 0;
+    auto* buffer = reinterpret_cast<uint8_t *>(&result);
+
+    for (unsigned int i = 0; i < LENGTH / 8; i++) {
+        buffer[i] = input[0];
+        input.erase(input.begin());
+    }
+
+    switch (LENGTH / 8)
+    {
+    case 1: /* 8bit */  return static_cast<uint8_t> (result & 0xFF);
+    case 2: /* 16bit */ return static_cast<uint16_t>(result & 0xFFFF);
+    case 4: /* 32bit */ return static_cast<uint32_t>(result & 0xFFFFFFFF);
+    case 8: /* 64bit */ return static_cast<uint64_t>(result & 0xFFFFFFFFFFFFFFFF);
+    default: throw TargetExpressionError("Unrecognized length");
+    }
+}
+
+inline uint8_t pop8(std::vector<uint8_t> & input) {
+    return std::any_cast<uint8_t>(pop<8>(input));
+}
+
+inline uint16_t pop16(std::vector<uint8_t> & input) {
+    return std::any_cast<uint16_t>(pop<16>(input));
+}
+
+inline uint32_t pop32(std::vector<uint8_t> & input) {
+    return std::any_cast<uint32_t>(pop<32>(input));
+}
+
+inline uint64_t pop64(std::vector<uint8_t> & input) {
+    return std::any_cast<uint64_t>(pop<64>(input));
+}
 
 #endif //INSTRUCTIONS_H

@@ -6,56 +6,16 @@
 #include <cassert>
 #include <cstdint>
 #include <debug.h>
-#include <algorithm>
 #include <any>
 #include <cctype>
 #include <iomanip>
-
-constexpr uint8_t REGISTER_PREFIX= 0x01;
-constexpr uint8_t CONSTANT_PREFIX= 0x02;
-constexpr uint8_t MEMORY_PREFIX= 0x03;
+#include <instruction.h>
 
 // Define regex patterns
-const std::regex register_pattern(R"(^%(R[0-7]|EXR[0-7]|HER[0-7]|FER[0-7])$)");
+const std::regex register_pattern(R"(^%(R|EXR|HER|FER)([0-7])$)");
 const std::regex constant_pattern(R"(^\$\((.*)\)$)");
-const std::regex memory_pattern(R"(^\*([1]|[2]|[4]|[8]|[1][6])\((.*),(.*),(.*)\)$)");
+const std::regex memory_pattern(R"(^\*(1|2|4|8|16)\(([^,]+),([^,]+),([^,]+)\)$)");
 std::regex base16_pattern(R"(0x[0-9A-Fa-f]+)");
-
-struct parsed_target_t
-{
-    enum { NOTaValidType, REGISTER, CONSTANT, MEMORY } TargetType;
-    std::string RegisterName;
-    std::string ConstantExpression;
-
-    struct {
-        std::string MemoryAccessRatio;
-        std::string MemoryBaseAddress;
-        std::string MemoryOffset1;
-        std::string MemoryOffset2;
-    } memory;
-};
-
-inline std::string & remove_space(std::string & str)
-{
-    std::erase(str, ' ');
-    return str;
-}
-
-template < unsigned int LENGTH >
-void push(std::vector<uint8_t> & buffer, const void * value)
-{
-    static_assert(LENGTH % 8 == 0);
-    assert(value != nullptr);
-
-    for (unsigned int i = 0; i < LENGTH / 8; i ++) {
-        buffer.push_back(static_cast<const uint8_t*>(value)[i]);
-    }
-}
-
-inline void push8(std::vector<uint8_t> & buffer, const uint8_t value)
-{
-    push<8>(buffer, &value);
-}
 
 bool is_valid_register(const std::string& input) {
     return std::regex_match(input, register_pattern);
@@ -68,21 +28,6 @@ bool is_valid_constant(const std::string& input) {
 bool is_valid_memory(const std::string& input) {
     return std::regex_match(input, memory_pattern);
 }
-
-// Function to convert a string to uppercase
-inline std::string & capitalization(std::string& input)
-{
-    std::ranges::transform(input, input.begin(),
-                           [](const unsigned char c) { return std::toupper(c); });
-    return input;
-}
-
-class TargetExpressionError final : public SysdarftBaseError
-{
-    public:
-    explicit TargetExpressionError(const std::string & message) :
-        SysdarftBaseError("Cannot parse Target expression: " + message) { }
-};
 
 parsed_target_t parse(std::string input)
 {
@@ -188,10 +133,10 @@ void encode_register(std::vector<uint8_t> & buffer, const parsed_target_t & inpu
     push8(buffer, REGISTER_PREFIX);
     switch (input.RegisterName[1])
     {
-        case 'R' : /* 8bit Register */ push8(buffer, 0x08); break;
-        case 'E' : /* 16bit Register */ push8(buffer, 0x16); break;
-        case 'H' : /* 32bit Register */ push8(buffer, 0x32); break;
-        case 'F' : /* 64bit Register */ push8(buffer, 0x64); break;
+        case 'R' : /* 8bit Register */ push8(buffer,  _8bit_prefix);  break;
+        case 'E' : /* 16bit Register */ push8(buffer, _16bit_prefix); break;
+        case 'H' : /* 32bit Register */ push8(buffer, _32bit_prefix); break;
+        case 'F' : /* 64bit Register */ push8(buffer, _64bit_prefix); break;
         default: throw TargetExpressionError("Unrecognized register name");
     }
     push8(buffer, register_index);
@@ -292,11 +237,11 @@ void encode_memory(std::vector<uint8_t> & buffer, const parsed_target_t & input)
     encode_each_parameter(input.memory.MemoryOffset2);
 }
 
-void encode_target(std::vector<uint8_t> & buffer, const std::string& input)
+parsed_target_t encode_target(std::vector<uint8_t> & buffer, const std::string& input)
 {
+    const auto parsed = parse(input);
 
-    if (const auto parsed = parse(input);
-        parsed.TargetType == parsed_target_t::REGISTER)
+    if (parsed.TargetType == parsed_target_t::REGISTER)
     {
         encode_register(buffer, parsed);
     } else if (parsed.TargetType == parsed_target_t::CONSTANT) {
@@ -306,33 +251,8 @@ void encode_target(std::vector<uint8_t> & buffer, const std::string& input)
     } else {
         throw TargetExpressionError(input);
     }
-}
 
-template < unsigned int LENGTH >
-std::any pop(std::vector<uint8_t> & input)
-{
-    static_assert(LENGTH % 8 == 0);
-
-    __uint128_t result = 0;
-    auto* buffer = reinterpret_cast<uint8_t *>(&result);
-
-    for (unsigned int i = 0; i < LENGTH / 8; i++) {
-        buffer[i] = input[0];
-        input.erase(input.begin());
-    }
-
-    switch (LENGTH / 8)
-    {
-        case 1: /* 8bit */  return static_cast<uint8_t> (result & 0xFF);
-        case 2: /* 16bit */ return static_cast<uint16_t>(result & 0xFFFF);
-        case 4: /* 32bit */ return static_cast<uint32_t>(result & 0xFFFFFFFF);
-        case 8: /* 64bit */ return static_cast<uint64_t>(result & 0xFFFFFFFFFFFFFFFF);
-        default: throw TargetExpressionError("Unrecognized length");
-    }
-}
-
-inline uint8_t pop8(std::vector<uint8_t> & input) {
-    return std::any_cast<uint8_t>(pop<8>(input));
+    return parsed;
 }
 
 void decode_register(std::vector<std::string> & output, std::vector<uint8_t> & input)
@@ -345,10 +265,10 @@ void decode_register(std::vector<std::string> & output, std::vector<uint8_t> & i
 
     switch (register_size)
     {
-        case 0x08: prefix += "R"; break;
-        case 0x16: prefix += "EXR"; break;
-        case 0x32: prefix += "HER"; break;
-        case 0x64: prefix += "FER"; break;
+        case _8bit_prefix:  prefix += "R"; break;
+        case _16bit_prefix: prefix += "EXR"; break;
+        case _32bit_prefix: prefix += "HER"; break;
+        case _64bit_prefix: prefix += "FER"; break;
         default: throw TargetExpressionError("Unrecognized register size");
     }
 
@@ -408,7 +328,7 @@ void decode_memory(std::vector<std::string> & output, std::vector<uint8_t> & inp
     output.emplace_back(")");
 }
 
-void decode(std::vector<std::string> & output, std::vector<uint8_t> & input)
+void decode_target(std::vector<std::string> & output, std::vector<uint8_t> & input)
 {
     switch (pop8(input))
     {
@@ -419,34 +339,34 @@ void decode(std::vector<std::string> & output, std::vector<uint8_t> & input)
     }
 }
 
-int main(int argc, char ** argv)
-{
-    debug::verbose = true;
-
-    std::vector < std::string > input {
-        "*1($(1),$(2),$(3))",
-        "*2(%FER0, %FER1, $(234 / 2))",
-        "*4(%FER1, %FER2, $((2^64-1)-0xFF+0x12))",
-        "%R7",
-        "%HER4",
-        "$(-1)"
-    };
-
-    for (const auto & inp : input)
-    {
-        std::vector<uint8_t> encode_buffer;
-        std::vector<std::string> decode_buffer;
-        encode_target(encode_buffer, inp);
-
-        for (const auto & code : encode_buffer) {
-            std::cout << std::setw(2) << std::setfill('0') << std::uppercase << std::hex << static_cast<int>(code) << " " << std::flush;
-        }
-        std::cout << std::endl;
-
-        decode(decode_buffer, encode_buffer);
-        for (const auto & code : decode_buffer) {
-            std::cout << code << std::flush;
-        }
-        std::cout << std::endl;
-    }
-}
+// int main(int argc, char ** argv)
+// {
+//     debug::verbose = true;
+//
+//     std::vector < std::string > input {
+//         "*1($(1),$(2),$(3))",
+//         "*2(%FER0, %FER1, $(234 / 2))",
+//         "*4(%FER1, %FER2, $( (2^64 -1 ) - 0xFF + 0x12) ) ",
+//         "%R7",
+//         "%HER4",
+//         "$(-1)"
+//     };
+//
+//     for (const auto & inp : input)
+//     {
+//         std::vector<uint8_t> encode_buffer;
+//         std::vector<std::string> decode_buffer;
+//         encode_target(encode_buffer, inp);
+//
+//         for (const auto & code : encode_buffer) {
+//             std::cout << std::setw(2) << std::setfill('0') << std::uppercase << std::hex << static_cast<int>(code) << " " << std::flush;
+//         }
+//         std::cout << std::endl;
+//
+//         decode_target(decode_buffer, encode_buffer);
+//         for (const auto & code : decode_buffer) {
+//             std::cout << code << std::flush;
+//         }
+//         std::cout << std::endl;
+//     }
+// }
