@@ -4,29 +4,34 @@
 #include <array>
 #include <mutex>
 #include <atomic>
-#include <ncurses.h>
 #include <debug.h>
 #include <global.h>
 
-#define WIDTH   127
-#define HEIGHT  31
+// -----------------------------------------------------
+// Virtual screen dimensions
+// -----------------------------------------------------
+static constexpr int V_WIDTH  = 127;
+static constexpr int V_HEIGHT = 31;
 
 class EXPORT ui_curses {
 private:
-    std::array< std::array<int, HEIGHT>, WIDTH> video_memory = { 0 };
-    std::mutex memory_access_mutex;
+    std::array< std::array<int, V_HEIGHT>, V_WIDTH> video_memory = { ' ' };
+    std::atomic<bool> video_memory_changed = false;
+    std::mutex g_data_mutex;
 
-    std::atomic<bool> video_memory_changed = true;
-    std::atomic<bool> monitor_input_status = true;
-    std::atomic<bool> running_thread_current_status = true;
-    std::atomic<bool> monitor_input_exited = false;
-    std::atomic<bool> running_thread_current_exited = false;
-    std::atomic<bool> if_i_cleaned_up = true;
-    std::atomic < cursor_position_t > cursor_pos = {};
+    std::atomic<int> offset_x = 0;
+    std::atomic<int> offset_y = 0;
 
-    static void start_curses();
+    std::atomic<bool> runner_loop_exit_indicator = false;
+    std::atomic<bool> runner_loop_exit_finished_indicator = false;
+
+    std::atomic<cursor_position_t> current_cursor_position = { };
+
     void run();
+    void init_video_memory();
     void monitor_input();
+    void render_screen();
+    void recalc_offsets(int rows, int cols);
 
 public:
     void cleanup();

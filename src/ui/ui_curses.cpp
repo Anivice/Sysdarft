@@ -1,15 +1,18 @@
 #include <ui_curses.h>
+#include <global.h>
 #include <thread>
 #include <chrono>
-#include <global.h>
-#include <csignal>
-#include <unistd.h>
-#include <termios.h>
-#include <atomic>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
+#include <mutex>
 #include <ncurses.h>
-#include <string>
 
 std::atomic<bool> needs_refresh;
+
+// TODO: Ignore key input when resizing
+// TODO: Kinda flashy when rerendering
 
 void ui_curses::run()
 {
@@ -17,255 +20,245 @@ void ui_curses::run()
     constexpr int targetFPS = 120;
     const auto frameDuration = std::chrono::milliseconds(1000 / targetFPS);
 
-    while (running_thread_current_status.load())
+    // 1) Initialize ncurses
+    initscr();            // Start curses mode
+    cbreak();             // Disable line buffering, pass key presses directly
+    noecho();             // Do not echo typed characters automatically
+    keypad(stdscr, true); // Enable arrow keys, F-keys, etc.
+
+    // Non-blocking getch() so we can do other logic if needed
+    // (Alternatively, you could block, but this is common in interactive UIs.)
+    nodelay(stdscr, true);
+    // ^ Setting this to 'false' means getch() will block.
+    //   If you want partial concurrency or periodic checks, use 'true'.
+
+    // 2) Enable mouse events (for scrolling)
+    mousemask(ALL_MOUSE_EVENTS, nullptr);
+
+    // 3) Initialize video memory
+    {
+        std::lock_guard<std::mutex> lock(g_data_mutex);
+        init_video_memory();
+    }
+
+    // 4) Perform an initial rendering
+    {
+        std::lock_guard<std::mutex> lock(g_data_mutex);
+        render_screen();
+    }
+    refresh();
+
+    while (!runner_loop_exit_indicator)
     {
         auto start = std::chrono::steady_clock::now();
 
-        if (needs_refresh.load())
+        // Wait for a key or mouse event
+        int ch = getch();
+
+        // Check if we actually got something
+        if (ch == ERR) {
+            // If non-blocking and nothing is pressed, we might do other logic here
+            // For blocking mode, we won't get ERR unless there's an issue
+            continue;
+        }
+
+        // Handle user input
         {
-            needs_refresh.store(false);
-
-            // Get new dimensions
-            int new_rows, new_cols;
-            getmaxyx(stdscr, new_rows, new_cols);
-
-            // Adjust ncurses internal structures
-            if (is_term_resized(new_rows, new_cols)) {
-                resize_term(new_rows, new_cols);
-            }
-
-            // Clear and redraw
-            clear();
+            // 1) Check for mouse events (wheel up/down)
+            if (ch == KEY_MOUSE)
             {
-                std::lock_guard lock(memory_access_mutex);
-                // Draw only up to new_rows, new_cols to avoid out-of-bounds
-                for (unsigned int y = 0; y < HEIGHT && y < (unsigned int)new_rows; y++) {
-                    for (unsigned int x = 0; x < WIDTH && x < (unsigned int)new_cols; x++) {
-                        mvaddch(y, x, video_memory[x][y]);
+                MEVENT me;
+                if (getmouse(&me) == OK)
+                {
+                    // Wheel up -> bstate & BUTTON4_PRESSED
+                    // Wheel down -> bstate & BUTTON5_PRESSED
+                    if (me.bstate & BUTTON4_PRESSED)
+                    {
+                        if (offset_y > 0)
+                        {
+                            std::lock_guard<std::mutex> lock(g_data_mutex);
+                            --offset_y;
+                            render_screen();
+                            refresh();
+                        }
+                    }
+                    else if (me.bstate & BUTTON5_PRESSED)
+                    {
+                        std::lock_guard<std::mutex> lock(g_data_mutex);
+                        ++offset_y;
+                        render_screen();
+                        refresh();
                     }
                 }
-
-                auto [x, y] = cursor_pos.load();
-                move(y, x);
+            }
+            // 2) **Press Ctrl+L to re-render** (Ctrl+L is ASCII 12)
+            else if (ch == 12)
+            {
+                std::lock_guard<std::mutex> lock(g_data_mutex);
+                // Just re-render the screen
+                render_screen();
+                refresh();
+            } else {
+                GlobalEventProcessor(UI_INSTANCE_NAME, UI_INPUT_MONITOR_METHOD_NAME)(ch);
             }
 
-            refresh();
-        }
-
-        if (video_memory_changed.load())
-        {
-            std::lock_guard lock(memory_access_mutex);
-
-            // Get current window size to avoid out-of-bounds
-            int max_rows, max_cols;
-            getmaxyx(stdscr, max_rows, max_cols);
-
-            for (unsigned int y = 0; y < HEIGHT && y < (unsigned int)max_rows; y++) {
-                for (unsigned int x = 0; x < WIDTH && x < (unsigned int)max_cols; x++) {
-                    mvaddch(y, x, video_memory[x][y]);
-                }
+            if (video_memory_changed)
+            {
+                std::lock_guard<std::mutex> lock(g_data_mutex);
+                render_screen();
+                refresh();
+                video_memory_changed = false;
             }
 
-            curs_set(TRUE);
-            auto [x, y] = cursor_pos.load();
-            move(y, x);
-            refresh();
-            video_memory_changed.store(false);
-        }
-
-        auto end = std::chrono::steady_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-        if (auto sleepDuration = frameDuration - elapsed;
-            sleepDuration > std::chrono::milliseconds(0))
-        {
-            std::this_thread::sleep_for(sleepDuration);
+            auto end = std::chrono::steady_clock::now();
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+            if (auto sleepDuration = frameDuration - elapsed;
+                sleepDuration > std::chrono::milliseconds(0))
+            {
+                std::this_thread::sleep_for(sleepDuration);
+            }
         }
     }
 
-    running_thread_current_exited.store(true);
+    // Clean up
+    endwin();
+
+    runner_loop_exit_finished_indicator = true;
 }
 
-void ui_curses::monitor_input()
+// -----------------------------------------------------
+// init_video_memory()
+//  Fill the buffer with dots and place a sample message
+// -----------------------------------------------------
+void ui_curses::init_video_memory()
 {
-    set_thread_name("UI Input Monitor");
-    nodelay(stdscr, TRUE);
+    for (int y = 0; y < V_HEIGHT; y++) {
+        for (int x = 0; x < V_WIDTH; x++) {
+            video_memory[x][y] = '.';
+        }
+    }
 
-    while (monitor_input_status.load())
+    // Place a message in the middle
+    const char* msg = "(Video Memory Not Initialized)";
+    int msg_len     = (int)std::strlen(msg);
+    int mid_x       = (V_WIDTH  - msg_len) / 2;
+    int mid_y       = (V_HEIGHT - 1) / 2;
+
+    for (int i = 0; i < msg_len; i++) {
+        video_memory[mid_x + i][mid_y] = msg[i];
+    }
+}
+
+// -----------------------------------------------------
+// render_screen()
+//  Clear the terminal and draw the portion of video_memory
+// -----------------------------------------------------
+void ui_curses::render_screen()
+{
+    int rows, cols;
+    getmaxyx(stdscr, rows, cols);
+
+    recalc_offsets(rows, cols);
+
+    clear();
+
+    // Clip the drawing to what fits on the screen
+    const int max_x = (cols >= V_WIDTH)  ? V_WIDTH  : cols;
+    const int max_y = (rows >= V_HEIGHT) ? V_HEIGHT : rows;
+
+    for (int y = 0; y < max_y; y++)
     {
-        int input = getch();
-
-        if (input == KEY_RESIZE) {
-            needs_refresh.store(true);
-        } else if (input == ERR) {
-            continue;
-        } else {
-            GlobalEventProcessor(UI_INSTANCE_NAME, UI_INPUT_MONITOR_METHOD_NAME)(input);
+        for (int x = 0; x < max_x; x++)
+        {
+            int sx = offset_x + x;
+            int sy = offset_y + y;
+            if (sx >= 0 && sx < cols && sy >= 0 && sy < rows) {
+                mvaddch(sy, sx, video_memory[x][y]);
+            }
         }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
-    monitor_input_exited.store(true);
+    const auto [x, y] = current_cursor_position.load();
+    int screen_x = offset_x + x;
+    int screen_y = offset_y + y;
+    move(screen_y, screen_x);
 }
 
-void ui_curses::start_curses()
+// -----------------------------------------------------
+// recalc_offsets()
+//  If the terminal is larger than V_WIDTH/V_HEIGHT, center.
+//  Otherwise, clamp so we don't go off screen.
+// -----------------------------------------------------
+void ui_curses::recalc_offsets(int rows, int cols)
 {
-    initscr();
-    noecho();
-    cbreak();
-    curs_set(TRUE);
-    keypad(stdscr, TRUE);
-}
-
-// Define the request handler type for clarity
-using ReqHandler = std::function<void(int)>;
-
-// RequestHandler class to manage rate limiting
-class RequestHandler {
-public:
-    // Constructor takes the original handler and the masking duration
-    RequestHandler(ReqHandler handler, std::chrono::milliseconds mask_duration)
-        : handler_(std::move(handler)),
-          mask_duration_(mask_duration),
-          last_invocation_time_(std::chrono::steady_clock::time_point::min()) {}
-
-    // Operator() to handle incoming requests
-    void operator()(int request) {
-        auto now = std::chrono::steady_clock::now();
-
-        // Lock the mutex to ensure thread-safe access to last_invocation_time_
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        // Check if enough time has passed since the last invocation
-        if (now - last_invocation_time_ >= mask_duration_) {
-            // Update the last invocation time
-            last_invocation_time_ = now;
-
-            // Unlock before calling the handler to prevent blocking other requests
-            // This is achieved by creating a temporary copy of the handler
-            // and releasing the lock before invoking it
-            ReqHandler current_handler = handler_;
-            lock.~lock_guard(); // Explicitly release the lock
-
-            // Call the original handler outside the locked section
-            current_handler(request);
+    // Horizontal
+    if (cols >= V_WIDTH) {
+        offset_x = (cols - V_WIDTH) / 2;
+    } else {
+        if (offset_x + V_WIDTH > cols) {
+            offset_x = cols - V_WIDTH;
         }
-        // If the request arrives within the mask_duration_, it is ignored
+        if (offset_x < 0) {
+            offset_x = 0;
+        }
     }
 
-private:
-    ReqHandler handler_;                                // Original handler
-    std::chrono::milliseconds mask_duration_;           // Masking duration
-    std::chrono::steady_clock::time_point last_invocation_time_; // Last invocation timestamp
-    std::mutex mutex_;                                   // Mutex for thread safety
-};
-
-void sig_handle(int sig)
-{
-    if (sig == SIGWINCH) {
-        needs_refresh.store(true);
+    // Vertical
+    if (rows >= V_HEIGHT) {
+        offset_y = (rows - V_HEIGHT) / 2;
+    } else {
+        if (offset_y + V_HEIGHT > rows) {
+            offset_y = rows - V_HEIGHT;
+        }
+        if (offset_y < 0) {
+            offset_y = 0;
+        }
     }
-}
-
-RequestHandler handler(sig_handle, std::chrono::milliseconds(500));
-
-void sig_handle_proxy(int sig)
-{
-    handler(sig);
 }
 
 void ui_curses::initialize()
 {
-    if_i_cleaned_up = false;
-    running_thread_current_exited = false;
-    monitor_input_exited = false;
+    runner_loop_exit_indicator = false;
+    runner_loop_exit_finished_indicator = false;
 
-    memory_access_mutex.lock();
-    for (unsigned int y = 0; y < HEIGHT; y++)
-    {
-        for (unsigned int x = 0; x < WIDTH; x++) {
-            video_memory[x][y] = ' ';
-        }
-    }
-    video_memory_changed = true;
-    memory_access_mutex.unlock();
+    std::thread Runner(&ui_curses::run, this);
+    Runner.detach();
 
-    // Initialize ncurses
-    start_curses();
-    refresh();
-
-    // Setup sigaction for SIGWINCH
-    struct sigaction sa{};
-    sa.sa_handler = sig_handle_proxy;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-
-    if (sigaction(SIGWINCH, &sa, nullptr) == -1) {
-        throw SysdarftBaseError("Installing signal handler failed!");
-    }
-
-    set_cursor(0, 0);
-    set_cursor_visibility(false);
-    curs_set(0);
-
-    std::thread Worker1(&ui_curses::run, this);
-    std::thread Worker2(&ui_curses::monitor_input, this);
-
-    // Detach threads so they run independently
-    Worker1.detach();
-    Worker2.detach();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
 void ui_curses::cleanup()
 {
-    if (if_i_cleaned_up) {
-        return;
-    }
-
-    std::lock_guard lock(memory_access_mutex);
-
-    monitor_input_status.store(false);
-    running_thread_current_status.store(false);
-    endwin(); // End ncurses mode
-
-    // Wait for threads to exit
-    for (uint32_t try_ = 0; try_ < 100; try_++)
-    {
-        if (running_thread_current_exited.load() && monitor_input_exited.load()) {
-            debug::log("Ncurses normal quit...\n");
-            return;
-        }
-
+    debug::log("Sending shutdown signal...\n");
+    runner_loop_exit_indicator = true;
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    debug::log("Signal sent! Waiting for shutdown procedure to finish...\n");
+    while (!runner_loop_exit_finished_indicator) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-
-    debug::log("Ncurses waiting for quit timed out!\n");
-    if_i_cleaned_up = true;
+    debug::log("Shutdown procedure finished!\n");
 }
 
 void ui_curses::set_cursor(const int x, const int y)
 {
-    std::lock_guard lock(memory_access_mutex);
-    // update position
-    const cursor_position_t pos = { .x = x, .y = y };
-    cursor_pos.store(pos);
+    const decltype(current_cursor_position.load()) pos = {.x = x, .y = y};
+    current_cursor_position = pos;
 }
 
 cursor_position_t ui_curses::get_cursor()
 {
-    std::lock_guard lock(memory_access_mutex);
-    return cursor_pos.load();
+    return current_cursor_position;
 }
 
 void ui_curses::display_char(int x, int y, int ch)
 {
-    std::lock_guard lock(memory_access_mutex);
+    std::lock_guard<std::mutex> lock(g_data_mutex);
     video_memory[x][y] = ch;
-    video_memory_changed.store(true);
+    video_memory_changed = true;
 }
 
 void ui_curses::set_cursor_visibility(bool visible)
 {
-    std::lock_guard lock(memory_access_mutex);
+    std::lock_guard<std::mutex> lock(g_data_mutex);
     curs_set(visible);
 }

@@ -1,104 +1,61 @@
-#include <chrono>
-#include <csignal>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
-#include <ctime>
-#include <functional>
+#include <iostream>
 #include <mutex>
 #include <thread>
-#include <utility>
-
-// ---------- NCURSES -----------
 #include <ncurses.h>
 
-// ========== 1) The Rate-Limiting RequestHandler ==========
-using ReqHandler = std::function<void(int)>;
-
-class RequestHandler {
-public:
-    RequestHandler(ReqHandler handler, std::chrono::milliseconds mask_duration)
-        : handler_(std::move(handler))
-        , mask_duration_(mask_duration)
-        , last_invocation_time_(std::chrono::steady_clock::time_point::min())
-    {}
-
-    void operator()(int request) {
-        auto now = std::chrono::steady_clock::now();
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        if (now - last_invocation_time_ >= mask_duration_) {
-            last_invocation_time_ = now;
-
-            // Unlock before calling the handler
-            ReqHandler local_handler = handler_;
-            lock.~lock_guard();
-
-            local_handler(request);
-        }
-    }
-
-private:
-    ReqHandler handler_;
-    std::chrono::milliseconds mask_duration_;
-    std::chrono::steady_clock::time_point last_invocation_time_;
-    std::mutex mutex_;
-};
-
-// ========== 2) Global Constants for "Video Memory" ==========
+// -----------------------------------------------------
+// Virtual screen dimensions
+// -----------------------------------------------------
 static constexpr int V_WIDTH  = 80;
 static constexpr int V_HEIGHT = 25;
 
-// ========== 3) Global Data Structures & Mutex ==========
-std::mutex g_data_mutex;
-
-// Virtual "video memory"
+// The "video memory"
 static char video_memory[V_WIDTH][V_HEIGHT];
 
-// Offsets for rendering
+// Offsets for rendering (where the virtual screen appears in the terminal)
 static int offset_x = 0;
 static int offset_y = 0;
 
-// ========== 4) Forward Declarations ==========
+// A mutex to guard shared data, if desired (thread safety)
+static std::mutex g_data_mutex;
+
+// -----------------------------------------------------
+// Forward Declarations
+// -----------------------------------------------------
 void init_video_memory();
 void render_screen();
 void recalc_offsets(int rows, int cols);
 
-// ========== 5) Our masked request handler for "RESIZE" ==========
-// This function will be invoked only if enough time has passed (500 ms).
-// We'll do the actual refresh & re-render from here.
-void on_resize_request(int /*unused*/) {
-    std::lock_guard<std::mutex> lock(g_data_mutex);
-    // Refresh ncurses internal structures
-    endwin();
-    refresh();
-    render_screen();
-    refresh();
-}
-
-// ========== 6) Main Function ==========
+// -----------------------------------------------------
+// Main
+// -----------------------------------------------------
 int main()
 {
     // 1) Initialize ncurses
-    initscr();
-    cbreak();
-    noecho();
-    keypad(stdscr, true);
+    initscr();            // Start curses mode
+    cbreak();             // Disable line buffering, pass key presses directly
+    noecho();             // Do not echo typed characters automatically
+    keypad(stdscr, true); // Enable arrow keys, F-keys, etc.
 
-    // 2) Non-blocking input so we can loop and check timing
-    nodelay(stdscr, true);
+    // Non-blocking getch() so we can do other logic if needed
+    // (Alternatively, you could block, but this is common in interactive UIs.)
+    nodelay(stdscr, false);
+    // ^ Setting this to 'false' means getch() will block.
+    //   If you want partial concurrency or periodic checks, use 'true'.
 
-    // 3) Enable mouse events
+    // 2) Enable mouse events (for scrolling)
     mousemask(ALL_MOUSE_EVENTS, nullptr);
 
-    // 4) Initialize the "video memory"
+    // 3) Initialize video memory
     {
         std::lock_guard<std::mutex> lock(g_data_mutex);
         init_video_memory();
     }
 
-    // 5) Create a rate-limiting wrapper for resizing requests (500 ms mask)
-    RequestHandler resize_handler(on_resize_request, std::chrono::milliseconds(500));
-
-    // 6) Draw the initial screen
+    // 4) Perform an initial rendering
     {
         std::lock_guard<std::mutex> lock(g_data_mutex);
         render_screen();
@@ -106,18 +63,27 @@ int main()
     refresh();
 
     bool done = false;
-    while (!done)
-    {
-        // Read input if available
+    while (!done) {
+        // Wait for a key or mouse event
         int ch = getch();
-        if (ch != ERR) {
-            // We got an event
+
+        // Check if we actually got something
+        if (ch == ERR) {
+            // If non-blocking and nothing is pressed, we might do other logic here
+            // For blocking mode, we won't get ERR unless there's an issue
+            continue;
+        }
+
+        // Handle user input
+        {
+            std::lock_guard<std::mutex> lock(g_data_mutex);
+
+            // 1) Quit if 'q'
             if (ch == 'q') {
                 done = true;
             }
+            // 2) Insert "Modified!" if 'm'
             else if (ch == 'm') {
-                // Example: modify the video memory
-                std::lock_guard<std::mutex> lock(g_data_mutex);
                 const char* text = "Modified!";
                 int tx = 5, ty = 10;
                 for (int i = 0; i < (int)std::strlen(text); i++) {
@@ -125,18 +91,16 @@ int main()
                         video_memory[tx + i][ty] = text[i];
                     }
                 }
-                // Re-render right away
                 render_screen();
                 refresh();
             }
+            // 3) Check for mouse events (wheel up/down)
             else if (ch == KEY_MOUSE) {
                 MEVENT me;
                 if (getmouse(&me) == OK) {
-                    // Check for wheel up/down
-                    // (BUTTON4_PRESSED = wheel up, BUTTON5_PRESSED = wheel down)
-                    std::lock_guard<std::mutex> lock(g_data_mutex);
+                    // Wheel up -> bstate & BUTTON4_PRESSED
+                    // Wheel down -> bstate & BUTTON5_PRESSED
                     if (me.bstate & BUTTON4_PRESSED) {
-                        // Scroll up
                         if (offset_y > 0) {
                             offset_y--;
                             render_screen();
@@ -144,29 +108,31 @@ int main()
                         }
                     }
                     else if (me.bstate & BUTTON5_PRESSED) {
-                        // Scroll down
                         offset_y++;
                         render_screen();
                         refresh();
                     }
                 }
             }
-            else if (ch == KEY_RESIZE) {
-                // Instead of redrawing immediately, we issue a "resize request"
-                // that is rate-limited by our RequestHandler.
-                resize_handler(1 /*dummy request code*/);
+            // 4) **Press Ctrl+L to re-render** (Ctrl+L is ASCII 12)
+            else if (ch == 12) {
+                // Just re-render the screen
+                render_screen();
+                refresh();
             }
+            // (Add other key handling as desired)
         }
-
-        // Just rest a little so we don't burn 100% CPU
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 
+    // Clean up
     endwin();
     return 0;
 }
 
-// ========== 7) init_video_memory ==========
+// -----------------------------------------------------
+// init_video_memory()
+//  Fill the buffer with dots and place a sample message
+// -----------------------------------------------------
 void init_video_memory()
 {
     for (int y = 0; y < V_HEIGHT; y++) {
@@ -174,18 +140,22 @@ void init_video_memory()
             video_memory[x][y] = '.';
         }
     }
-    // Place a sample message
-    const char* msg = "Hello from video_memory (C++23 + ncurses + RequestHandler)!";
-    int msg_len = (int)std::strlen(msg);
-    int mid_x   = (V_WIDTH  - msg_len) / 2;
-    int mid_y   = (V_HEIGHT - 1) / 2;
+
+    // Place a message in the middle
+    const char* msg = "Hello from video_memory! (Press Ctrl+L to re-render)";
+    int msg_len     = (int)std::strlen(msg);
+    int mid_x       = (V_WIDTH  - msg_len) / 2;
+    int mid_y       = (V_HEIGHT - 1) / 2;
+
     for (int i = 0; i < msg_len; i++) {
         video_memory[mid_x + i][mid_y] = msg[i];
     }
 }
 
-// ========== 8) render_screen ==========
-// Clears the screen and draws the portion of video_memory that fits
+// -----------------------------------------------------
+// render_screen()
+//  Clear the terminal and draw the portion of video_memory
+// -----------------------------------------------------
 void render_screen()
 {
     int rows, cols;
@@ -193,9 +163,9 @@ void render_screen()
 
     recalc_offsets(rows, cols);
 
-    clear(); // always clear first
+    clear();
 
-    // Determine how many characters to print
+    // Clip the drawing to what fits on the screen
     int max_x = (cols >= V_WIDTH)  ? V_WIDTH  : cols;
     int max_y = (rows >= V_HEIGHT) ? V_HEIGHT : rows;
 
@@ -210,11 +180,14 @@ void render_screen()
     }
 }
 
-// ========== 9) recalc_offsets ==========
-// Decide where to place our virtual screen in the real terminal.
+// -----------------------------------------------------
+// recalc_offsets()
+//  If the terminal is larger than V_WIDTH/V_HEIGHT, center.
+//  Otherwise, clamp so we don't go off screen.
+// -----------------------------------------------------
 void recalc_offsets(int rows, int cols)
 {
-    // Horizontal centering if there's enough space; clamp otherwise
+    // Horizontal
     if (cols >= V_WIDTH) {
         offset_x = (cols - V_WIDTH) / 2;
     } else {
@@ -226,7 +199,7 @@ void recalc_offsets(int rows, int cols)
         }
     }
 
-    // Vertical centering if there's enough space; clamp otherwise
+    // Vertical
     if (rows >= V_HEIGHT) {
         offset_y = (rows - V_HEIGHT) / 2;
     } else {

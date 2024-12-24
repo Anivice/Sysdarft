@@ -10,10 +10,10 @@ public:
         GlobalEventProcessor(UI_INSTANCE_NAME, UI_DISPLAY_CHAR_METHOD_NAME)(
             cursor_pos.x, cursor_pos.y, key);
 
-        int linear = cursor_pos.y * WIDTH + cursor_pos.x;
+        int linear = cursor_pos.y * V_WIDTH + cursor_pos.x;
         linear++;
-        const auto cursor_pos_y = (linear / WIDTH) & 31;
-        const auto cursor_pos_x = (linear % WIDTH) & 127;
+        const auto cursor_pos_y = (linear / V_WIDTH) & 31;
+        const auto cursor_pos_x = (linear % V_WIDTH) & 127;
         cursor_pos = { .x = cursor_pos_x, .y = cursor_pos_y };
 
         GlobalEventProcessor(UI_INSTANCE_NAME, UI_SET_CURSOR_METHOD_NAME)(
