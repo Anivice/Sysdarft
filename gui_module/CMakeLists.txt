@@ -92,7 +92,8 @@ find_package(CURL REQUIRED)
 find_package(Threads REQUIRED)
 
 # Add the executable target
-add_library(sysdarft_backend SHARED src/main.cpp src/fallback.cpp)
+add_library(sysdarft_backend SHARED
+        src/main.cpp src/websocket_session.cpp src/http.cpp src/backend.cpp src/fallback.cpp)
 
 # Include directories
 target_include_directories(sysdarft_backend PRIVATE
