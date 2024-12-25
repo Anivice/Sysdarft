@@ -346,6 +346,15 @@ public:
     {
         GlobalEventProcessor(UI_INSTANCE_NAME, UI_INITIALIZE_METHOD_NAME)();
         GlobalEventProcessor(UI_INSTANCE_NAME, UI_SET_CURSOR_VISIBILITY_METHOD_NAME)(true);
+        GlobalEventProcessor(UI_INSTANCE_NAME, UI_DISPLAY_CHAR_METHOD_NAME)(0, 0, (int)'#');
+        GlobalEventProcessor(UI_INSTANCE_NAME, UI_DISPLAY_CHAR_METHOD_NAME)(1, 0, (int)'S');
+        GlobalEventProcessor(UI_INSTANCE_NAME, UI_DISPLAY_CHAR_METHOD_NAME)(2, 0, (int)'y');
+        GlobalEventProcessor(UI_INSTANCE_NAME, UI_DISPLAY_CHAR_METHOD_NAME)(3, 0, (int)'s');
+        GlobalEventProcessor(UI_INSTANCE_NAME, UI_DISPLAY_CHAR_METHOD_NAME)(4, 0, (int)'d');
+        GlobalEventProcessor(UI_INSTANCE_NAME, UI_DISPLAY_CHAR_METHOD_NAME)(5, 0, (int)'a');
+        GlobalEventProcessor(UI_INSTANCE_NAME, UI_DISPLAY_CHAR_METHOD_NAME)(6, 0, (int)'r');
+        GlobalEventProcessor(UI_INSTANCE_NAME, UI_DISPLAY_CHAR_METHOD_NAME)(7, 0, (int)'f');
+        GlobalEventProcessor(UI_INSTANCE_NAME, UI_DISPLAY_CHAR_METHOD_NAME)(8, 0, (int)'t');
         getc(stdin);
         GlobalEventProcessor(UI_INSTANCE_NAME, UI_CLEANUP_METHOD_NAME)();
     }
@@ -409,7 +418,7 @@ public:
     void dummy_input_handler(int) {
         return;
     }
-} dummy;
+} backend;
 
 Cli::Cli()
 {
@@ -426,7 +435,7 @@ Cli::Cli()
     GlobalEventProcessor.install_instance(GLOBAL_INSTANCE_NAME, &GlobalConfig,
         GLOBAL_SET_CONFIG_METHOD_NAME, &GlobalConfig_::set_config);
 
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &dummy,
+    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &backend,
         UI_INPUT_MONITOR_METHOD_NAME, &backend::dummy_input_handler);
     GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
         UI_CLEANUP_METHOD_NAME, &ui_curses::cleanup);

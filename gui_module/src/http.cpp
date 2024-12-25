@@ -15,7 +15,7 @@ void http_session::run()
             {
                 if(ec == boost::asio::error::operation_aborted)
                     return; // canceled
-                std::cerr << "[HTTP] read error: " << ec.message() << std::endl;
+                debug::log("[HTTP] Read error: ", ec.message(), "\n");
                 return;
             }
 
@@ -54,6 +54,7 @@ void http_session::do_websocket_upgrade()
 // --------------- REGULAR HTTP RESPONSE ---------------
 void http_session::do_http_request()
 {
+    bool shutdown = false;
     // Build a response in `res_` (another member variable)
     res_.version(req_.version());
     res_.keep_alive(false);
@@ -67,14 +68,13 @@ void http_session::do_http_request()
     }
     else if(req_.method() == boost::beast::http::verb::get && req_.target() == "/shutdown")
     {
-        std::cout << "Shutdown request received!\n";
+        debug::log("[HTTP] Shutdown request received!\n");
         res_.result(boost::beast::http::status::ok);
         res_.set(boost::beast::http::field::server, "Sysdarft");
         res_.set(boost::beast::http::field::content_type, "text/plain");
         res_.body() = "Shutting down...";
 
-        // Trigger shutdown
-        owner_->request_shutdown();
+        shutdown = true;
     }
     else
     {
@@ -101,4 +101,9 @@ void http_session::do_http_request()
             }
         }
     );
+
+    // Trigger shutdown
+    if (shutdown) {
+        owner_->cleanup();
+    }
 }

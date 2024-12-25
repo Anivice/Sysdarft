@@ -84,7 +84,13 @@ void websocket_session::do_read()
             }
 
             // We have "data"
-            debug::log("[WebSocket] Received: ", data, "\n");
+            debug::log("[WebSocket] Received: ", std::string(data), "\n");
+            auto input_handler = [](const std::string & _data) {
+                set_thread_name("Async Input Handler");
+                const auto key = convertJsonToKeyEvent(_data);
+                GlobalEventProcessor(UI_INSTANCE_NAME, UI_INPUT_MONITOR_METHOD_NAME)(key.keyCode);
+            };
+            std::thread(input_handler, std::string(data)).detach();
 
             // consume buffer
             self->buffer_.consume(self->buffer_.size());

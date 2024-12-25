@@ -19,6 +19,9 @@ struct cursor_position_t
 {
     int x;
     int y;
+    bool operator==(const cursor_position_t & cursor_pos) const {
+        return x == cursor_pos.x && y == cursor_pos.y;
+    }
 };
 
 #define UI_INSTANCE_NAME                        "UI"

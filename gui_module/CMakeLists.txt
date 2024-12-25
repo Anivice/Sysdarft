@@ -100,10 +100,11 @@ add_object(websocket_session src/websocket_session.cpp)
 add_object(http src/http.cpp)
 add_object(backend src/backend.cpp)
 add_object(fallback src/fallback.cpp)
+add_object(input src/input.cpp)
 
 # Add the executable target
 add_library(sysdarft_backend SHARED src/main.cpp)
-target_link_libraries(sysdarft_backend PUBLIC websocket_session http backend fallback)
+target_link_libraries(sysdarft_backend PUBLIC websocket_session http backend fallback input)
 
 # Include directories
 target_include_directories(sysdarft_backend PRIVATE

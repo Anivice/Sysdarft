@@ -50,17 +50,24 @@ void backend::initialize()
     start_accept();
 
     // 2) Launch a thread to run the io_context so async ops happen
-    std::thread ioThread([this] {
+    std::thread([this] {
+        set_thread_name("IO Thread");
         try {
+            ioThreadExited = false;
             ioc_.run();
         } catch (std::exception &e) {
             debug::log("[IO Thread] exception: ", e.what(), "\n");
         }
-    });
-    ioThread.detach();
+
+        debug::log("[IO Thread] Thread exited!\n");
+        ioThreadExited = true;
+    }).detach();
 
     // 3) Launch the render loop in a separate thread
     renderThread_ = std::thread(&backend::render_loop, this);
+
+    // 4) Start cursor worker
+    start_cursor_worker();
 
     debug::log("[Backend] Backend initialized! Instance created at http://127.0.0.1:8080\n");
 }
@@ -73,30 +80,40 @@ void backend::cleanup()
         return;
     }
     debug::log("[Backend] Sending shutdown request!\n");
-
     // Request shutdown
     request_shutdown();
 
-    debug::log("[Backend] Waiting for threads to finish!\n");
-
+    debug::log("[Backend] Request sent, waiting for threads to finish!\n");
     // Wait for render loop to exit
     if (renderThread_.joinable()) {
         renderThread_.join();
     }
+    debug::log("[Backend] Threads finished!\n");
+
+    debug::log("[Backend] Shutting down cursor worker!\n");
+    // Stop cursor worker
+    stop_cursor_worker();
+    debug::log("[Backend] Cursor worker shutdown complete!\n");
 
     debug::log("[Backend] Shutting down acceptor!\n");
     // The ioc_ won't stop until all async ops are done, but at least we
     // close the acceptor to avoid new connections
     beast::error_code ec;
     acceptor_.close(ec);
+    debug::log("[Backend] Acceptor stopped!\n");
 
     debug::log("[Backend] Close all websockets!\n");
     // Force close all websockets
     close_all_websockets();
+    debug::log("[Backend] All websockets terminated!\n");
 
     debug::log("[Backend] Stopping event to IOC!\n");
     // Post a stop event to ioc_
     ioc_.stop();
+    while (!ioThreadExited) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    debug::log("[Backend] Stopped event to IOC!\n");
 
     debug::log("[Backend] Backend cleanup complete!\n");
 }
@@ -170,6 +187,8 @@ void backend::start_accept()
 // The render loop: updates video buffer, sends frames to all websockets
 void backend::render_loop()
 {
+    set_thread_name("UI Render");
+
     int frameCount = 0;
     while (runLoop_) {
         frameCount++;
@@ -181,22 +200,24 @@ void backend::render_loop()
             auto epoch = now.time_since_epoch();
             const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(epoch).count();
             const auto seconds = milliseconds / 1000;
-            const auto microseconds = milliseconds % 1000 * 1000;
+            const auto microseconds = milliseconds % 1000;
             videoBuffer_[0] = "Frame: " + std::to_string(frameCount)
                 + " Timestamp: " + std::to_string(seconds) + "." + std::to_string(microseconds);
             videoBuffer_[0].resize(V_WIDTH, ' ');
         }
 
         // convert
+        if (video_memory_changed)
         {
             std::lock_guard<std::mutex> lk(videoMutex_);
+            std::lock_guard<std::mutex> lk2(BinaryBufferMutex);
             int y = 0;
             for (auto it = videoBuffer_.begin() + 1;
                 it != videoBuffer_.end(); ++it, ++y)
             {
                 for (int x = 0; x < V_WIDTH; ++x)
                 {
-                    const auto ch = static_cast<char>(binary_video_buffer[x][y]);
+                    auto ch = static_cast<char>(binary_video_buffer[x][y]);
                     if (ch < 0x20 || ch > 0x7e) { // character not displayable
                         it->at(x) = '.';
                     } else {
@@ -204,6 +225,8 @@ void backend::render_loop()
                     }
                 }
             }
+
+            video_memory_changed = false;
         }
 
         std::string text;
@@ -246,21 +269,73 @@ void backend::close_all_websockets()
 {
     std::lock_guard<std::mutex> lock(wsMutex_);
     for (auto &weak : websockets_) {
-        if (auto sp = weak.lock()) {
+        if (const auto sp = weak.lock()) {
             sp->close(); // calls async_close
         }
     }
     websockets_.clear();
 }
 
-// dummy
-void backend::set_cursor(int, int) {
+void backend::swap_cursor_with_char_at_pos()
+{
+    set_thread_name("UI Cursor");
+    while (cursor_worker_running)
+    {
+        if (cursor_visibility)
+        {
+            std::lock_guard<std::mutex> lock(BinaryBufferMutex);
+            const auto [x, y] = cursor_pos_.load();
+            if (cursor_position_is_cursor_char_itself) {
+                binary_video_buffer[x][y] = char_at_cursor_position;
+                cursor_position_is_cursor_char_itself = false;
+            } else {
+                // back up the current character
+                char_at_cursor_position = binary_video_buffer[x][y];
+                // set the position to cursor
+                binary_video_buffer[x][y] = cursor_char;
+                cursor_position_is_cursor_char_itself = true;
+            }
+
+            video_memory_changed = true;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+
+    cursor_worker_finished = true;
 }
 
-cursor_position_t backend::get_cursor() { return {0, 0}; }
-
-void backend::display_char(int, int, int) {
+void backend::set_cursor(int x, int y)
+{
+    cursor_pos_.store({x, y});
 }
 
-void backend::set_cursor_visibility(bool) {
+cursor_position_t backend::get_cursor()
+{
+    return cursor_pos_;
+}
+
+void backend::display_char(int x, int y, int ch)
+{
+    std::lock_guard<std::mutex> lock(BinaryBufferMutex);
+    if (const auto cur_pos = cursor_pos_.load();
+        cur_pos == cursor_position_t { .x = x, .y = y  })
+    {
+        cursor_position_is_cursor_char_itself = false; // force update
+    }
+
+    binary_video_buffer[x][y] = ch;
+    video_memory_changed = true;
+}
+
+void backend::set_cursor_visibility(bool visibility)
+{
+    if (cursor_position_is_cursor_char_itself && !visibility)
+    {
+        std::lock_guard<std::mutex> lock(BinaryBufferMutex);
+        const auto [x, y] = cursor_pos_.load();
+        binary_video_buffer[x][y] = char_at_cursor_position;
+    }
+
+    cursor_visibility = visibility;
 }
