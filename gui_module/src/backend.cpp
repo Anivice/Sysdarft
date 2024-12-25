@@ -177,8 +177,33 @@ void backend::render_loop()
         // Build a text frame
         {
             std::lock_guard<std::mutex> lk(videoMutex_);
-            videoBuffer_[0] = "Frame: " + std::to_string(frameCount);
+            auto now = std::chrono::system_clock::now();
+            auto epoch = now.time_since_epoch();
+            const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(epoch).count();
+            const auto seconds = milliseconds / 1000;
+            const auto microseconds = milliseconds % 1000 * 1000;
+            videoBuffer_[0] = "Frame: " + std::to_string(frameCount)
+                + " Timestamp: " + std::to_string(seconds) + "." + std::to_string(microseconds);
             videoBuffer_[0].resize(V_WIDTH, ' ');
+        }
+
+        // convert
+        {
+            std::lock_guard<std::mutex> lk(videoMutex_);
+            int y = 0;
+            for (auto it = videoBuffer_.begin() + 1;
+                it != videoBuffer_.end(); ++it, ++y)
+            {
+                for (int x = 0; x < V_WIDTH; ++x)
+                {
+                    const auto ch = static_cast<char>(binary_video_buffer[x][y]);
+                    if (ch < 0x20 || ch > 0x7e) { // character not displayable
+                        it->at(x) = '.';
+                    } else {
+                        it->at(x) = ch;
+                    }
+                }
+            }
         }
 
         std::string text;

@@ -98,6 +98,9 @@ private:
     // For text "Frame: X" in the UI
     std::mutex videoMutex_;
     std::vector<std::string> videoBuffer_;
+    /* raw buffer */
+    /* needs to be converted and discard non-ASCII characters */
+    std::array < std::array < int, V_HEIGHT >, V_WIDTH > binary_video_buffer;
 
     std::atomic<bool> is_instance_initialized_before = {false};
 
@@ -105,7 +108,23 @@ public:
     backend()
         : ioc_()
           , acceptor_(ioc_)
-          , videoBuffer_(V_HEIGHT, std::string(V_WIDTH, '.')) {
+          , videoBuffer_(V_HEIGHT + 1, std::string(V_WIDTH, '.'))
+    {
+        for (int y = 0; y < V_HEIGHT; y++) {
+            for (int x = 0; x < V_WIDTH; x++) {
+                binary_video_buffer[x][y] = '.';
+            }
+        }
+
+        // Place a message in the middle
+        const char* msg = "(Video Memory Not Initialized)";
+        const int msg_len     = static_cast<int>(std::strlen(msg));
+        const int mid_x       = (V_WIDTH  - msg_len) / 2;
+        constexpr int mid_y       = (V_HEIGHT - 1) / 2;
+
+        for (int i = 0; i < msg_len; i++) {
+            binary_video_buffer[mid_x + i][mid_y] = msg[i];
+        }
     }
 
     // Called once: start acceptor + run ioc in a thread, start render thread

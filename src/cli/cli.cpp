@@ -346,7 +346,7 @@ public:
     {
         GlobalEventProcessor(UI_INSTANCE_NAME, UI_INITIALIZE_METHOD_NAME)();
         GlobalEventProcessor(UI_INSTANCE_NAME, UI_SET_CURSOR_VISIBILITY_METHOD_NAME)(true);
-        std::this_thread::sleep_for(std::chrono::seconds(2));
+        getc(stdin);
         GlobalEventProcessor(UI_INSTANCE_NAME, UI_CLEANUP_METHOD_NAME)();
     }
 

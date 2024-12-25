@@ -2,7 +2,7 @@
 
 const std::string fallback_page = R"HTML(
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Sysdarft WebSocket Embedded UI (Fatal Fallback)</title>

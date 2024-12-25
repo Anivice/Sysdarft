@@ -2,25 +2,115 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Boost.Beast WebSocket</title>
+    <title>Amber Phosphor Web Interface</title>
     <style>
         html, body {
             margin: 0; padding: 0; height: 100%;
-            background: black; color: white; font-family: monospace;
+            background: #002a89; color: white; font-family: monospace;
             display: flex; justify-content: center; align-items: center;
         }
-        #screen {
-            white-space: pre;
-            background: black; color: white;
-            margin: 0; padding: 8px;
+        #screenCanvas {
+            /* This just ensures the canvas doesn't blow up the layout */
+            image-rendering: pixelated; /* sometimes helps with crispness */
         }
     </style>
 </head>
 <body>
-<pre id="screen"></pre>
+<canvas id="screenCanvas"></canvas>
 <script>
-    const screenEl = document.getElementById('screen');
-    // Connect to WebSocket at /ws
+    /************************************************************
+     *  CONFIGURATIONS
+     ************************************************************/
+    const ROWS         = 32;   // same 32 you mentioned
+    const COLS         = 127;  // same 127 you mentioned
+    const CELL_WIDTH   = 6;    // adjust to your taste
+    const CELL_HEIGHT  = 14;   // adjust to your taste
+
+    // How many frames to keep the old character fading out
+    const DECAY_FRAMES = 30;
+
+    // Colors (adjust to taste)
+    const AMBER_COLOR  = 'rgb(255, 191, 0)';
+    const BG_COLOR     = 'rgb(50,24,20)';  // slightly dark amber-ish black
+
+    /************************************************************
+     *  CANVAS SETUP
+     ************************************************************/
+    const canvas = document.getElementById('screenCanvas');
+    canvas.width = COLS * CELL_WIDTH;
+    canvas.height = ROWS * CELL_HEIGHT;
+    const ctx = canvas.getContext('2d');
+
+    // We’ll keep track of each cell with an object:
+    // {
+    //   currentChar: 'A',  // the current visible character
+    //   oldChar: ' ',      // the character that is fading out
+    //   decay: 0           // how many frames left to keep fading out oldChar
+    // }
+    let displayBuffer = [];
+    function initDisplayBuffer() {
+        for (let r = 0; r < ROWS; r++) {
+            displayBuffer[r] = [];
+            for (let c = 0; c < COLS; c++) {
+                displayBuffer[r][c] = {
+                    currentChar: ' ',
+                    oldChar: ' ',
+                    decay: 0
+                };
+            }
+        }
+    }
+    initDisplayBuffer();
+
+    /************************************************************
+     *  ANIMATION LOOP: DRAW CHARACTERS WITH DECAY
+     ************************************************************/
+    function draw() {
+        // Clear background
+        ctx.fillStyle = BG_COLOR;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw each cell
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                const cell = displayBuffer[r][c];
+                const x = c * CELL_WIDTH;
+                const y = r * CELL_HEIGHT;
+
+                // 1) Draw oldChar with partial alpha if it’s still decaying
+                if (cell.decay > 0) {
+                    const alpha = cell.decay / DECAY_FRAMES; // from 1.0 down to near 0
+                    ctx.save();
+                    ctx.globalAlpha = alpha;
+                    ctx.fillStyle = AMBER_COLOR;
+                    ctx.fillText(cell.oldChar, x, y + CELL_HEIGHT - 2);
+                    ctx.restore();
+                }
+
+                // 2) Draw currentChar at full brightness
+                ctx.fillStyle = AMBER_COLOR;
+                ctx.fillText(cell.currentChar, x, y + CELL_HEIGHT - 2);
+
+                // Decrement decay
+                if (cell.decay > 0) {
+                    cell.decay -= 1;
+                }
+            }
+        }
+
+        requestAnimationFrame(draw);
+    }
+
+    // Setup the font once
+    ctx.font = `${CELL_HEIGHT}px monospace`;
+    ctx.textBaseline = 'alphabetic';
+
+    // Start the animation
+    requestAnimationFrame(draw);
+
+    /************************************************************
+     *  WEBSOCKET SETUP
+     ************************************************************/
     const ws = new WebSocket("ws://" + location.host + "/ws");
 
     ws.onopen = () => {
@@ -28,15 +118,43 @@
     };
 
     ws.onmessage = (evt) => {
-        // The server sends the entire video buffer as text
-        screenEl.textContent = evt.data;
+        // Server sends 32 lines of 127 ASCII chars each (127x32)
+        // Convert the text into rows
+        const lines = evt.data.split('\n');
+
+        // For safety, only handle the first ROWS lines
+        for (let r = 0; r < ROWS; r++) {
+            // If the server data has fewer than r lines, skip
+            if (r >= lines.length) break;
+
+            const line = lines[r];
+            for (let c = 0; c < COLS; c++) {
+                // If line is shorter, or c is out of range, break
+                if (c >= line.length) break;
+
+                const newChar = line[c];
+                const cell = displayBuffer[r][c];
+
+                // If the character changed
+                if (cell.currentChar !== newChar) {
+                    // Move the oldChar to a decay state
+                    cell.oldChar = cell.currentChar;
+                    cell.decay = DECAY_FRAMES;
+
+                    // Now update currentChar
+                    cell.currentChar = newChar;
+                }
+            }
+        }
     };
 
     ws.onclose = () => {
         console.log("WebSocket closed");
     };
 
-    // Send keyboard events to server
+    /************************************************************
+     *  SEND KEYBOARD EVENTS
+     ************************************************************/
     window.addEventListener('keydown', (e) => {
         const msg = {
             type: "keydown",
