@@ -1,5 +1,6 @@
 #include <ui_curses.h>
 #include <global.h>
+#include <thread>
 
 class input_processor {
 public:
@@ -51,7 +52,10 @@ int main(int argc, char**)
     GlobalEventProcessor(UI_INSTANCE_NAME, UI_INITIALIZE_METHOD_NAME)();
     GlobalEventProcessor(UI_INSTANCE_NAME, UI_SET_CURSOR_VISIBILITY_METHOD_NAME)(true);
     if (argc >= 2) {
-        __asm__ __volatile__("jmp .");
+        set_thread_name("Main Loop");
+        while (true) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
     }
     GlobalEventProcessor(UI_INSTANCE_NAME, UI_CLEANUP_METHOD_NAME)();
 }

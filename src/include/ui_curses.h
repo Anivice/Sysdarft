@@ -23,7 +23,7 @@ private:
     std::atomic<int> offset_y = 0;
 
     std::atomic<bool> runner_loop_exit_indicator = false;
-    std::atomic<bool> runner_loop_exit_finished_indicator = false;
+    std::atomic<bool> runner_loop_exit_finished_indicator = true;
 
     std::atomic<cursor_position_t> current_cursor_position = { };
 

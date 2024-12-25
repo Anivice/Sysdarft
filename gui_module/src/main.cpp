@@ -30,11 +30,13 @@ namespace bp = boost::process;
 class backend {
 private:
     std::atomic<bool> shutdown_confirmed = false;
+    std::atomic<bool> shutdown_finished = true;
     std::thread worker;
     using json = nlohmann::json;
+    bp::child py_child;
 
     // Function to start the Python client using Boost.Process
-    static void start_python_client()
+    void start_python_client()
     {
         try {
             std::string python_executable = "/usr/bin/python3";
@@ -46,12 +48,8 @@ private:
             std::string python_script = prefix + "/resources/main.py";
 
             // Launch the Python script as a detached child process
-            bp::child c(
-                python_executable,
-                python_script);
-
-            // Detach to let it run independently
-            c.detach();
+            py_child = bp::child(python_executable, python_script);
+            py_child.detach();
 
             std::cout << "Python client started successfully.\n";
         }
@@ -63,6 +61,8 @@ private:
     void main_thread()
     {
         shutdown_confirmed = false;
+        shutdown_finished = false;
+
         // Create a Crow app
         crow::SimpleApp app;
 
@@ -102,7 +102,7 @@ private:
         {
             std::cout << "Shutdown request received." << std::endl;
             shutdown_confirmed = true;
-            auto shutdown = [&app]()->void
+            auto shutdown = [&app, this]()->void
             {
                 std::cout << "Shutdown in " << std::flush;
                 for (signed int i = 5; i > 0; i--) {
@@ -112,6 +112,8 @@ private:
 
                 std::cout << std::endl;
                 app.stop(); // Gracefully stop the server
+                py_child.terminate(); // not so gracefully kill my child
+                shutdown_finished = true;
             };
 
             std::thread shutdown_thread(shutdown);
@@ -134,7 +136,7 @@ private:
         });
 
         // Start the Python client in a separate thread
-        std::thread python_thread(start_python_client);
+        std::thread python_thread(&backend::start_python_client, this);
 
         // Start the Crow server on port 50001
         std::cout << "Starting server on port 50001...\n";
@@ -145,20 +147,26 @@ private:
             python_thread.join();
         }
     }
+
 public:
     void cleanup()
     {
-        send_shutdown_request();
+        if (!shutdown_finished)
+        {
+            send_shutdown_request();
 
-        if (worker.joinable()) {
-            worker.join();
+            while (!shutdown_finished) {
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+
+            debug::log("main thread exited!\n");
         }
-        debug::log("main thread exited!\n");
     }
 
     void initialize()
     {
         worker = std::thread(&backend::main_thread, this);
+        worker.detach();
         debug::log("main thread started!\n");
     }
 

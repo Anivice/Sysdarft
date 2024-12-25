@@ -3,22 +3,13 @@
 #include <thread>
 #include <chrono>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
-#include <iostream>
 #include <mutex>
 #include <ncurses.h>
-
-std::atomic<bool> needs_refresh;
-
-// TODO: Ignore key input when resizing
-// TODO: Kinda flashy when rerendering
 
 void ui_curses::run()
 {
     set_thread_name("UI Runner");
-    constexpr int targetFPS = 120;
-    const auto frameDuration = std::chrono::milliseconds(1000 / targetFPS);
 
     // 1) Initialize ncurses
     initscr();            // Start curses mode
@@ -50,15 +41,12 @@ void ui_curses::run()
 
     while (!runner_loop_exit_indicator)
     {
-        auto start = std::chrono::steady_clock::now();
-
         // Wait for a key or mouse event
         int ch = getch();
 
         // Check if we actually got something
         if (ch == ERR) {
-            // If non-blocking and nothing is pressed, we might do other logic here
-            // For blocking mode, we won't get ERR unless there's an issue
+            std::this_thread::sleep_for(std::chrono::milliseconds(3));
             continue;
         }
 
@@ -91,8 +79,8 @@ void ui_curses::run()
                     }
                 }
             }
-            // 2) **Press Ctrl+L to re-render** (Ctrl+L is ASCII 12)
-            else if (ch == 12)
+            // 2) **Press Ctrl+L to re-render** (Ctrl+L is ASCII 12) (or it just resizes itself)
+            else if (ch == 12 || ch == 410)
             {
                 std::lock_guard<std::mutex> lock(g_data_mutex);
                 // Just re-render the screen
@@ -110,13 +98,8 @@ void ui_curses::run()
                 video_memory_changed = false;
             }
 
-            auto end = std::chrono::steady_clock::now();
-            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-            if (auto sleepDuration = frameDuration - elapsed;
-                sleepDuration > std::chrono::milliseconds(0))
-            {
-                std::this_thread::sleep_for(sleepDuration);
-            }
+            // 3 ms delay
+            std::this_thread::sleep_for(std::chrono::milliseconds(3));
         }
     }
 
@@ -140,9 +123,9 @@ void ui_curses::init_video_memory()
 
     // Place a message in the middle
     const char* msg = "(Video Memory Not Initialized)";
-    int msg_len     = (int)std::strlen(msg);
-    int mid_x       = (V_WIDTH  - msg_len) / 2;
-    int mid_y       = (V_HEIGHT - 1) / 2;
+    const int msg_len     = static_cast<int>(std::strlen(msg));
+    const int mid_x       = (V_WIDTH  - msg_len) / 2;
+    constexpr int mid_y       = (V_HEIGHT - 1) / 2;
 
     for (int i = 0; i < msg_len; i++) {
         video_memory[mid_x + i][mid_y] = msg[i];
@@ -160,6 +143,7 @@ void ui_curses::render_screen()
 
     recalc_offsets(rows, cols);
 
+    curs_set(FALSE);
     clear();
 
     // Clip the drawing to what fits on the screen
@@ -179,9 +163,10 @@ void ui_curses::render_screen()
     }
 
     const auto [x, y] = current_cursor_position.load();
-    int screen_x = offset_x + x;
-    int screen_y = offset_y + y;
+    const int screen_x = offset_x + x;
+    const int screen_y = offset_y + y;
     move(screen_y, screen_x);
+    curs_set(TRUE);
 }
 
 // -----------------------------------------------------
