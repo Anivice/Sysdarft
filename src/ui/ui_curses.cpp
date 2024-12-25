@@ -154,8 +154,9 @@ void ui_curses::render_screen()
     {
         for (int x = 0; x < max_x; x++)
         {
-            int sx = offset_x + x;
-            int sy = offset_y + y;
+            const int sx = offset_x + x;
+            const int sy = offset_y + y;
+
             if (sx >= 0 && sx < cols && sy >= 0 && sy < rows) {
                 mvaddch(sy, sx, video_memory[x][y]);
             }

@@ -76,7 +76,7 @@ if(POLICY CMP0167)
 endif()
 
 # Find Boost libraries without specifying 'process' as a separate component
-find_package(Boost 1.70 REQUIRED COMPONENTS system filesystem)
+find_package(Boost 1.70 REQUIRED COMPONENTS system filesystem thread)
 
 if(NOT Boost_FOUND)
     message(FATAL_ERROR "Boost not found. Please install boost-devel.")
@@ -92,8 +92,7 @@ find_package(CURL REQUIRED)
 find_package(Threads REQUIRED)
 
 # Add the executable target
-add_library(sysdarft_backend SHARED
-        src/main.cpp src/crow_all.h src/shutdown.cpp)
+add_library(sysdarft_backend SHARED src/main.cpp src/fallback.cpp)
 
 # Include directories
 target_include_directories(sysdarft_backend PRIVATE
@@ -105,6 +104,7 @@ target_include_directories(sysdarft_backend PRIVATE
 target_link_libraries(sysdarft_backend PRIVATE
         Boost::system
         Boost::filesystem
+        Boost::thread
         nlohmann_json::nlohmann_json
         CURL::libcurl
         Threads::Threads
@@ -112,7 +112,7 @@ target_link_libraries(sysdarft_backend PRIVATE
 
 add_custom_target(CopyPythonFiles ALL
         COMMAND mkdir -p "${CMAKE_CURRENT_BINARY_DIR}/resources/"
-        COMMAND cp "${CMAKE_CURRENT_SOURCE_DIR}/resources/main.py" "${CMAKE_CURRENT_BINARY_DIR}/resources/"
+        COMMAND cp "${CMAKE_CURRENT_SOURCE_DIR}/resources/index.html" "${CMAKE_CURRENT_BINARY_DIR}/resources/"
         VERBATIM
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/resources/main.py
-        COMMENT "Copying python files...")
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/resources/index.html
+        COMMENT "Copying WebPage files...")

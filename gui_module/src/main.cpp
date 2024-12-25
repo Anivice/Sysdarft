@@ -1,23 +1,30 @@
 // main.cpp
 
-#include "crow_all.h"           // Include Crow
-#include <nlohmann/json.hpp>    // For JSON handling
-#include <boost/process.hpp>    // For process management
+#include "fallback.h"
+#include <nlohmann/json.hpp>
+#include <boost/process.hpp>
 #include <thread>
 #include <string>
-#include <dlfcn.h>              // get_shared_library_path.cpp
+#include <dlfcn.h>
 #include <debug.h>
 #include <global.h>
 #include <cstdio>
 #include <vector>
-#include "shutdown.h"
+#include <boost/asio.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/beast/core.hpp>
+#include <boost/beast/http.hpp>
+#include <boost/beast/websocket.hpp>
+#include <iostream>
+#include <mutex>
+#include <atomic>
 #include <ui_curses.h>
+#include <chrono>
+#include <fstream>
 
-std::string getSharedLibraryPath()
-{
+std::string getSharedLibraryPath() {
     Dl_info dl_info;
-    // Use a known function within the shared library; here, it's getSharedLibraryPath itself
-    if (dladdr((void*)getSharedLibraryPath, &dl_info)) {
+    if (dladdr((void *)getSharedLibraryPath, &dl_info)) {
         if (dl_info.dli_fname) {
             return dl_info.dli_fname;
         }
@@ -25,156 +32,341 @@ std::string getSharedLibraryPath()
     return "";
 }
 
+namespace asio = boost::asio;
+namespace beast = boost::beast;
+namespace http = beast::http;
+namespace websocket = beast::websocket;
+using tcp = boost::asio::ip::tcp;
 namespace bp = boost::process;
 
 class backend {
 private:
-    std::atomic<bool> shutdown_confirmed = false;
-    std::atomic<bool> shutdown_finished = true;
-    std::thread worker;
+    std::vector<std::string> g_videoBuffer = std::vector(V_HEIGHT, std::string(V_WIDTH, '.'));
+    std::atomic<bool> video_memory_changed = false;
+    std::mutex g_videoMutex;
     using json = nlohmann::json;
-    bp::child py_child;
+    std::vector<std::weak_ptr<websocket::stream<beast::tcp_stream>>> g_sessions;
+    std::mutex g_sessionsMutex;
+    std::atomic<bool> g_runLoop{true};
+    std::atomic<bool> g_runLoop_shutdownFinished{true};
+    std::atomic<bool> g_shutdown{false};
+    std::atomic<bool> g_shutdownFinished{true};
+    asio::io_context ioc_;
+    tcp::acceptor acceptor_;
+    std::atomic<int> g_activeThreads{0};
+    std::atomic<bool> g_renderThreadExiting{false};
 
-    // Function to start the Python client using Boost.Process
-    void start_python_client()
+    std::string make_html_page()
     {
-        try {
-            std::string python_executable = "/usr/bin/python3";
-            std::string prefix = getSharedLibraryPath();
-            while (prefix.back() != '/') {
-                prefix.pop_back();
-            }
-
-            std::string python_script = prefix + "/resources/main.py";
-
-            // Launch the Python script as a detached child process
-            py_child = bp::child(python_executable, python_script);
-            py_child.detach();
-
-            std::cout << "Python client started successfully.\n";
+        std::string prefix = getSharedLibraryPath();
+        while (prefix.back() != '/') {
+            prefix.pop_back();
         }
-        catch (const std::exception& e) {
-            std::cerr << "Failed to start Python client: " << e.what() << "\n";
+
+        std::string webpage = prefix + "/resources/index.html";
+        std::ifstream infile(webpage);
+        if (!infile.is_open()) {
+            std::cerr << "Failed to open webpage " << webpage << ", using embedded page!" << std::endl;
+            return fallback_page;
+        }
+
+        std::string page, line;
+        while (std::getline(infile, line)) {
+            page += line + "\n";
+        }
+        infile.close();
+
+        return page;
+    }
+
+    void handle_http_request(beast::tcp_stream &stream, http::request<http::string_body> req)
+    {
+        if (req.method() == http::verb::get && req.target() == "/") {
+            http::response<http::string_body> res{
+                http::status::ok, req.version()};
+            res.set(http::field::server, "Sysdarft");
+            res.set(http::field::content_type, "text/html");
+            res.keep_alive(req.keep_alive());
+            res.body() = make_html_page();
+            res.prepare_payload();
+
+            beast::error_code ec;
+            http::write(stream, res, ec);
+        }
+        else if (req.method() == http::verb::get && req.target() == "/shutdown") {
+            std::cout << "Shutdown request received!" << std::endl;
+
+            http::response<http::string_body> res{http::status::ok, req.version()};
+            res.set(http::field::server, "Sysdarft");
+            res.set(http::field::content_type, "text/plain");
+            res.keep_alive(req.keep_alive());
+            res.body() = "Shutting down...";
+            res.prepare_payload();
+
+            beast::error_code ec;
+            http::write(stream, res, ec);
+
+            g_shutdown = true;
+        }
+        else
+        {
+            http::response<http::string_body> res{
+                http::status::not_found, req.version()};
+            res.set(http::field::server, "Sysdarft");
+            res.keep_alive(req.keep_alive());
+            res.body() = "Not found\r\n";
+            res.prepare_payload();
+
+            beast::error_code ec;
+            http::write(stream, res, ec);
         }
     }
 
     void main_thread()
     {
-        shutdown_confirmed = false;
-        shutdown_finished = false;
+        // We increment the global thread count
+        g_activeThreads.fetch_add(1, std::memory_order_relaxed);
 
-        // Create a Crow app
-        crow::SimpleApp app;
+        try {
+            // Start the detached render thread
+            std::thread(&backend::render_loop, this).detach();
 
-        // Define the route for processing JSON
-        CROW_ROUTE(app, "/portal").methods("POST"_method)
-        ([](const crow::request& req) -> crow::response
-        {
-            try {
-                // Parse the incoming JSON
-                auto received_json = json::parse(req.body);
+            // Prepare acceptor
+            acceptor_.open(tcp::v4());
+            acceptor_.set_option(boost::asio::socket_base::reuse_address(true));
+            acceptor_.bind({tcp::v4(), 8080});
+            acceptor_.listen();
 
-                // Example processing: Add new fields
-                received_json["processed"] = true;
-                received_json["message"] = "Data processed successfully by C++ server.";
+            // Accept loop
+            while (!g_shutdown) {
+                tcp::socket socket(ioc_);
+                boost::system::error_code ec;
+                acceptor_.accept(socket, ec);
 
-                // Serialize JSON to string
-                std::string response_str = received_json.dump();
-
-                // Return the response with Content-Type: application/json
-                return {200, "application/json; charset=utf-8", response_str};
-            }
-            catch (const json::parse_error &e) {
-                std::cerr << "JSON parse error: " << e.what() << "\n";
-                const json error_json = {{"error", "Invalid JSON format"}, {"details", e.what()}};
-                return {400, "application/json; charset=utf-8", error_json.dump() };
-            }
-            catch (const std::exception &e) {
-                std::cerr << "C++ exception: " << e.what() << "\n";
-                const json error_json = {{"error", "Server error"}, {"details", e.what()}};
-                return {500, "application/json; charset=utf-8", error_json.dump()};
-            }
-        });
-
-        // Define the /shutdown route
-        CROW_ROUTE(app, "/shutdown").methods("POST"_method)
-        ([&app, this](const crow::request& /* req */) -> crow::response
-        {
-            std::cout << "Shutdown request received." << std::endl;
-            shutdown_confirmed = true;
-            auto shutdown = [&app, this]()->void
-            {
-                std::cout << "Shutdown in " << std::flush;
-                for (signed int i = 5; i > 0; i--) {
-                    std::cout << i << " " << std::flush;
-                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                if (ec == asio::error::operation_aborted || g_shutdown) {
+                    // If acceptor is closed or we are shutting down, break
+                    break;
                 }
-
-                std::cout << std::endl;
-                app.stop(); // Gracefully stop the server
-                py_child.terminate(); // not so gracefully kill my child
-                shutdown_finished = true;
-            };
-
-            std::thread shutdown_thread(shutdown);
-            shutdown_thread.detach();
-
-            return {200, "text/plain",
-                "Server will be shut down in 5 seconds."};
-        });
-
-        // Define the /shutdown route
-        CROW_ROUTE(app, "/status").methods("POST"_method)
-        ([this](const crow::request& /* req */) -> crow::response
-        {
-            std::string ret = R"({"status":"alive"})";
-            if (shutdown_confirmed) {
-                ret = R"({"status":"dying"})";
+                if (!ec) {
+                    // For each client, spawn a DETACHED session thread
+                    std::thread(&backend::do_session, this, std::move(socket)).detach();
+                }
             }
 
-            return {200, "application/json; charset=utf-8", ret};
-        });
+            // We’re done accepting. Now let’s close websockets and finalize
+            close_all_websockets();
 
-        // Start the Python client in a separate thread
-        std::thread python_thread(&backend::start_python_client, this);
+            // Close acceptor
+            boost::system::error_code ec;
+            acceptor_.close(ec);
 
-        // Start the Crow server on port 50001
-        std::cout << "Starting server on port 50001...\n";
-        app.port(50001).multithreaded().run();
-
-        // Wait for the Python client thread to finish (if it ever does)
-        if(python_thread.joinable()){
-            python_thread.join();
+        } catch (std::exception const &e) {
+            std::cerr << "[main_thread] Exception: " << e.what() << "\n";
         }
+
+        // Decrement the global thread count
+        g_activeThreads.fetch_sub(1, std::memory_order_relaxed);
+    }
+
+    void render_loop()
+    {
+        g_activeThreads.fetch_add(1, std::memory_order_relaxed);
+
+        std::cout << "[Render] Rendering loop starts" << std::endl;
+        using clock = std::chrono::steady_clock;
+        auto nextFrame = clock::now();
+
+        while (g_runLoop) {
+            nextFrame += std::chrono::milliseconds(5);
+
+            {
+                std::lock_guard<std::mutex> lock(g_videoMutex);
+                static int frameCount = 0;
+                frameCount++;
+                g_videoBuffer[0] = "Frame: " + std::to_string(frameCount);
+                g_videoBuffer[0].resize(V_WIDTH, ' ');
+                // If you want to see changes in other lines, manipulate them here
+                // e.g. g_videoBuffer[1][0] = '*';
+            }
+
+            // Build single string
+            std::string text;
+            {
+                std::lock_guard<std::mutex> lock(g_videoMutex);
+                for (const auto &row : g_videoBuffer) {
+                    text += row + "\n";
+                }
+            }
+
+            // Send to all connected clients
+            {
+                std::lock_guard<std::mutex> lock(g_sessionsMutex);
+                auto it = g_sessions.begin();
+                while (it != g_sessions.end()) {
+                    if (auto session = it->lock()) {
+                        beast::error_code ec;
+                        session->text(true);
+                        session->write(boost::asio::buffer(text), ec);
+                        if (ec == websocket::error::closed) {
+                            it = g_sessions.erase(it);
+                        } else {
+                            ++it;
+                        }
+                    } else {
+                        it = g_sessions.erase(it);
+                    }
+                }
+            }
+
+            std::this_thread::sleep_until(nextFrame);
+        }
+
+        g_renderThreadExiting = true;
+        g_activeThreads.fetch_sub(1, std::memory_order_relaxed);
+    }
+
+    void do_session(tcp::socket&& socket)
+    {
+        g_activeThreads.fetch_add(1, std::memory_order_relaxed);
+
+        try {
+            beast::tcp_stream stream(std::move(socket));
+            beast::flat_buffer buffer;
+
+            http::request<http::string_body> req;
+            http::read(stream, buffer, req);
+
+            if (websocket::is_upgrade(req)) {
+                // spawn websocket
+                do_websocket_session(stream.release_socket(), std::move(req));
+            } else {
+                // normal http
+                handle_http_request(stream, std::move(req));
+            }
+        } catch (std::exception const &e) {
+            std::cerr << "[Session] Exception: " << e.what() << "\n";
+        }
+
+        g_activeThreads.fetch_sub(1, std::memory_order_relaxed);
+    }
+
+    void do_websocket_session(tcp::socket &&socket, http::request<http::string_body>&& req)
+    {
+        g_activeThreads.fetch_add(1, std::memory_order_relaxed);
+
+        auto ws = std::make_shared<websocket::stream<beast::tcp_stream>>(std::move(socket));
+        ws->set_option(websocket::stream_base::timeout::suggested(beast::role_type::server));
+
+        boost::system::error_code ec;
+        ws->accept(req, ec);
+        if (ec) {
+            std::cerr << "[WS] Accept error: " << ec.message() << std::endl;
+            g_activeThreads.fetch_sub(1, std::memory_order_relaxed);
+            return;
+        }
+
+        // Add to g_sessions
+        {
+            std::lock_guard<std::mutex> lock(g_sessionsMutex);
+            g_sessions.push_back(ws);
+        }
+
+        beast::flat_buffer buffer;
+        for (;;) {
+            ws->read(buffer, ec);
+            if (ec == websocket::error::closed) {
+                std::cout << "[WS] WebSocket closed" << std::endl;
+                break;
+            } else if (ec) {
+                std::cerr << "[WS] Read error: " << ec.message() << std::endl;
+                break;
+            }
+            // ... handle message ...
+            buffer.consume(buffer.size());
+        }
+
+        // Remove from g_sessions
+        {
+            std::lock_guard<std::mutex> lock(g_sessionsMutex);
+            auto it = g_sessions.begin();
+            while (it != g_sessions.end()) {
+                if (it->expired() || it->lock().get() == ws.get()) {
+                    it = g_sessions.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        }
+
+        g_activeThreads.fetch_sub(1, std::memory_order_relaxed);
+    }
+
+    // Clean way to request shutdown
+    void request_shutdown()
+    {
+        if (!g_shutdown.exchange(true)) {
+            // If we weren’t already shutting down:
+            // 1. close acceptor to break out of accept() calls
+            boost::system::error_code ec;
+            acceptor_.close(ec);
+
+            // 2. close websockets so they break out of read()
+            close_all_websockets();
+
+            // 3. stop render loop
+            g_runLoop = false;
+        }
+    }
+
+    void close_all_websockets()
+    {
+        std::lock_guard<std::mutex> lock(g_sessionsMutex);
+        for (auto &weak : g_sessions) {
+            if (auto s = weak.lock()) {
+                boost::system::error_code ec;
+                // Attempt graceful close
+                s->close(websocket::close_code::normal, ec);
+            }
+        }
+        g_sessions.clear();
     }
 
 public:
     void cleanup()
     {
-        if (!shutdown_finished)
-        {
-            send_shutdown_request();
-
-            while (!shutdown_finished) {
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-            }
-
-            debug::log("main thread exited!\n");
+        // If we haven’t already shut down, do it now
+        if (!g_shutdown) {
+            debug::log("Sending shutdown request!\n");
+            request_shutdown();
         }
+
+        // Now wait until *all* threads have truly finished
+        // (including session threads and render thread).
+        // Because they are detached, we can't join them.
+        // Instead, we poll the global counter.
+        // If your plugin architecture is short-lived or you can't do a loop here,
+        // you might skip or reduce the poll time.
+        while (g_activeThreads.load() > 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+
+        debug::log("All detached threads exited!\n");
+        debug::log("Backend cleanup complete!\n");
     }
 
     void initialize()
     {
-        worker = std::thread(&backend::main_thread, this);
-        worker.detach();
+        std::thread(&backend::main_thread, this).detach();
         debug::log("main thread started!\n");
     }
 
-    void set_cursor(int, int) { }
-    cursor_position_t get_cursor() { return { 0, 0 }; }
-    void display_char(int, int, int) { }
-    void set_cursor_visibility(bool) { }
+    void set_cursor(int, int) {}
+    cursor_position_t get_cursor() { return {0, 0}; }
+    void display_char(int, int, int) {}
+    void set_cursor_visibility(bool) {}
+    backend() : ioc_() , acceptor_(ioc_) { }
 } dummy;
+
 
 extern "C" {
     int EXPORT module_init(void);
@@ -182,15 +374,13 @@ extern "C" {
     std::vector<std::string> EXPORT module_dependencies(void);
 }
 
-std::vector<std::string> EXPORT module_dependencies(void)
-{
-    return { };
+std::vector<std::string> EXPORT module_dependencies(void) {
+    return {};
 }
 
-int EXPORT module_init(void)
-{
+int EXPORT module_init(void) {
     GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &dummy,
-    UI_CLEANUP_METHOD_NAME, &backend::cleanup);
+        UI_CLEANUP_METHOD_NAME, &backend::cleanup);
     GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &dummy,
         UI_INITIALIZE_METHOD_NAME, &backend::initialize);
     GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &dummy,
@@ -205,10 +395,9 @@ int EXPORT module_init(void)
     return 0;
 }
 
-void EXPORT module_exit(void)
-{
+void EXPORT module_exit(void) {
     GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-    UI_CLEANUP_METHOD_NAME, &ui_curses::cleanup);
+        UI_CLEANUP_METHOD_NAME, &ui_curses::cleanup);
     GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
         UI_INITIALIZE_METHOD_NAME, &ui_curses::initialize);
     GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
