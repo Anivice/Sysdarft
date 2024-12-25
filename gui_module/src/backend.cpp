@@ -17,7 +17,12 @@ std::string getSharedLibraryPath() {
 // Called once: start acceptor + run ioc in a thread, start render thread
 void backend::initialize()
 {
-    debug::log("main thread started!\n");
+    if (is_instance_initialized_before) {
+        debug::log("[Backend] Creating multiple instances is NOT allowed! Exiting...\n");
+        return;
+    }
+
+    is_instance_initialized_before = true;
 
     // 1) Start accepting connections on port 8080 (async style)
     beast::error_code ec;
@@ -25,21 +30,22 @@ void backend::initialize()
 
     acceptor_.open(endpoint.protocol(), ec);
     if (ec) {
-        std::cerr << "Acceptor open: " << ec.message() << std::endl;
+        debug::log("[Backend] Acceptor open: ", ec.message(), "\b");
         return;
     }
     acceptor_.set_option(asio::socket_base::reuse_address(true), ec);
     acceptor_.bind(endpoint, ec);
     if (ec) {
-        std::cerr << "Acceptor bind: " << ec.message() << std::endl;
+        debug::log("[Backend] Acceptor bind: ", ec.message(), "\n");
         return;
     }
     acceptor_.listen(asio::socket_base::max_listen_connections, ec);
     if (ec) {
-        std::cerr << "Acceptor listen: " << ec.message() << std::endl;
+        debug::log("[Backend] Acceptor listen: ", ec.message(), "\n");
         return;
     }
 
+    debug::log("[Backend] Endpoint created! TCP listening on port 8080...\n");
     // Start async accept
     start_accept();
 
@@ -48,7 +54,7 @@ void backend::initialize()
         try {
             ioc_.run();
         } catch (std::exception &e) {
-            std::cerr << "[IO Thread] exception: " << e.what() << std::endl;
+            debug::log("[IO Thread] exception: ", e.what(), "\n");
         }
     });
     ioThread.detach();
@@ -56,7 +62,7 @@ void backend::initialize()
     // 3) Launch the render loop in a separate thread
     renderThread_ = std::thread(&backend::render_loop, this);
 
-    debug::log("Backend initialized!\n");
+    debug::log("[Backend] Backend initialized! Instance created at http://127.0.0.1:8080\n");
 }
 
 // Called on program exit or plugin unload
@@ -66,28 +72,33 @@ void backend::cleanup()
         // Already shutting down
         return;
     }
-    debug::log("Sending shutdown request!\n");
+    debug::log("[Backend] Sending shutdown request!\n");
 
     // Request shutdown
     request_shutdown();
+
+    debug::log("[Backend] Waiting for threads to finish!\n");
 
     // Wait for render loop to exit
     if (renderThread_.joinable()) {
         renderThread_.join();
     }
 
+    debug::log("[Backend] Shutting down acceptor!\n");
     // The ioc_ won't stop until all async ops are done, but at least we
     // close the acceptor to avoid new connections
     beast::error_code ec;
     acceptor_.close(ec);
 
+    debug::log("[Backend] Close all websockets!\n");
     // Force close all websockets
     close_all_websockets();
 
+    debug::log("[Backend] Stopping event to IOC!\n");
     // Post a stop event to ioc_
     ioc_.stop();
 
-    debug::log("Backend cleanup complete!\n");
+    debug::log("[Backend] Backend cleanup complete!\n");
 }
 
 // Called from "/shutdown" or your own code
@@ -117,7 +128,7 @@ std::string backend::make_html_page()
     std::string webpage = prefix + "/resources/index.html";
     std::ifstream infile(webpage);
     if (!infile.is_open()) {
-        std::cerr << "Failed to open webpage " << webpage << ", using embedded page!" << std::endl;
+        debug::log("[Backend] Failed to open webpage ", webpage, ", using embedded page!\n");
         return fallback_page;
     }
 
@@ -131,16 +142,19 @@ std::string backend::make_html_page()
 }
 
 // Register a new WebSocket session so we can close them on shutdown
-void backend::register_websocket(std::shared_ptr<websocket_session> ws) {
+void backend::register_websocket(std::shared_ptr<websocket_session> ws)
+{
     std::lock_guard<std::mutex> lock(wsMutex_);
     websockets_.push_back(ws);
 }
 
 // Start async accept
-void backend::start_accept() {
+void backend::start_accept()
+{
     auto socket = std::make_shared<tcp::socket>(ioc_);
     acceptor_.async_accept(*socket,
-                           [this, socket](beast::error_code ec) {
+                           [this, socket](beast::error_code ec)
+                           {
                                if (!ec && !shuttingDown_) {
                                    // Create http_session
                                    std::make_shared<http_session>(std::move(*socket), this)->run();
@@ -154,7 +168,8 @@ void backend::start_accept() {
 }
 
 // The render loop: updates video buffer, sends frames to all websockets
-void backend::render_loop() {
+void backend::render_loop()
+{
     int frameCount = 0;
     while (runLoop_) {
         frameCount++;
@@ -179,11 +194,13 @@ void backend::render_loop() {
 
         std::this_thread::sleep_for(5ms);
     }
-    std::cout << "[Render] Exiting loop\n";
+
+    debug::log("[Render] Exiting loop\n");
 }
 
 // Send a message to all WebSocket sessions
-void backend::broadcast(const std::string &text) {
+void backend::broadcast(const std::string &text)
+{
     std::lock_guard<std::mutex> lock(wsMutex_);
     // Clean up any that have died
     auto it = websockets_.begin();
@@ -200,7 +217,8 @@ void backend::broadcast(const std::string &text) {
 }
 
 // Close all websockets gracefully
-void backend::close_all_websockets() {
+void backend::close_all_websockets()
+{
     std::lock_guard<std::mutex> lock(wsMutex_);
     for (auto &weak : websockets_) {
         if (auto sp = weak.lock()) {

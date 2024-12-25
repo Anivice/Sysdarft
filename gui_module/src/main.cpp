@@ -45,6 +45,6 @@ void EXPORT module_exit(void) {
                                           UI_DISPLAY_CHAR_METHOD_NAME, &ui_curses::display_char);
     GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
                                           UI_SET_CURSOR_VISIBILITY_METHOD_NAME, &ui_curses::set_cursor_visibility);
-    debug::log("UI instance restored!\n");
-    debug::log("Backend exited!\n");
+    debug::log("UI instance falling backed to ncurses!\n");
+    debug::log("Backend module exited!\n");
 }

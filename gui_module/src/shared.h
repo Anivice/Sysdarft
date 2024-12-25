@@ -99,6 +99,8 @@ private:
     std::mutex videoMutex_;
     std::vector<std::string> videoBuffer_;
 
+    std::atomic<bool> is_instance_initialized_before = {false};
+
 public:
     backend()
         : ioc_()

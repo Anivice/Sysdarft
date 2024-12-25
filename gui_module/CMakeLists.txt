@@ -91,9 +91,19 @@ find_package(CURL REQUIRED)
 # Find Threads
 find_package(Threads REQUIRED)
 
+function(add_object OBJECTNAME FILE)
+    add_library(${OBJECTNAME} OBJECT ${FILE})
+    target_include_directories(${OBJECTNAME} PUBLIC ${Boost_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../src/include)
+endfunction()
+
+add_object(websocket_session src/websocket_session.cpp)
+add_object(http src/http.cpp)
+add_object(backend src/backend.cpp)
+add_object(fallback src/fallback.cpp)
+
 # Add the executable target
-add_library(sysdarft_backend SHARED
-        src/main.cpp src/websocket_session.cpp src/http.cpp src/backend.cpp src/fallback.cpp)
+add_library(sysdarft_backend SHARED src/main.cpp)
+target_link_libraries(sysdarft_backend PUBLIC websocket_session http backend fallback)
 
 # Include directories
 target_include_directories(sysdarft_backend PRIVATE
