@@ -1,52 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Amber Phosphor Web Interface</title>
+    <meta charset="UTF-8"/>
+    <title>Amber CRT - VHS with Flicker</title>
     <style>
+        /* Full screen layout */
         html, body {
-            margin: 0; padding: 0; height: 100%;
-            background: #002a89; color: white; font-family: monospace;
-            display: flex; justify-content: center; align-items: center;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            overflow: hidden; /* prevent scrollbars */
         }
+
+        /* Center the scaled content in the viewport */
+        #outer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Scale the entire "screen" to 70%, with center origin for neat centering */
+        #wrapper {
+            transform: scale(0.7);
+            transform-origin: center center;
+            position: relative; /* so overlay or other stuff can be positioned inside if needed */
+
+            /* Slight color filter for “warm analog” look. Tweak to taste. */
+            filter: contrast(1.2) saturate(1.3) hue-rotate(5deg);
+        }
+
+        /* The final, upscaled canvas.  Force blocky scaling. */
         #screenCanvas {
-            /* This just ensures the canvas doesn't blow up the layout */
-            image-rendering: pixelated; /* sometimes helps with crispness */
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        /*
+           A scanline/noise overlay for that VHS/analog vibe:
+           - pointer-events: none so it doesn't block user interaction
+           - repeating-linear-gradient for horizontal lines
+           - partial opacity
+         */
+        #vhsOverlay {
+            pointer-events: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 9999;
+
+            background:
+                /* Fine horizontal lines every ~3px, 50% grey vs black */
+                    repeating-linear-gradient(
+                            to bottom,
+                            rgba(255, 255, 255, 0.02) 0px,
+                            rgba(255, 255, 255, 0.02) 2px,
+                            rgba(0, 0, 0, 0.02)       3px,
+                            rgba(0, 0, 0, 0.02)       4px
+                    ),
+                        /* Another subtle pattern layered on top */
+                    repeating-linear-gradient(
+                            to bottom,
+                            rgba(0, 0, 0, 0.03)      0px,
+                            rgba(0, 0, 0, 0.03)      1px,
+                            rgba(255, 255, 255, 0.03) 2px,
+                            rgba(255, 255, 255, 0.03) 3px
+                    );
+            mix-blend-mode: multiply;  /* Merge with what’s below */
+            opacity: 0.3;             /* Adjust for more/less visible lines */
         }
     </style>
 </head>
 <body>
-<canvas id="screenCanvas"></canvas>
+<!-- The scanline/noise overlay on top of everything -->
+<div id="vhsOverlay"></div>
+
+<!-- Outer container centers our scaled content -->
+<div id="outer">
+    <!-- Wrapper is scaled down to 70% -->
+    <div id="wrapper">
+        <!-- The final “screen” canvas, showing the upscaled text -->
+        <canvas id="screenCanvas"></canvas>
+    </div>
+</div>
+
 <script>
     /************************************************************
-     *  CONFIGURATIONS
+     *  BASIC CONFIG
      ************************************************************/
-    const ROWS         = 32;   // same 32 you mentioned
-    const COLS         = 127;  // same 127 you mentioned
-    const CELL_WIDTH   = 6;    // adjust to your taste
-    const CELL_HEIGHT  = 14;   // adjust to your taste
+    const COLS = 127;
+    const ROWS = 32;
 
-    // How many frames to keep the old character fading out
+    // Large text resolution (we intentionally lose quality by downsampling)
+    const CELL_WIDTH  = 20;
+    const CELL_HEIGHT = 30;
+    const DOWNSAMPLE_FACTOR = 2;  // e.g., from full → half → full again
+
+    // Phosphor fade-out
     const DECAY_FRAMES = 30;
-
-    // Colors (adjust to taste)
     const AMBER_COLOR  = 'rgb(255, 191, 0)';
-    const BG_COLOR     = 'rgb(50,24,20)';  // slightly dark amber-ish black
+    const BG_COLOR     = 'rgb(16, 2, 0)';
 
     /************************************************************
      *  CANVAS SETUP
      ************************************************************/
-    const canvas = document.getElementById('screenCanvas');
-    canvas.width = COLS * CELL_WIDTH;
-    canvas.height = ROWS * CELL_HEIGHT;
-    const ctx = canvas.getContext('2d');
+// 1) Large text canvas: draw text + decay in “full resolution”
+    const textCanvas = document.createElement('canvas');
+    textCanvas.width  = COLS * CELL_WIDTH;
+    textCanvas.height = ROWS * CELL_HEIGHT;
+    const textCtx = textCanvas.getContext('2d', { alpha: false });
 
-    // We’ll keep track of each cell with an object:
-    // {
-    //   currentChar: 'A',  // the current visible character
-    //   oldChar: ' ',      // the character that is fading out
-    //   decay: 0           // how many frames left to keep fading out oldChar
-    // }
+    // 2) Downsample canvas: half size (throw away detail)
+    const downsampleCanvas = document.createElement('canvas');
+    downsampleCanvas.width  = Math.floor(textCanvas.width  / DOWNSAMPLE_FACTOR);
+    downsampleCanvas.height = Math.floor(textCanvas.height / DOWNSAMPLE_FACTOR);
+    const downsampleCtx = downsampleCanvas.getContext('2d', { alpha: false });
+
+    // 3) Main, visible canvas
+    const mainCanvas = document.getElementById('screenCanvas');
+    mainCanvas.width  = textCanvas.width;
+    mainCanvas.height = textCanvas.height;
+    const mainCtx = mainCanvas.getContext('2d', { alpha: false });
+
+    // Disable smoothing in downsampling/upscaling
+    downsampleCtx.imageSmoothingEnabled = false;
+    mainCtx.imageSmoothingEnabled       = false;
+
+    /************************************************************
+     *  DISPLAY BUFFER
+     ************************************************************/
     let displayBuffer = [];
     function initDisplayBuffer() {
         for (let r = 0; r < ROWS; r++) {
@@ -63,53 +147,83 @@
     initDisplayBuffer();
 
     /************************************************************
-     *  ANIMATION LOOP: DRAW CHARACTERS WITH DECAY
+     *  FLICKER SETUP
+     ************************************************************/
+// We'll apply a slight random flicker to the final image each frame
+// reminiscent of old CRTs that have a subtle brightness or color jitter
+    function getFlickerAlpha() {
+        // e.g. random between ~0.97 and ~1.03
+        // The final clamp is to avoid going below 0 or above some max
+        const flicker = 0.97 + Math.random() * 0.06;
+        return Math.min(Math.max(flicker, 0.85), 1.1);
+    }
+
+    /************************************************************
+     *  RENDER LOOP: TEXT → DOWNSAMPLE → UPSCALE + FLICKER
      ************************************************************/
     function draw() {
-        // Clear background
-        ctx.fillStyle = BG_COLOR;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // A) Render text+decay onto the large text canvas
+        textCtx.fillStyle = BG_COLOR;
+        textCtx.fillRect(0, 0, textCanvas.width, textCanvas.height);
 
-        // Draw each cell
         for (let r = 0; r < ROWS; r++) {
             for (let c = 0; c < COLS; c++) {
                 const cell = displayBuffer[r][c];
                 const x = c * CELL_WIDTH;
                 const y = r * CELL_HEIGHT;
 
-                // 1) Draw oldChar with partial alpha if it’s still decaying
+                // Old char (phosphor fade)
                 if (cell.decay > 0) {
-                    const alpha = cell.decay / DECAY_FRAMES; // from 1.0 down to near 0
-                    ctx.save();
-                    ctx.globalAlpha = alpha;
-                    ctx.fillStyle = AMBER_COLOR;
-                    ctx.fillText(cell.oldChar, x, y + CELL_HEIGHT - 2);
-                    ctx.restore();
+                    const alpha = cell.decay / DECAY_FRAMES;
+                    textCtx.save();
+                    textCtx.globalAlpha = alpha;
+                    textCtx.fillStyle = AMBER_COLOR;
+                    textCtx.fillText(cell.oldChar, x, y + CELL_HEIGHT - 5);
+                    textCtx.restore();
                 }
 
-                // 2) Draw currentChar at full brightness
-                ctx.fillStyle = AMBER_COLOR;
-                ctx.fillText(cell.currentChar, x, y + CELL_HEIGHT - 2);
+                // Current char (full brightness)
+                textCtx.fillStyle = AMBER_COLOR;
+                textCtx.fillText(cell.currentChar, x, y + CELL_HEIGHT - 5);
 
                 // Decrement decay
-                if (cell.decay > 0) {
-                    cell.decay -= 1;
-                }
+                if (cell.decay > 0) cell.decay--;
             }
         }
+
+        // B) Downsample to discard detail
+        downsampleCtx.drawImage(
+            textCanvas,
+            0, 0, textCanvas.width, textCanvas.height,
+            0, 0, downsampleCanvas.width, downsampleCanvas.height
+        );
+
+        // C) Flicker alpha for final draw
+        const flickerAlpha = getFlickerAlpha();
+
+        // D) Upscale + flicker onto main canvas
+        mainCtx.save();
+        mainCtx.globalAlpha = flickerAlpha;
+        mainCtx.drawImage(
+            downsampleCanvas,
+            0, 0, downsampleCanvas.width, downsampleCanvas.height,
+            0, 0, mainCanvas.width, mainCanvas.height
+        );
+        mainCtx.restore();
 
         requestAnimationFrame(draw);
     }
 
-    // Setup the font once
-    ctx.font = `${CELL_HEIGHT}px monospace`;
-    ctx.textBaseline = 'alphabetic';
+    // Setup the font on our text context
+    // The font size is *slightly bigger* than the cell height so you see it well
+    textCtx.font = '24px monospace';
+    textCtx.textBaseline = 'alphabetic';
 
-    // Start the animation
+    // Start rendering
     requestAnimationFrame(draw);
 
     /************************************************************
-     *  WEBSOCKET SETUP
+     *  WEBSOCKET
      ************************************************************/
     const ws = new WebSocket("ws://" + location.host + "/ws");
 
@@ -118,30 +232,18 @@
     };
 
     ws.onmessage = (evt) => {
-        // Server sends 32 lines of 127 ASCII chars each (127x32)
-        // Convert the text into rows
+        // We expect 32 lines of 127 ASCII chars
         const lines = evt.data.split('\n');
-
-        // For safety, only handle the first ROWS lines
         for (let r = 0; r < ROWS; r++) {
-            // If the server data has fewer than r lines, skip
             if (r >= lines.length) break;
-
             const line = lines[r];
             for (let c = 0; c < COLS; c++) {
-                // If line is shorter, or c is out of range, break
                 if (c >= line.length) break;
-
                 const newChar = line[c];
                 const cell = displayBuffer[r][c];
-
-                // If the character changed
                 if (cell.currentChar !== newChar) {
-                    // Move the oldChar to a decay state
                     cell.oldChar = cell.currentChar;
                     cell.decay = DECAY_FRAMES;
-
-                    // Now update currentChar
                     cell.currentChar = newChar;
                 }
             }
@@ -153,7 +255,7 @@
     };
 
     /************************************************************
-     *  SEND KEYBOARD EVENTS
+     *  KEYBOARD EVENTS
      ************************************************************/
     window.addEventListener('keydown', (e) => {
         const msg = {
