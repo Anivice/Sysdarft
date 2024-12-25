@@ -76,9 +76,13 @@ template <typename... Args> void debug::log(const Args &...args)
 
     if (verbose)
     {
+        // Current timestamp
+        /****************************************************************************************************************/
         // output timestamp
         _log(_CYAN_, _BOLD_, get_current_date_time(), _REGULAR_, ": ");
 
+        // Who called me
+        /****************************************************************************************************************/
         // obtain the stack trace
         auto [backtrace_symbols, backtrace_frames] = debug::obtain_stack_frame();
 

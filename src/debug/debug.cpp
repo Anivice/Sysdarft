@@ -14,11 +14,30 @@
 #include <vector>
 #include <chrono>
 #include <cxxabi.h>
+#include <iostream>
+#include <dirent.h>
+#include <sys/types.h>
+#include <fstream>
+#include <cctype>
+#include <map>
 
 #define MAX_STACK_FRAMES 64
 
+// Structure to hold thread information
+struct ThreadInfo
+{
+    pid_t tid{};
+    std::string name;
+    char state{};
+    unsigned long utime{};    // User mode jiffies
+    unsigned long stime{};    // Kernel mode jiffies
+    unsigned long vmsize{};   // Virtual memory size in kB
+    unsigned long vmrss{};    // Resident Set Size in kB
+    unsigned long starttime{}; // Start time in jiffies
+};
+
 std::mutex debug::log_mutex;
-bool debug::verbose = false;
+std::atomic<bool> debug::verbose = false;
 
 std::string debug::separate_before_slash(const std::string& input)
 {
@@ -192,7 +211,7 @@ std::string initialize_error_msg(
     const bool if_perform_code_backtrace)
 {
     std::ostringstream err_msg;
-    err_msg << "=================================================================\n";
+    err_msg << _CYAN_ "=================================================================" _REGULAR_ "\n";
 
     // Retrieve current time once to avoid multiple calls
     const std::string current_time = debug::get_current_date_time();
@@ -201,13 +220,30 @@ std::string initialize_error_msg(
             << "Exception Thrown at " << current_time
             << _REGULAR_ << "\n";
 
-    // Combine error code and errno color settings into a single check
-    err_msg << ((_errno == 0) ? _GREEN_ : _RED_);
+    auto replace_all = [](std::string & input,
+        const std::string & target,
+        const std::string & replacement)
+    {
+        if (target.empty()) return; // Avoid infinite loop if target is empty
+
+        size_t pos = 0;
+        while ((pos = input.find(target, pos)) != std::string::npos) {
+            input.replace(pos, target.length(), replacement);
+            pos += replacement.length(); // Move past the replacement to avoid infinite loop
+        }
+    };
+
+    std::string processed_msg = msg;
+    if (!processed_msg.empty() && processed_msg.back() == '\n') {
+        processed_msg.pop_back();
+    }
+    replace_all(processed_msg, "\n", "\n" _ITALIC_ _GREEN_ ">>> ");
 
     // Consolidate the error description
-    err_msg << _BOLD_
-            << "Error description:\n" << msg << "\n"
-            << "System Error: errno=" << _errno << ": " << strerror(_errno) << _REGULAR_ << "\n";
+    err_msg << ((_errno == 0) ? _GREEN_ : _RED_)
+            << _BOLD_
+            << "Error description:\n" _REGULAR_ _ITALIC_ _GREEN_ ">>> " << processed_msg << _REGULAR_ "\n"
+            << ((_errno == 0) ? _GREEN_ : _RED_) << "System Error: errno=" << _errno << ": " << strerror(_errno) << _REGULAR_ << "\n";
 
     // Backtrace section
     if (if_perform_code_backtrace && debug::verbose)
@@ -215,11 +251,20 @@ std::string initialize_error_msg(
         const std::regex pattern(R"(([^\(]+)\(([^\)]*)\) \[([^\]]+)\])");
         std::smatch matches;
 
-        err_msg << _YELLOW_ << _BOLD_ << "Backtrace starts here (usually meaningful traces starts from #3):\n" << _REGULAR_;
+        err_msg << _CYAN_ "=================================================================" _REGULAR_ "\n";
+        err_msg << _YELLOW_ << _BOLD_ << "Backtrace starts here:\n" << _REGULAR_;
         auto [backtrace_symbols, backtrace_frames] = debug::obtain_stack_frame();
 
-        for (size_t i = 0; i < backtrace_symbols.size(); ++i) {
-            err_msg << "    " << _PURPLE_ << "Frame #" << i << " " << backtrace_frames[i] << _REGULAR_ << ": ";
+        for (size_t i = 0; i < backtrace_symbols.size(); ++i)
+        {
+            std::stringstream prefix;
+
+            if (i == 3) {
+                prefix << "   " _GREEN_ _BOLD_ "[" _RED_ "Frame #" << i << " " << backtrace_frames[i] << ": ";
+            } else {
+                prefix << "    " _PURPLE_ "Frame #" << i << " " << backtrace_frames[i] << _REGULAR_ ": ";
+            }
+            err_msg << prefix.str();
             if (std::regex_search(backtrace_symbols[i], matches, pattern) && matches.size() > 3) {
                 const std::string& executable_path = matches[1].str();
                 const std::string& traced_address = matches[2].str();
@@ -240,8 +285,30 @@ std::string initialize_error_msg(
                                 << "\tObtaining backtrace information failed for "
                                 << executable_path << " with offset " << address << ": "
                                 << fd_stderr << _REGULAR_ << "\n";
-                    } else {
-                        err_msg << _BLUE_ << fd_stdout << _REGULAR_;
+                    }
+                    else
+                    {
+                        std::string caller, path;
+
+                        size_t pos = fd_stdout.find('/'); // Find the position of the first '/'
+                        if (pos != std::string::npos)
+                        {
+                            caller = fd_stdout.substr(0, pos - 4 /* delete " at " */);
+                            path = fd_stdout.substr(pos);
+                        }
+
+                        size_t pos2 = caller.find('('); // Find the position of the first '/'
+                        if (pos2 != std::string::npos) {
+                            caller = caller.substr(0, pos2);
+                        }
+
+                        if (!caller.empty() && !path.empty()) {
+                            std::string empty(prefix.str().length() - 9, ' ');
+                            err_msg << (i == 3 ? _RED_ : _BLUE_) << caller << (i == 3 ? _GREEN_ "]\n" : "\n")
+                                    << (i == 3 ? _RED_ : _BLUE_) << empty << "at " << path << _REGULAR_;
+                        } else {
+                            err_msg << (i == 3 ? _RED_ : _BLUE_) << fd_stdout << (i == 3 ? _GREEN_ "]" : "") << _REGULAR_;
+                        }
                     }
                 };
 
@@ -251,20 +318,29 @@ std::string initialize_error_msg(
                     generate_addr2line_trace_info(traced_address);
                 }
             } else {
-                err_msg << _RED_ << "No trace information\n" << _REGULAR_;
+                err_msg << _RED_ << "No trace information\n" _REGULAR_ "\n";
             }
         }
-        err_msg << _YELLOW_ << _BOLD_ << "Backtrace ends here.\n" << _REGULAR_;
+        err_msg << _YELLOW_ << _BOLD_ << "Backtrace ends here." _REGULAR_ "\n";
     }
 
-    err_msg << "\n" << _BLUE_ _BOLD_
-            << "If you see this message, but the program continues to work,\n"
-            << "it means it's in debug mode, and some error handling functions are missing.\n"
-            << "If you see this message, and the program crashed, then this means it has unhandled BUGs.\n"
-            << "You need to refer to the backtrace to find out what that BUG is.\n"
-            << _REGULAR_ << "\n";
+    if (debug::verbose) {
+        err_msg << _CYAN_ "=================================================================" _REGULAR_ "\n"
+                << _BOLD_ _YELLOW_ "Thread Information:" _REGULAR_ "\n"
+                << debug::get_verbose_info();
+    }
 
-    err_msg << "=================================================================\n";
+    if (!debug::verbose) {
+        err_msg << _CYAN_ "=================================================================" _REGULAR_ "\n"
+                << _BLUE_ _BOLD_ "\n"
+                << "If you see this message, but the program continues to work,\n"
+                << "it means it's in debug mode, and some error handling functions are missing or not implemented.\n"
+                << "If you see this message, and the program crashed, then this means it has unhandled BUGs.\n"
+                << "You need to enable verbose mode, and refer to the backtrace to find out where is exception occurred.\n"
+                << _REGULAR_ << "\n";
+    }
+
+    err_msg << _CYAN_ "=================================================================" _REGULAR_ "\n";
 
     return err_msg.str();
 }
@@ -280,4 +356,242 @@ SysdarftBaseError::SysdarftBaseError(const std::string& msg, const bool if_perfo
     ),
     cur_errno(errno)
 {
+}
+
+// Function to check if a string consists solely of digits
+bool isDigits(const std::string& str) {
+    return std::all_of(str.begin(), str.end(), ::isdigit);
+}
+
+// Function to parse /proc/self/task/<tid>/stat
+bool parseStatFile(pid_t tid, ThreadInfo& info)
+{
+    std::string statPath = "/proc/self/task/" + std::to_string(tid) + "/stat";
+    std::ifstream statFile(statPath);
+    if (!statFile.is_open()) {
+        std::cerr << "Failed to open " << statPath << std::endl;
+        return false;
+    }
+
+    std::string line;
+    getline(statFile, line);
+    statFile.close();
+
+    // Parsing stat file
+    // The format is:
+    // pid (comm) state ppid ... utime stime ... starttime ...
+    // Since comm can contain spaces and is enclosed in parentheses, find the position after the last ')'
+    size_t pos1 = line.find('(');
+    size_t pos2 = line.rfind(')');
+    if (pos1 == std::string::npos || pos2 == std::string::npos || pos2 <= pos1 + 1) {
+        std::cerr << "Malformed stat file for TID " << tid << std::endl;
+        return false;
+    }
+
+    std::string before = line.substr(0, pos1 - 1); // pid
+    std::string comm = line.substr(pos1 + 1, pos2 - pos1 - 1); // comm
+    std::string after = line.substr(pos2 + 2); // rest of the fields
+
+    std::istringstream iss(after);
+    std::vector<std::string> fields;
+    std::string field;
+    while (iss >> field) {
+        fields.push_back(field);
+    }
+
+    if (fields.size() < 44) { // Ensure there are enough fields
+        std::cerr << "Not enough fields in stat file for TID " << tid << std::endl;
+        return false;
+    }
+
+    // Populate ThreadInfo
+    info.tid = tid;
+    info.name = comm;
+    info.state = fields[0][0]; // state is the first field after comm
+    try {
+        info.utime = std::stoul(fields[11]);    // Field 14: utime
+        info.stime = std::stoul(fields[12]);    // Field 15: stime
+        info.starttime = std::stoul(fields[19]); // Field 22: starttime
+    } catch (const std::invalid_argument& e) {
+        std::cerr << "Invalid number in stat file for TID " << tid << std::endl;
+        return false;
+    } catch (const std::out_of_range& e) {
+        std::cerr << "Number out of range in stat file for TID " << tid << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+// Function to parse /proc/self/task/<tid>/status
+bool parseStatusFile(pid_t tid, ThreadInfo& info)
+{
+    std::string statusPath = "/proc/self/task/" + std::to_string(tid) + "/status";
+    std::ifstream statusFile(statusPath);
+    if (!statusFile.is_open()) {
+        std::cerr << "Failed to open " << statusPath << std::endl;
+        return false;
+    }
+
+    std::string line;
+    std::map<std::string, std::string> statusMap;
+    while (getline(statusFile, line)) {
+        size_t colon = line.find(':');
+        if (colon != std::string::npos) {
+            std::string key = line.substr(0, colon);
+            // Remove leading whitespace from value
+            size_t valueStart = line.find_first_not_of(" \t", colon + 1);
+            std::string value = (valueStart != std::string::npos) ? line.substr(valueStart) : "";
+            statusMap[key] = value;
+        }
+    }
+    statusFile.close();
+
+    // Extract VmSize and VmRSS if available
+    if (statusMap.find("VmSize") != statusMap.end()) {
+        std::istringstream iss(statusMap["VmSize"]);
+        iss >> info.vmsize;
+    } else {
+        info.vmsize = 0;
+    }
+
+    if (statusMap.find("VmRSS") != statusMap.end()) {
+        std::istringstream iss(statusMap["VmRSS"]);
+        iss >> info.vmrss;
+    } else {
+        info.vmrss = 0;
+    }
+
+    return true;
+}
+
+// Function to get thread information
+bool getThreadInfo(pid_t tid, ThreadInfo& info)
+{
+    if (!parseStatFile(tid, info)) {
+        return false;
+    }
+    if (!parseStatusFile(tid, info)) {
+        return false;
+    }
+    return true;
+}
+
+std::string debug::get_verbose_info()
+{
+    std::stringstream ret;
+    std::string taskPath = "/proc/self/task/";
+    DIR* dir = opendir(taskPath.c_str());
+    if (dir == nullptr) {
+        std::cerr << "Failed to open directory: " << taskPath << std::endl;
+        return "";
+    }
+
+    std::vector<ThreadInfo> threads;
+    struct dirent* entry;
+
+    while ((entry = readdir(dir)) != nullptr) {
+        // Entries are directories with numeric names (TIDs)
+        if (entry->d_type == DT_DIR) {
+            std::string name(entry->d_name);
+            if (name == "." || name == "..") {
+                continue;
+            }
+            if (!isDigits(name)) {
+                continue;
+            }
+            pid_t tid = std::stoi(name);
+            ThreadInfo info;
+            if (getThreadInfo(tid, info)) {
+                threads.push_back(info);
+            }
+        }
+    }
+
+    closedir(dir);
+
+    // Determine maximum widths for each column
+    size_t max_tid = std::string("TID").size();
+    size_t max_state = std::string("State").size();
+    size_t max_name = std::string("Name").size();
+    size_t max_utime = std::string("Utime").size();
+    size_t max_stime = std::string("Stime").size();
+    size_t max_vmsize = std::string("Vmsize(kB)").size();
+    size_t max_vmrss = std::string("Vmrss(kB)").size();
+    size_t max_starttime = std::string("Starttime").size();
+
+    for (const auto& thread : threads)
+    {
+        max_tid = std::max(max_tid, std::to_string(thread.tid).size());
+        max_state = std::max(max_state, std::to_string(thread.state).size());
+        max_name = std::max(max_name, thread.name.size());
+        max_utime = std::max(max_utime, std::to_string(thread.utime).size());
+        max_stime = std::max(max_stime, std::to_string(thread.stime).size());
+        max_vmsize = std::max(max_vmsize, std::to_string(thread.vmsize).size());
+        max_vmrss = std::max(max_vmrss, std::to_string(thread.vmrss).size());
+        max_starttime = std::max(max_starttime, std::to_string(thread.starttime).size());
+    }
+
+    // Define padding for each column (max length + 3 spaces)
+    size_t pad_tid = max_tid + 3;
+    size_t pad_state = max_state + 3;
+    size_t pad_name = max_name + 3;
+    size_t pad_utime = max_utime + 3;
+    size_t pad_stime = max_stime + 3;
+    size_t pad_vmsize = max_vmsize + 3;
+    size_t pad_vmrss = max_vmrss + 3;
+    size_t pad_starttime = max_starttime + 3;
+
+    // Function to create a string with a given number of spaces
+    auto create_spaces = [](const size_t count) -> std::string {
+        return std::string(count, ' ');
+    };
+
+    // Function to pad a string to the right with spaces up to a given width
+    auto pad_right = [&](const std::string& s, const size_t width) -> std::string
+    {
+        if (s.size() >= width) {
+            return s;
+        }
+        return s + create_spaces(width - s.size());
+    };
+
+    // Header
+    ret << _BOLD_ << _YELLOW_ << "Number of threads in current process: "
+        << threads.size() << "\n\n" << _REGULAR_;
+
+    ret << _BLUE_ << "Detailed Thread Information:" _REGULAR_ "\n";
+    ret << _CYAN_ "-----------------------------------------------" _REGULAR_ "\n";
+
+    // Table Header
+    std::stringstream table;
+    table   << _RED_    << pad_right("TID", pad_tid)
+            << _GREEN_  << pad_right("State", pad_state)
+            << _BLUE_   << pad_right("Name", pad_name)
+            << _PURPLE_ << pad_right("Utime", pad_utime)
+            << _YELLOW_ << pad_right("Stime", pad_stime)
+            << _CYAN_   << pad_right("Vmsize(kB)", pad_vmsize)
+            << _RED_    << pad_right("Vmrss(kB)", pad_vmrss)
+            << _GREEN_  << pad_right("Starttime", pad_starttime)
+            << _REGULAR_ "\n";
+    ret << table.str();
+
+    // Separator
+    ret << _PURPLE_ << std::string(table.str().length() - 45, '-') << _REGULAR_ "\n";
+
+    // Table Rows
+    for (const auto& thread : threads)
+    {
+        ret << _RED_    << pad_right(std::to_string(thread.tid), pad_tid)
+            << _GREEN_  << pad_right(std::string(1, thread.state), pad_state)
+            << _BLUE_   << pad_right(thread.name.substr(0, 15), pad_name) // Limit name length for readability
+            << _PURPLE_ << pad_right(std::to_string(thread.utime), pad_utime)
+            << _YELLOW_ << pad_right(std::to_string(thread.stime), pad_stime)
+            << _CYAN_   << pad_right(std::to_string(thread.vmsize), pad_vmsize)
+            << _RED_    << pad_right(std::to_string(thread.vmrss), pad_vmrss)
+            << _GREEN_  << pad_right(std::to_string(thread.starttime), pad_starttime)
+            << _REGULAR_ "\n";
+    }
+
+    return ret.str();
 }

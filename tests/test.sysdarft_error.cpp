@@ -7,22 +7,28 @@ void f3(int)
 
 void f2(const int a)
 {
-    f3(a);
+    try {
+        f3(a);
+    } catch (SysdarftBaseError& e) {
+        throw SysdarftBaseError("Error caught: " + std::string(e.what()));
+    }
 }
 
 void f1(const int a)
 {
-    f2(a);
+    try {
+        f2(a);
+    } catch (SysdarftBaseError& e) {
+        throw SysdarftBaseError("Error caught: " + std::string(e.what()));
+    }
 }
 
 int main()
 {
-    try
-    {
+    debug::verbose = true;
+    try {
         f1(12);
-    }
-    catch (SysdarftBaseError& e)
-    {
+    } catch (SysdarftBaseError& e) {
         std::cerr << e.what() << std::endl;
         return 0;
     }

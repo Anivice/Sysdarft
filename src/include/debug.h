@@ -8,6 +8,7 @@
 #include <map>
 #include <unordered_map>
 #include <pthread.h>
+#include <atomic>
 
 #define EXPORT __attribute__((visibility("default")))
 
@@ -20,6 +21,7 @@
 #define _BOLD_    "\033[1m"
 #define _REGULAR_ "\033[0m"
 #define _FLASH_   "\033[5m"
+#define _ITALIC_  "\033[3m"
 
 namespace debug
 {
@@ -397,7 +399,9 @@ namespace debug
      */
     std::string EXPORT separate_before_slash(const std::string& input);
 
-    extern EXPORT bool verbose;
+    extern EXPORT std::atomic<bool> verbose;
+
+    std::string get_verbose_info();
 
     /**
      * @brief Logs a message with a timestamp to the standard output.
