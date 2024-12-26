@@ -1,4 +1,5 @@
 #include <debug.h>
+#include <thread>
 
 void f3(int)
 {
@@ -25,6 +26,10 @@ void f1(const int a)
 
 int main()
 {
+    std::thread Thread1([]() {
+        std::this_thread::sleep_for(std::chrono::seconds(1000));
+    });
+
     debug::verbose = true;
     try {
         f1(12);

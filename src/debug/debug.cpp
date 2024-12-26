@@ -644,3 +644,33 @@ std::string debug::get_verbose_info()
 
     return ret.str();
 }
+
+// Signal handler for SIGABRT
+void handle_sigabrt(int signum)
+{
+    const char * prefix = _RED_ _BOLD_ "[FATAL ERROR] Program is terminated using SIGABRT (Signal Abort)!" _REGULAR_ "\n";
+    debug::verbose = true;
+    SysdarftBaseError Error("Abnormal termination!");
+    std::string str = Error.what();
+    write(STDOUT_FILENO, prefix, strlen(prefix));
+    write(STDERR_FILENO, str.c_str(), str.length() - 1);
+    _exit(EXIT_FAILURE);
+}
+
+class __global_initialization__ {
+public:
+    __global_initialization__()
+    {
+        // Set up the SIGABRT handler
+        struct sigaction sa{};
+        sa.sa_handler = handle_sigabrt;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = 0; // No special flags
+
+        if (sigaction(SIGABRT, &sa, nullptr) == -1)
+        {
+            perror("Error setting up SIGABRT handler");
+            exit(EXIT_FAILURE);
+        }
+    }
+} __global_initialization_instance__;
