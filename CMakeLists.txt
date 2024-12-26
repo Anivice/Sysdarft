@@ -150,7 +150,7 @@ add_library(sysdarft_processor OBJECT
         src/sysdarft_processor/io/disk_hub.cpp
         src/sysdarft_processor/io/io_hub.cpp
         src/sysdarft_processor/io/external_device_hub.cpp
-        src/sysdarft_processor/io/memory_io.cpp
+        src/sysdarft_processor/cpu/memory_io.cpp
         src/sysdarft_processor/include/io.h
         src/sysdarft_processor/include/gpu.h
         src/sysdarft_processor/include/int.h
@@ -163,11 +163,13 @@ add_library(sysdarft_processor OBJECT
         src/sysdarft_processor/cpu/protected_mode_target_access.cpp
         src/sysdarft_processor/cpu/register.cpp
         src/sysdarft_processor/cpu/timestamp.cpp
-        src/sysdarft_processor/cpu/target_value_access.cpp
+        src/sysdarft_processor/cpu/real_mode_target_access.cpp
         src/sysdarft_processor/cpu/clock.cpp
         src/sysdarft_processor/cpu/operation_triggerer.cpp
         src/sysdarft_processor/integrated_devices/integrated_gpu.cpp
-        src/sysdarft_processor/instantiation/processor_instances_and_their_corresponding_init.cpp)
+        src/sysdarft_processor/instantiation/processor_instances_and_their_corresponding_init.cpp
+        src/sysdarft_processor/include/cpu.inl
+)
 target_include_directories(sysdarft_processor PUBLIC src/include src/sysdarft_processor/include)
 
 # Sysdarft Shared Library:

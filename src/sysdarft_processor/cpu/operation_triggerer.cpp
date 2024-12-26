@@ -5,15 +5,6 @@
 #include <random>
 #include <iomanip>
 
-std::atomic<unsigned long long int> count = 0;
-
-// Sample operation function
-void processor::operation(__uint128_t timestamp, uint8_t current_core)
-{
-    std::this_thread::sleep_for(std::chrono::nanoseconds(10));
-    ++count;
-}
-
 void processor::triggerer_thread(std::atomic<bool> & running, std::atomic<bool> & stopped)
 {
     const std::chrono::nanoseconds period_ns(1'000'000'000 / frequencyHz);
@@ -32,23 +23,27 @@ void processor::triggerer_thread(std::atomic<bool> & running, std::atomic<bool> 
     {
         auto op_start = std::chrono::steady_clock::now();
 
-        for (int i = 0; i < core_count; i++)
+        if (!real_mode_register_access(0).ControlRegister0.ProtectedMode)
         {
-            std::thread T1(&processor::operation, this, timestamp, i);
-            thread_pool[i] = std::move(T1);
-        }
-
-        for (auto & thread : thread_pool)
-        {
-            if (thread.joinable()) {
-                thread.join();
+            for (int i = 0; i < core_count; i++)
+            {
+                std::thread T1(&processor::operation, this, timestamp, i);
+                thread_pool[i] = std::move(T1);
             }
+
+            for (auto & thread : thread_pool)
+            {
+                if (thread.joinable()) {
+                    thread.join();
+                }
+            }
+        } else {
+            operation(timestamp, 0);
         }
 
         auto op_end = std::chrono::steady_clock::now();
-        const auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(op_end - op_start);
-
-        if (duration > MAX_DURATION_NS) {
+        if (const auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(op_end - op_start);
+            duration > MAX_DURATION_NS) {
             debug::log("[CPU] Delayed ", duration - MAX_DURATION_NS, " ns for current cycle!\n");
         } else {
             std::this_thread::sleep_for(MAX_DURATION_NS * wait_scale.load() - duration);
@@ -57,7 +52,6 @@ void processor::triggerer_thread(std::atomic<bool> & running, std::atomic<bool> 
         timestamp++;
     }
 
-    debug::log(count, " instructions executed.\n");
     stopped = true;
 }
 

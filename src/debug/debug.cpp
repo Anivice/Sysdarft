@@ -231,167 +231,154 @@ size_t max_line_length(const std::string& input)
  *       in the generated message.
  */
 std::string initialize_error_msg(
-    const std::string& msg,
+    const std::string &msg,
     const int _errno,
     const bool if_perform_code_backtrace)
 {
-    std::ostringstream err_msg;
-    err_msg << "<INSERT BREAK HERE>\n";
+    if (debug::verbose)
+    {
+        std::ostringstream err_msg;
+        err_msg << "<INSERT BREAK HERE>\n";
 
-    // Retrieve current time once to avoid multiple calls
-    const std::string current_time = debug::get_current_date_time();
+        // Retrieve current time once to avoid multiple calls
+        const std::string current_time = debug::get_current_date_time();
 
-    err_msg << _RED_ << _BOLD_
+        err_msg << _RED_ << _BOLD_
             << "Exception Thrown at " << current_time
             << _REGULAR_ << "\n";
 
-    auto replace_all = [](std::string & input,
-        const std::string & target,
-        const std::string & replacement)
-    {
-        if (target.empty()) return; // Avoid infinite loop if target is empty
+        auto replace_all = [](std::string &input,
+                              const std::string &target,
+                              const std::string &replacement) {
+            if (target.empty())
+                return; // Avoid infinite loop if target is empty
 
-        size_t pos = 0;
-        while ((pos = input.find(target, pos)) != std::string::npos) {
-            input.replace(pos, target.length(), replacement);
-            pos += replacement.length(); // Move past the replacement to avoid infinite loop
+            size_t pos = 0;
+            while ((pos = input.find(target, pos)) != std::string::npos) {
+                input.replace(pos, target.length(), replacement);
+                pos += replacement.length(); // Move past the replacement to avoid infinite loop
+            }
+        };
+
+        std::string processed_msg = msg;
+        if (!processed_msg.empty() && processed_msg.back() == '\n') {
+            processed_msg.pop_back();
         }
-    };
+        replace_all(processed_msg, "\n", "\n" _ITALIC_ _GREEN_ ">>> ");
 
-    std::string processed_msg = msg;
-    if (!processed_msg.empty() && processed_msg.back() == '\n') {
-        processed_msg.pop_back();
-    }
-    replace_all(processed_msg, "\n", "\n" _ITALIC_ _GREEN_ ">>> ");
-
-    // Consolidate the error description
-    err_msg << ((_errno == 0) ? _GREEN_ : _RED_)
+        // Consolidate the error description
+        err_msg << ((_errno == 0) ? _GREEN_ : _RED_)
             << _BOLD_
             << "Error description:\n" _REGULAR_ _ITALIC_ _GREEN_ ">>> " << processed_msg << _REGULAR_ "\n"
             << ((_errno == 0) ? _GREEN_ : _RED_) << "System Error: errno=" << _errno << ": " << strerror(_errno) << _REGULAR_ << "\n";
 
-    // Backtrace section
-    if (if_perform_code_backtrace && debug::verbose)
-    {
-        const std::regex pattern(R"(([^\(]+)\(([^\)]*)\) \[([^\]]+)\])");
-        std::smatch matches;
+        // Backtrace section
+        if (if_perform_code_backtrace) {
+            const std::regex pattern(R"(([^\(]+)\(([^\)]*)\) \[([^\]]+)\])");
+            std::smatch matches;
 
-        err_msg << "<INSERT BREAK HERE>\n";
-        err_msg << _YELLOW_ << _BOLD_ << "Backtrace starts here:\n" << _REGULAR_;
-        auto [backtrace_symbols, backtrace_frames] = debug::obtain_stack_frame();
+            err_msg << "<INSERT BREAK HERE>\n";
+            err_msg << _YELLOW_ << _BOLD_ << "Backtrace starts here:\n" << _REGULAR_;
+            auto [backtrace_symbols, backtrace_frames] = debug::obtain_stack_frame();
 
-        for (size_t i = 0; i < backtrace_symbols.size(); ++i)
-        {
-            std::stringstream prefix;
+            for (size_t i = 0; i < backtrace_symbols.size(); ++i) {
+                std::stringstream prefix;
 
-            if (i == 3) {
-                prefix << "   " _GREEN_ _BOLD_ "[" _RED_ "Frame #" << i << " " << backtrace_frames[i] << ": ";
-            } else {
-                prefix << "    " _PURPLE_ "Frame #" << i << " " << backtrace_frames[i] << _REGULAR_ ": ";
-            }
-            err_msg << prefix.str();
-            if (std::regex_search(backtrace_symbols[i], matches, pattern) && matches.size() > 3) {
-                const std::string& executable_path = matches[1].str();
-                const std::string& traced_address = matches[2].str();
-                const std::string& traced_runtime_address = matches[3].str();
+                if (i == 3) {
+                    prefix << "   " _GREEN_ _BOLD_ "[" _RED_ "Frame #" << i << " " << backtrace_frames[i] << ": ";
+                } else {
+                    prefix << "    " _PURPLE_ "Frame #" << i << " " << backtrace_frames[i] << _REGULAR_ ": ";
+                }
+                err_msg << prefix.str();
+                if (std::regex_search(backtrace_symbols[i], matches, pattern) && matches.size() > 3) {
+                    const std::string &executable_path = matches[1].str();
+                    const std::string &traced_address = matches[2].str();
+                    const std::string &traced_runtime_address = matches[3].str();
 
-                auto generate_addr2line_trace_info = [&](const std::string & address) {
-                    auto [fd_stdout, fd_stderr, exit_status] = debug::exec_command(
-                        "addr2line",
-                        "--demangle",
-                        "-f",
-                        "-p",
-                        "-a",
-                        "-e",
-                        executable_path,
-                        address);
-                    if (exit_status != 0) {
-                        err_msg << _RED_ << _BOLD_
+                    auto generate_addr2line_trace_info = [&](const std::string &address) {
+                        auto [fd_stdout, fd_stderr, exit_status] = debug::exec_command(
+                            "addr2line",
+                            "--demangle",
+                            "-f",
+                            "-p",
+                            "-a",
+                            "-e",
+                            executable_path,
+                            address);
+                        if (exit_status != 0) {
+                            err_msg << _RED_ << _BOLD_
                                 << "\tObtaining backtrace information failed for "
                                 << executable_path << " with offset " << address << ": "
                                 << fd_stderr << _REGULAR_ << "\n";
-                    }
-                    else
-                    {
-                        std::string caller, path;
+                        } else {
+                            std::string caller, path;
 
-                        size_t pos = fd_stdout.find('/'); // Find the position of the first '/'
-                        if (pos != std::string::npos)
-                        {
-                            caller = fd_stdout.substr(0, pos - 4 /* delete " at " */);
-                            path = fd_stdout.substr(pos);
-                        }
+                            size_t pos = fd_stdout.find('/'); // Find the position of the first '/'
+                            if (pos != std::string::npos) {
+                                caller = fd_stdout.substr(0, pos - 4 /* delete " at " */);
+                                path = fd_stdout.substr(pos);
+                            }
 
-                        size_t pos2 = caller.find('('); // Find the position of the first '/'
-                        if (pos2 != std::string::npos) {
-                            caller = caller.substr(0, pos2);
-                        }
+                            size_t pos2 = caller.find('('); // Find the position of the first '/'
+                            if (pos2 != std::string::npos) {
+                                caller = caller.substr(0, pos2);
+                            }
 
-                        if (!caller.empty() && !path.empty()) {
-                            std::string empty(prefix.str().length() - 9, ' ');
-                            err_msg << (i == 3 ? _RED_ : _BLUE_) << caller << (i == 3 ? _GREEN_ "]\n" : "\n")
+                            if (!caller.empty() && !path.empty()) {
+                                std::string empty(prefix.str().length() - 9, ' ');
+                                err_msg << (i == 3 ? _RED_ : _BLUE_) << caller << (i == 3 ? _GREEN_ "]\n" : "\n")
                                     << (i == 3 ? _RED_ : _GREEN_) << (i == 3 ? empty.substr(0, empty.length() - 5) : empty)
                                     << "at " << path << _REGULAR_;
-                        } else {
-                            err_msg << (i == 3 ? _RED_ : _BLUE_) << fd_stdout << (i == 3 ? _GREEN_ "]" : "") << _REGULAR_;
+                            } else {
+                                err_msg << (i == 3 ? _RED_ : _BLUE_) << fd_stdout << (i == 3 ? _GREEN_ "]" : "") << _REGULAR_;
+                            }
                         }
+                    };
+
+                    if (traced_address.empty()) {
+                        generate_addr2line_trace_info(traced_runtime_address);
+                    } else {
+                        generate_addr2line_trace_info(traced_address);
                     }
-                };
-
-                if (traced_address.empty()) {
-                    generate_addr2line_trace_info(traced_runtime_address);
                 } else {
-                    generate_addr2line_trace_info(traced_address);
+                    err_msg << _RED_ << "No trace information\n" _REGULAR_ "\n";
                 }
-            } else {
-                err_msg << _RED_ << "No trace information\n" _REGULAR_ "\n";
             }
+            err_msg << _YELLOW_ << _BOLD_ << "Backtrace ends here." _REGULAR_ "\n";
         }
-        err_msg << _YELLOW_ << _BOLD_ << "Backtrace ends here." _REGULAR_ "\n";
-    }
 
-    if (debug::verbose) {
         err_msg << "<INSERT BREAK HERE>\n"
-                << _BOLD_ _YELLOW_ "Thread Information:" _REGULAR_ "\n"
-                << debug::get_verbose_info();
+            << _BOLD_ _YELLOW_ "Thread Information:" _REGULAR_ "\n"
+            << debug::get_verbose_info();
+
+        err_msg << "<INSERT BREAK HERE>\n";
+
+        std::string result = err_msg.str();
+        std::string processed_result = err_msg.str();
+
+        // Lambda to remove ANSI escape codes
+        auto remove_ansi_escape_codes = [](std::string &input) {
+            // Regex pattern to match ANSI escape codes
+            // \x1B is the ESC character
+            // \[[0-9;]* is the parameter bytes
+            // [A-Za-z] is the command character
+            std::regex ansi_escape_pattern(R"(\x1B\[[0-9;]*[A-Za-z])");
+
+            // Replace all matches with an empty string
+            input = std::regex_replace(input, ansi_escape_pattern, "");
+        };
+
+        remove_ansi_escape_codes(result);
+        auto len = max_line_length(result);
+        std::string break_line(len, '=');
+        break_line.insert(0, _BOLD_ _YELLOW_);
+        break_line += _REGULAR_;
+        replace_all(processed_result, "<INSERT BREAK HERE>", break_line);
+
+        return processed_result;
     }
 
-    if (!debug::verbose) {
-        err_msg << "<INSERT BREAK HERE>\n"
-                << _BLUE_ _BOLD_ "\n"
-                << "If you see this message, but the program continues to work,\n"
-                << "it means it's in debug mode, and some error handling functions are missing or not implemented.\n"
-                << "If you see this message, and the program crashed, then this means it has unhandled BUGs.\n"
-                << "You need to enable verbose mode, and refer to the backtrace to find out where is exception occurred.\n"
-                << _REGULAR_ << "\n";
-    }
-
-    err_msg << "<INSERT BREAK HERE>\n";
-
-    std::string result = err_msg.str();
-    std::string processed_result = err_msg.str();
-
-    // Lambda to remove ANSI escape codes
-    auto remove_ansi_escape_codes = [](std::string& input)
-    {
-        // Regex pattern to match ANSI escape codes
-        // \x1B is the ESC character
-        // \[[0-9;]* is the parameter bytes
-        // [A-Za-z] is the command character
-        std::regex ansi_escape_pattern(R"(\x1B\[[0-9;]*[A-Za-z])");
-
-        // Replace all matches with an empty string
-        input = std::regex_replace(input, ansi_escape_pattern, "");
-    };
-
-    remove_ansi_escape_codes(result);
-    auto len = max_line_length(result);
-    std::string break_line(len, '=');
-    break_line.insert(0, _BOLD_ _YELLOW_);
-    break_line += _REGULAR_;
-    replace_all(processed_result, "<INSERT BREAK HERE>", break_line);
-
-    return processed_result;
+    return msg + std::string(" (errno=") + std::to_string(_errno) + ")";
 }
 
 SysdarftBaseError::SysdarftBaseError(const std::string& msg, const bool if_perform_code_backtrace)
