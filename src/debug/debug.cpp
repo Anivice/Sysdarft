@@ -170,6 +170,31 @@ debug::cmd_status debug::_exec_command(const std::string& cmd, const std::vector
     return result;
 }
 
+// Function to find the maximum line length in a string
+size_t max_line_length(const std::string& input)
+{
+    size_t max_length = 0;
+    size_t current_length = 0;
+
+    for (char ch : input) {
+        if (ch == '\n') {
+            if (current_length > max_length) {
+                max_length = current_length;
+            }
+            current_length = 0; // Reset for the next line
+        } else {
+            ++current_length;
+        }
+    }
+
+    // Check the last line if it doesn't end with a newline
+    if (current_length > max_length) {
+        max_length = current_length;
+    }
+
+    return max_length;
+}
+
 /**
  * @brief Generates a formatted error message with optional backtrace information.
  *
@@ -211,7 +236,7 @@ std::string initialize_error_msg(
     const bool if_perform_code_backtrace)
 {
     std::ostringstream err_msg;
-    err_msg << _CYAN_ "=================================================================" _REGULAR_ "\n";
+    err_msg << "<INSERT BREAK HERE>\n";
 
     // Retrieve current time once to avoid multiple calls
     const std::string current_time = debug::get_current_date_time();
@@ -251,7 +276,7 @@ std::string initialize_error_msg(
         const std::regex pattern(R"(([^\(]+)\(([^\)]*)\) \[([^\]]+)\])");
         std::smatch matches;
 
-        err_msg << _CYAN_ "=================================================================" _REGULAR_ "\n";
+        err_msg << "<INSERT BREAK HERE>\n";
         err_msg << _YELLOW_ << _BOLD_ << "Backtrace starts here:\n" << _REGULAR_;
         auto [backtrace_symbols, backtrace_frames] = debug::obtain_stack_frame();
 
@@ -305,7 +330,8 @@ std::string initialize_error_msg(
                         if (!caller.empty() && !path.empty()) {
                             std::string empty(prefix.str().length() - 9, ' ');
                             err_msg << (i == 3 ? _RED_ : _BLUE_) << caller << (i == 3 ? _GREEN_ "]\n" : "\n")
-                                    << (i == 3 ? _RED_ : _BLUE_) << empty << "at " << path << _REGULAR_;
+                                    << (i == 3 ? _RED_ : _GREEN_) << (i == 3 ? empty.substr(0, empty.length() - 5) : empty)
+                                    << "at " << path << _REGULAR_;
                         } else {
                             err_msg << (i == 3 ? _RED_ : _BLUE_) << fd_stdout << (i == 3 ? _GREEN_ "]" : "") << _REGULAR_;
                         }
@@ -325,13 +351,13 @@ std::string initialize_error_msg(
     }
 
     if (debug::verbose) {
-        err_msg << _CYAN_ "=================================================================" _REGULAR_ "\n"
+        err_msg << "<INSERT BREAK HERE>\n"
                 << _BOLD_ _YELLOW_ "Thread Information:" _REGULAR_ "\n"
                 << debug::get_verbose_info();
     }
 
     if (!debug::verbose) {
-        err_msg << _CYAN_ "=================================================================" _REGULAR_ "\n"
+        err_msg << "<INSERT BREAK HERE>\n"
                 << _BLUE_ _BOLD_ "\n"
                 << "If you see this message, but the program continues to work,\n"
                 << "it means it's in debug mode, and some error handling functions are missing or not implemented.\n"
@@ -340,9 +366,32 @@ std::string initialize_error_msg(
                 << _REGULAR_ << "\n";
     }
 
-    err_msg << _CYAN_ "=================================================================" _REGULAR_ "\n";
+    err_msg << "<INSERT BREAK HERE>\n";
 
-    return err_msg.str();
+    std::string result = err_msg.str();
+    std::string processed_result = err_msg.str();
+
+    // Lambda to remove ANSI escape codes
+    auto remove_ansi_escape_codes = [](std::string& input)
+    {
+        // Regex pattern to match ANSI escape codes
+        // \x1B is the ESC character
+        // \[[0-9;]* is the parameter bytes
+        // [A-Za-z] is the command character
+        std::regex ansi_escape_pattern(R"(\x1B\[[0-9;]*[A-Za-z])");
+
+        // Replace all matches with an empty string
+        input = std::regex_replace(input, ansi_escape_pattern, "");
+    };
+
+    remove_ansi_escape_codes(result);
+    auto len = max_line_length(result);
+    std::string break_line(len, '=');
+    break_line.insert(0, _BOLD_ _YELLOW_);
+    break_line += _REGULAR_;
+    replace_all(processed_result, "<INSERT BREAK HERE>", break_line);
+
+    return processed_result;
 }
 
 SysdarftBaseError::SysdarftBaseError(const std::string& msg, const bool if_perform_code_backtrace)
