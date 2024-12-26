@@ -7,7 +7,7 @@
 #include <mutex>
 #include <ncurses.h>
 
-void ui_curses::run()
+void ui_curses::run(std::atomic<bool>& running, std::atomic<bool>& stopped)
 {
     set_thread_name("UI Runner");
 
@@ -39,7 +39,7 @@ void ui_curses::run()
     }
     refresh();
 
-    while (!runner_loop_exit_indicator)
+    while (running)
     {
         // Wait for a key or mouse event
         int ch = getch();
@@ -106,7 +106,7 @@ void ui_curses::run()
     // Clean up
     endwin();
 
-    runner_loop_exit_finished_indicator = true;
+    stopped = true;
 }
 
 // -----------------------------------------------------
@@ -122,13 +122,13 @@ void ui_curses::init_video_memory()
     }
 
     // Place a message in the middle
-    const char* msg = "(Video Memory Not Initialized)";
+    const auto msg = "(Video Memory Not Initialized)";
     const int msg_len     = static_cast<int>(std::strlen(msg));
     const int mid_x       = (V_WIDTH  - msg_len) / 2;
     constexpr int mid_y       = (V_HEIGHT - 1) / 2;
 
     for (int i = 0; i < msg_len; i++) {
-        video_memory[mid_x + i][mid_y] = msg[i];
+        video_memory[mid_x + i][mid_y] = static_cast<unsigned char>(msg[i]);
     }
 }
 
@@ -204,25 +204,15 @@ void ui_curses::recalc_offsets(int rows, int cols)
 
 void ui_curses::initialize()
 {
-    runner_loop_exit_indicator = false;
-    runner_loop_exit_finished_indicator = false;
-
-    std::thread Runner(&ui_curses::run, this);
-    Runner.detach();
-
+    renderer.start();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
 void ui_curses::cleanup()
 {
-    debug::log("Sending shutdown signal...\n");
-    runner_loop_exit_indicator = true;
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    debug::log("Signal sent! Waiting for shutdown procedure to finish...\n");
-    while (!runner_loop_exit_finished_indicator) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    debug::log("Shutdown procedure finished!\n");
+    debug::log("[Curses] Stopping renderer...\n");
+    renderer.stop();
+    debug::log("[Curses] Shutdown procedure finished!\n");
 }
 
 void ui_curses::set_cursor(const int x, const int y)

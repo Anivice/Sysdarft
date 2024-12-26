@@ -6,14 +6,16 @@
 #include <mutex>
 #include <ui_curses.h>
 #include <thread>
+#include <worker.h>
 
 class EXPORT Cli {
 private:
-    void run();
+    void run(std::atomic<bool> &, std::atomic<bool> &);
 
     std::string last_command;
     std::mutex access_mutex;
-    std::thread CliWorkThread;
+    worker_thread worker;
+
 public:
     Cli();
 };

@@ -36,7 +36,7 @@ void handle_sigint(int signum)
     }
 }
 
-void Cli::run()
+void Cli::run(std::atomic<bool> & running, std::atomic<bool> & stopped)
 {
     set_thread_name("Sysdarft Console");
     // Setup sigaction for SIGINT
@@ -115,6 +115,7 @@ void Cli::run()
     }
 
     debug::log("Console input turned off, exiting...\n");
+    stopped = true; // prevent infinite locking on worker destruction
     std::lock_guard lock(access_mutex);
     GlobalEventProcessor(GLOBAL_INSTANCE_NAME, GLOBAL_DESTROY_METHOD_NAME)();
 }
@@ -420,7 +421,7 @@ public:
     }
 } backend;
 
-Cli::Cli()
+Cli::Cli() : worker(this, &Cli::run)
 {
     // input
     GlobalEventProcessor.install_instance(GLOBAL_INSTANCE_NAME, &input_processor,
@@ -450,6 +451,5 @@ Cli::Cli()
     GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
         UI_SET_CURSOR_VISIBILITY_METHOD_NAME, &ui_curses::set_cursor_visibility);
 
-    CliWorkThread = std::thread(&Cli::run, this);
-    CliWorkThread.detach();
+    worker.start();
 }
