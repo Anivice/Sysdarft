@@ -4,6 +4,7 @@
 #include <worker.h>
 #include <instance.h>
 #include <cstdint>
+#include <memory>
 
 inline unsigned long long operator"" _Hz(const unsigned long long freq)
 {
@@ -26,8 +27,7 @@ public:
     }
 };
 
-struct
-    sysdarft_register_t
+struct alignas(8) sysdarft_register_t
 {
     struct SegmentationConfigurationRegister
     {
@@ -317,7 +317,7 @@ private:
     std::atomic<bool> has_instance = false;
 
     std::mutex RegisterAccessMutex;
-    std::vector < SysdarftRegister > Registers;
+    std::vector < std::unique_ptr < SysdarftRegister > > Registers;
 
     std::mutex MemoryAccessMutex;
     std::vector < std::array < unsigned char, PAGE_SIZE > > Memory;
@@ -340,10 +340,12 @@ public:
 
     processor() : triggerer(this, &processor::triggerer_thread)
     {
-        if (core_count == 0)
-        {
+        if (core_count == 0) {
             throw CPUConfigurationError("Core count can't be 0!");
         }
+
+        initialize_registers();
+        initialize_memory();
     }
 };
 

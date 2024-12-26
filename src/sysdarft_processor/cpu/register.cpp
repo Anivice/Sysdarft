@@ -5,15 +5,23 @@ void processor::initialize_registers()
 {
     std::lock_guard lock(RegisterAccessMutex);
     Registers.clear();
+    Registers.reserve(core_count);
     for (int i = 0; i < core_count; i++) {
-        Registers.emplace_back(SysdarftRegister());
+        auto reg = std::make_unique<SysdarftRegister>();
+        Registers.emplace_back(std::move(reg)); // Move the unique_ptr into the vector
     }
 
-    Registers[0].InstructionPointer = 0xC1800;
+    if (!Registers.empty()) {
+        Registers[0]->InstructionPointer = 0xC1800;
+    }
 }
 
 SysdarftRegister & SysdarftRegister::operator=(const SysdarftRegister & other)
 {
-    Registers = other.Registers;
+    if (this != &other) {
+        // Perform a deep copy of all necessary members
+        this->Registers = other.Registers; // Ensure Registers is a proper deep copy
+        // Copy other members as needed
+    }
     return *this;
 }

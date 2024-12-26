@@ -4,7 +4,7 @@ void processor::initialize_memory()
 {
     std::lock_guard lock(MemoryAccessMutex);
     Memory.clear();
-    for (uint64_t i = 0; i < TotalMemory; i++) {
+    for (uint64_t i = 0; i < TotalMemory / PAGE_SIZE; i++) {
         Memory.emplace_back(std::array < unsigned char, PAGE_SIZE >());
     }
 }

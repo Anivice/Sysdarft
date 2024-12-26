@@ -1,7 +1,5 @@
 #include <cpu.h>
-#include <iostream>
 #include <cstdint>
-#include <iomanip>
 
 /*
  * Memory Layout:
@@ -51,6 +49,7 @@ void processor::soft_interruption_ready(const uint8_t current_core, const uint64
 
 void processor::__InstructionExecutorType__::nop()
 {
+    debug::log("[PROCESSOR]:        NOP\n");
     // No Operation
 }
 

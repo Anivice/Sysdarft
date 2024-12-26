@@ -23,7 +23,7 @@ void processor::triggerer_thread(std::atomic<bool> & running, std::atomic<bool> 
     {
         auto op_start = std::chrono::steady_clock::now();
 
-        if (!real_mode_register_access(0).ControlRegister0.ProtectedMode)
+        if (real_mode_register_access(0).ControlRegister0.ProtectedMode)
         {
             for (int i = 0; i < core_count; i++)
             {
@@ -38,6 +38,7 @@ void processor::triggerer_thread(std::atomic<bool> & running, std::atomic<bool> 
                 }
             }
         } else {
+            // Real Mode, only one core is used
             operation(timestamp, 0);
         }
 

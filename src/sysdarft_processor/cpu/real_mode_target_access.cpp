@@ -7,7 +7,7 @@ SysdarftRegister processor::real_mode_register_access(const uint8_t RegisterID)
     }
 
     std::lock_guard<std::mutex> lock(RegisterAccessMutex);
-    return Registers[RegisterID];
+    return *Registers.at(RegisterID);
 }
 
 void processor::real_mode_register_store(const SysdarftRegister &reg, const uint8_t RegisterID)
@@ -17,5 +17,5 @@ void processor::real_mode_register_store(const SysdarftRegister &reg, const uint
     }
 
     std::lock_guard<std::mutex> lock(RegisterAccessMutex);
-    Registers[RegisterID] = reg;
+    *Registers[RegisterID] = reg;
 }
