@@ -205,6 +205,7 @@ add_unit_test(test.cli tests/test.cli.cpp)
 add_unit_test(test.curses tests/test.curses.cpp)
 add_unit_test(test.pure.curse tests/test.pure.curses.cpp)
 add_unit_test(test.timer tests/test.timer.cpp)
+add_unit_test(test.processor tests/test.processor.cpp)
 
 # Console Executable:
 add_executable(sysdarft-system src/main.cpp)

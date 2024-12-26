@@ -30,7 +30,11 @@ public:
         };
 
         // Store a lambda that matches the signature of method_
-        method_ = [bound_function](std::atomic<bool>& running, std::atomic<bool>& stopped, const std::vector<std::any>& args) -> void {
+        method_ = [bound_function](
+            std::atomic<bool>& /* running */,
+            std::atomic<bool>& /* stopped */,
+            const std::vector<std::any>& args) -> void
+        {
             // Invoke the bound function with the provided arguments
             // The return value (std::any) is ignored since method_ expects void
             invoke_with_any<decltype(bound_function), Args...>(bound_function, args);
@@ -40,7 +44,7 @@ public:
     template <typename... Args>
     void start(Args&... args)
     {
-        debug::log("Starting worker thread...\n");
+        debug::log("[Worker] Starting worker thread...\n");
         running = true;
         stopped = false;
         stopped_before = false;
@@ -50,24 +54,24 @@ public:
 
         // Start the thread with the correct arguments
         std::thread(method_, std::ref(running), std::ref(stopped), any_args).detach();
-        debug::log("Worker thread detached...\n");
+        debug::log("[Worker] Worker thread detached...\n");
     }
 
     void stop()
     {
-        debug::log("Stopping worker thread...\n");
+        debug::log("[Worker] Stopping worker thread...\n");
         running = false;
         while (!stopped) {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-        debug::log("Worker thread stopped...\n");
+        debug::log("[Worker] Worker thread stopped...\n");
         stopped_before = true;
     }
 
     ~worker_thread()
     {
         if (!stopped_before) { // manual stop didn't invoked
-            debug::log("Stopping worker thread automatically...\n");
+            debug::log("[Worker] Stopping worker thread automatically...\n");
             stop();
         }
     }
