@@ -6,25 +6,45 @@
 #include <cstdint>
 #include <memory>
 
-inline unsigned long long operator"" _Hz(const unsigned long long freq)
-{
+// Width
+#define _8bit_prefix  0x08
+#define _16bit_prefix 0x16
+#define _32bit_prefix 0x32
+#define _64bit_prefix 0x64
+#define FLOATING_POINT_PREFIX 0xFC
+
+// Prefix
+#define REGISTER_PREFIX 0x01
+#define CONSTANT_PREFIX 0x02
+#define MEMORY_PREFIX   0x03
+
+// Specific Registers
+#define R_StackPointer                     0xA0
+#define R_StackConfiguration               0xA1
+#define R_CodeConfiguration                0xA2
+#define R_DataPointer                      0xA3
+#define R_DataConfiguration                0xA4
+#define R_ExtendedSegmentPointer           0xA5
+#define R_ExtendedSegmentConfiguration     0xA6
+#define R_SegmentationAccessTable          0xA7
+#define R_ControlRegister0                 0xA8
+
+inline unsigned long long operator"" _Hz(const unsigned long long freq) {
     return freq;
 }
 
 class CPUConfigurationError final : public SysdarftBaseError
 {
 public:
-    explicit CPUConfigurationError(const std::string& msg) : SysdarftBaseError("CPU configuration error: " + msg)
-    {
-    }
+    explicit CPUConfigurationError(const std::string& msg) :
+        SysdarftBaseError("CPU configuration error: " + msg) { }
 };
 
 class MultipleCPUInstanceCreation final : public SysdarftBaseError
 {
 public:
-    explicit MultipleCPUInstanceCreation() : SysdarftBaseError("Trying to create multiple CPU instances!")
-    {
-    }
+    explicit MultipleCPUInstanceCreation() :
+        SysdarftBaseError("Trying to create multiple CPU instances!") { }
 };
 
 struct alignas(8) sysdarft_register_t
@@ -234,7 +254,6 @@ public:
     decltype(Registers.SegmentationAccessTablePointer)& SegmentationAccessTable
         = Registers.SegmentationAccessTablePointer;
 
-    // Only effect for CPU 0
     decltype(Registers.ControlRegister0) & ControlRegister0 = Registers.ControlRegister0;
 
     long double& XMM0 = Registers.FPURegister.XMM0;
@@ -246,7 +265,7 @@ public:
     long double& XMM6 = Registers.FPURegister.XMM6;
     long double& XMM7 = Registers.FPURegister.XMM7;
 
-    SysdarftRegister & operator=(const SysdarftRegister & other);
+    SysdarftRegister & operator=(const SysdarftRegister & other) = delete;
 };
 
 #define PAGE_SIZE 4096
@@ -294,59 +313,143 @@ struct size_to_uint<64> {
     using type = uint64_t;
 };
 
-class processor
+// Define the NumType concept
+template<typename T>
+concept NumType =
+      std::same_as<T, int8_t>
+   || std::same_as<T, uint8_t>
+   || std::same_as<T, int16_t>
+   || std::same_as<T, uint16_t>
+   || std::same_as<T, int32_t>
+   || std::same_as<T, uint32_t>
+   || std::same_as<T, int64_t>
+   || std::same_as<T, uint64_t>;
+
+#define BIOS_START          0xC1800
+#define BIOS_END            0xFFFFF
+#define BIOS_SIZE           (BIOS_END - BIOS_START + 1)
+#define BOOT_LOADER_START   0x00000
+#define BOOT_LOADER_END     0x9FFFF
+#define BOOT_LOADER_SIZE    (BOOT_LOADER_END - BOOT_LOADER_START + 1)
+#define INTERRUPTION_VECTOR 0xA0000
+#define INTERRUPTION_VEC_L  (INTERRUPTION_VECTOR + 512 * 8)
+
+class EXPORT processor
 {
+public:
+    class Target;
+
 private:
     // OK. A lot of definitions here and I simply can't do anything about it
     class __InstructionExecutorType__{
+    private:
+        processor & CPU;
+        Target pop_target();
+
     public:
         void nop();
+        void add();
         void pushall();
+
+        explicit __InstructionExecutorType__(processor & _CPU) : CPU(_CPU) { }
     } InstructionExecutor;
 
-    void operation(__uint128_t timestamp, uint8_t current_core);
-    void soft_interruption_ready(uint8_t current_core, const uint64_t int_code);
+    void operation(__uint128_t timestamp);
+    void soft_interruption_ready(const uint64_t int_code);
 
     void triggerer_thread(std::atomic<bool>& running,
                           std::atomic<bool>& stopped);
     worker_thread triggerer;
 
     std::atomic<unsigned long long> frequencyHz = 1000_Hz;
-    std::atomic<uint8_t> core_count = 2;
     std::atomic<double> wait_scale = 1.0;
     std::atomic<bool> has_instance = false;
 
     std::mutex RegisterAccessMutex;
-    std::vector < std::unique_ptr < SysdarftRegister > > Registers;
+    SysdarftRegister Registers;
 
     std::mutex MemoryAccessMutex;
+    /*
+     * Memory Layout:
+     * 0x00000 - 0x9FFFF [BOOT CODE]     - 640KB
+     * 0xA0000 - 0xC17FF [CONFIGURATION] - 134KB
+     *                   [4KB Interruption Table: 512 Interrupts]
+     * 0xC1800 - 0xFFFFF [FIRMWARE]      - 250KB
+     */
     std::vector < std::array < unsigned char, PAGE_SIZE > > Memory;
     std::atomic<uint64_t> TotalMemory = 32 * 1024 * 1024; // 32MB Memory
 
     void initialize_registers();
     void initialize_memory();
-    void get_memory(uint64_t address, char * _dest, uint64_t size) const;
+    void get_memory(uint64_t address, char * _dest, uint64_t size);
     void write_memory(uint64_t address, const char* _source, uint64_t size);
-
-    SysdarftRegister real_mode_register_access(const uint8_t RegisterID);
-    void real_mode_register_store(const SysdarftRegister&, uint8_t RegisterID);
-    template <size_t SIZE> typename size_to_uint<SIZE>::type pop(const uint8_t CoreID);
-    template <size_t SIZE> typename size_to_uint<SIZE>::type target_access(const uint8_t CoreID);
+    template <size_t SIZE> typename size_to_uint<SIZE>::type pop();
 
 public:
+    class Target {
+    private:
+        processor & CPU;
+
+        enum { NaT /* Not a Type */,
+            TypeRegister = REGISTER_PREFIX,
+            TypeConstant = CONSTANT_PREFIX,
+            TypeMemory = MEMORY_PREFIX,
+        } TargetType { };
+
+        uint8_t TargetWidth { };
+        union {
+            uint8_t RegisterIndex;
+            uint64_t ConstantValue;
+            uint64_t MemoryAddress; // Calculated Memory Address
+        } TargetInformation { };
+
+        std::string literal;
+
+        void do_setup_register_info();
+        void do_setup_constant_info();
+        void do_setup_memory_info();
+        void do_decode_via_prefix(uint8_t prefix);
+        [[nodiscard]] uint64_t do_get_register();
+        void do_set_register(uint64_t);
+        [[nodiscard]] uint64_t get_target_content_in_u64bit_t();
+        void set_target_content_in_u64bit_t(uint64_t);
+        explicit Target(processor &);
+
+    public:
+        template < NumType ValueType > Target & operator=(const ValueType & val) {
+            set_target_content_in_u64bit_t(val);
+            return *this;
+        }
+
+        template < NumType ValueType > bool operator==(const ValueType & val) {
+            return get_target_content_in_u64bit_t() == val;
+        }
+
+        template < NumType ValueType > ValueType get() {
+            return get_target_content_in_u64bit_t();
+        }
+
+        Target & operator=(const Target &) = delete;
+        ~Target() = default;
+
+        friend class __InstructionExecutorType__;
+    };
+
     void collaboration();
     void start_triggering();
     void stop_triggering();
+    void load_bios(std::array<uint8_t, BIOS_SIZE> const &bios);
 
-    processor() : triggerer(this, &processor::triggerer_thread)
+    processor() :
+        InstructionExecutor(*this),
+        triggerer(this, &processor::triggerer_thread)
     {
-        if (core_count == 0) {
-            throw CPUConfigurationError("Core count can't be 0!");
-        }
-
         initialize_registers();
         initialize_memory();
     }
+
+    friend class Target;
+    friend class __InstructionExecutorType__;
 };
 
 #include "cpu.inl"

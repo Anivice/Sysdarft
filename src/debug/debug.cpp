@@ -639,7 +639,7 @@ void handle_sigabrt(int signum)
     debug::verbose = true;
     SysdarftBaseError Error("Abnormal termination!");
     std::string str = Error.what();
-    write(STDOUT_FILENO, prefix, strlen(prefix));
+    write(STDERR_FILENO, prefix, strlen(prefix));
     write(STDERR_FILENO, str.c_str(), str.length() - 1);
     _exit(EXIT_FAILURE);
 }

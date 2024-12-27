@@ -17,30 +17,12 @@ void processor::triggerer_thread(std::atomic<bool> & running, std::atomic<bool> 
     debug::log("[CPU] Maximum allowed duration per operation: ", MAX_DURATION_NS.count(), " nanoseconds.\n");
 
     __uint128_t timestamp = 0;
-    std::vector<std::thread> thread_pool(core_count);
 
     while (running)
     {
         auto op_start = std::chrono::steady_clock::now();
 
-        if (real_mode_register_access(0).ControlRegister0.ProtectedMode)
-        {
-            for (int i = 0; i < core_count; i++)
-            {
-                std::thread T1(&processor::operation, this, timestamp, i);
-                thread_pool[i] = std::move(T1);
-            }
-
-            for (auto & thread : thread_pool)
-            {
-                if (thread.joinable()) {
-                    thread.join();
-                }
-            }
-        } else {
-            // Real Mode, only one core is used
-            operation(timestamp, 0);
-        }
+        operation(timestamp);
 
         auto op_end = std::chrono::steady_clock::now();
         if (const auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(op_end - op_start);
@@ -75,24 +57,12 @@ void processor::collaboration()
         const std::chrono::nanoseconds MAX_DURATION_NS = period_ns + std::chrono::nanoseconds();
 
         __uint128_t timestamp = 0;
-        std::vector<std::thread> thread_pool(core_count);
 
         while (running)
         {
             auto op_start = std::chrono::steady_clock::now();
 
-            for (int i = 0; i < core_count; i++)
-            {
-                std::thread T1(minimum_operation);
-                thread_pool[i] = std::move(T1);
-            }
-
-            for (auto & thread : thread_pool)
-            {
-                if (thread.joinable()) {
-                    thread.join();
-                }
-            }
+            minimum_operation();
 
             auto op_end = std::chrono::steady_clock::now();
             const auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(op_end - op_start);
@@ -119,7 +89,7 @@ void processor::collaboration()
         std::this_thread::sleep_for(std::chrono::nanoseconds(1));
     }
 
-    const auto expected = frequencyHz * 10 * core_count;
+    const auto expected = frequencyHz * 10;
     const uint64_t actual = ins_count;
 
     wait_scale = static_cast<double>(actual) / static_cast<double>(expected);

@@ -169,6 +169,7 @@ add_library(sysdarft_processor OBJECT
         src/sysdarft_processor/integrated_devices/integrated_gpu.cpp
         src/sysdarft_processor/instantiation/processor_instances_and_their_corresponding_init.cpp
         src/sysdarft_processor/include/cpu.inl
+        src/sysdarft_processor/cpu/initialization.cpp
 )
 target_include_directories(sysdarft_processor PUBLIC src/include src/sysdarft_processor/include)
 

@@ -1,14 +1,6 @@
 #include <cpu.h>
 #include <cstdint>
 
-/*
- * Memory Layout:
- * 0x00000 - 0x9FFFF [BOOT CODE]     - 640KB
- * 0xA0000 - 0xC17FF [CONFIGURATION] - 134KB
- *                   [4KB Interruption Table: 512 Interrupts]
- * 0xC1800 - 0xFFFFF [FIRMWARE]      - 250KB
- */
-
 std::mutex interruption_vector_address_table_mutex_;
 std::map < uint64_t /* Interruption number */, uint64_t /* Interruption vector address */>
     interruption_vector_address_table;
@@ -33,27 +25,40 @@ public:
 } __initialize_vector_instance__;
 
 // Sample operation function
-void processor::operation(__uint128_t timestamp, const uint8_t current_core)
+void processor::operation(__uint128_t timestamp)
 {
-    switch (pop<64>(current_core))
+    switch (pop<64>())
     {
         case 0x00: InstructionExecutor.nop(); break;
-        default: soft_interruption_ready(current_core, INT_ILLEGAL_INSTRUCTION); break;
+        case 0x01: InstructionExecutor.add(); break;
+        default: soft_interruption_ready(INT_ILLEGAL_INSTRUCTION); break;
     }
 }
 
-void processor::soft_interruption_ready(const uint8_t current_core, const uint64_t int_code)
+void processor::soft_interruption_ready(const uint64_t int_code)
 {
-    const auto reg = real_mode_register_access(current_core);
+}
+
+processor::Target processor::__InstructionExecutorType__::pop_target()
+{
+    return Target(CPU);
 }
 
 void processor::__InstructionExecutorType__::nop()
 {
-    debug::log("[PROCESSOR]:        NOP\n");
+    debug::log("[PROCESSOR]:\tNOP\n");
     // No Operation
+}
+
+void processor::__InstructionExecutorType__::add()
+{
+    auto width = CPU.pop<8>();
+    auto operand1 = pop_target();
+    auto operand2 = pop_target();
+    debug::log("[PROCESSOR]:\tADD ", operand1.literal, ", ", operand2.literal, "\n");
+    operand1 = operand1.get<uint64_t>() + operand2.get<uint64_t>();
 }
 
 void processor::__InstructionExecutorType__::pushall()
 {
-
 }
