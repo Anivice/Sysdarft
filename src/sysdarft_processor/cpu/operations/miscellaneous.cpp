@@ -2,6 +2,6 @@
 
 void processor::__InstructionExecutorType__::nop(const __uint128_t timestamp)
 {
-    debug::log("[PROCESSOR, ", timestamp, "]:\tNOP\n");
+    debug::log("[PROCESSOR, ", timestamp, "]: NOP\n");
     // No Operation
 }

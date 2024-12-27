@@ -6,7 +6,7 @@ void processor::__InstructionExecutorType__::add(const __uint128_t timestamp)
     __uint128_t compliment = 0, opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]:\tADD ", operand1.literal, ", ", operand2.literal, "\n");
+    debug::log("[PROCESSOR, ", timestamp, "]: ADD ", operand1.literal, ", ", operand2.literal, "\n");
 
     switch (width) {
     case 0x08: compliment = 0xFF; break;
@@ -46,7 +46,7 @@ void processor::__InstructionExecutorType__::adc(const __uint128_t timestamp)
     __uint128_t compliment = 0, opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]:\tADC ", operand1.literal, ", ", operand2.literal, "\n");
+    debug::log("[PROCESSOR, ", timestamp, "]: ADC ", operand1.literal, ", ", operand2.literal, "\n");
 
     switch (width) {
     case 0x08: compliment = 0xFF; break;
