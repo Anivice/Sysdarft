@@ -27,11 +27,13 @@ public:
 // Sample operation function
 void processor::operation(const __uint128_t timestamp)
 {
-    switch (pop<64>())
+    switch (auto opcode = pop<64>())
     {
-        case 0x00: InstructionExecutor.nop(timestamp); break;
-        case 0x01: InstructionExecutor.add(timestamp); break;
-        default: soft_interruption_ready(INT_ILLEGAL_INSTRUCTION); break;
+    case OPCODE_NOP: InstructionExecutor.nop(timestamp); break;
+    case OPCODE_ADD: InstructionExecutor.add(timestamp); break;
+    case OPCODE_ADC: InstructionExecutor.adc(timestamp); break;
+    default: debug::log("[PROCESSOR]: Unhandled opcode: ", opcode, "\n");
+            // TODO: INT_ILLEGAL_INSTRUCTION
     }
 }
 

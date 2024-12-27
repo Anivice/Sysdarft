@@ -56,24 +56,28 @@ struct EXPORT parsed_target_t
 #define ENTRY_ARGUMENT_COUNT "argument_count"
 #define ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION "require_operation_width_specification"
 
+#define OPCODE_NOP (0x00)
+#define OPCODE_ADD (0x01)
+#define OPCODE_ADC (0x02)
+
 // Initialize the instruction to opcode mapping
 const std::unordered_map<std::string, std::map<std::string, uint64_t>> instruction_map = {
     { "NOP", {
-            { ENTRY_OPCODE, 0x00 },
+            { ENTRY_OPCODE, OPCODE_NOP },
             { ENTRY_ARGUMENT_COUNT, 0 },
             { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0 },
         }
     },
 
     { "ADD", {
-            { ENTRY_OPCODE, 0x01 },
+            { ENTRY_OPCODE, OPCODE_ADD },
             { ENTRY_ARGUMENT_COUNT, 2 },
             { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1 },
         }
     },
 
     { "ADC", {
-            { ENTRY_OPCODE, 0x02 },
+            { ENTRY_OPCODE, OPCODE_ADC },
             { ENTRY_ARGUMENT_COUNT, 2 },
             { ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1 },
         }

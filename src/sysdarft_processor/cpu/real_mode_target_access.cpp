@@ -34,7 +34,9 @@ void processor::Target::do_setup_constant_info()
     const auto constant_value = CPU.pop<64>();
     TargetType = TypeConstant;
     TargetInformation.ConstantValue = constant_value;
-    literal = "$(" + std::to_string(constant_value) + ")";
+    std::stringstream ss;
+    ss << "0x" << std::hex << std::uppercase << constant_value;
+    literal = "$(" + ss.str() + ")";
 }
 
 void processor::Target::do_setup_memory_info()

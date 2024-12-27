@@ -156,9 +156,7 @@ add_library(sysdarft_processor OBJECT
         src/sysdarft_processor/include/io.h
         src/sysdarft_processor/include/gpu.h
         src/sysdarft_processor/include/int.h
-        src/sysdarft_processor/include/vm.h
         src/sysdarft_processor/include/instance.h
-        src/sysdarft_processor/hypervisor/hypervisor.cpp
         src/sysdarft_processor/interruptions/interruptions.cpp
         src/sysdarft_processor/cpu/instruction_executor.cpp
         src/sysdarft_processor/cpu/protected_mode_target_access.cpp
