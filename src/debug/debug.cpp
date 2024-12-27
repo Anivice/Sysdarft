@@ -407,6 +407,8 @@ std::string initialize_error_msg(
     return msg + std::string(" (errno=") + std::to_string(_errno) + ")";
 }
 
+std::string __last_sysdarft_error__;
+
 SysdarftBaseError::SysdarftBaseError(const std::string& msg, const bool if_perform_code_backtrace)
 :
     runtime_error(
@@ -418,6 +420,9 @@ SysdarftBaseError::SysdarftBaseError(const std::string& msg, const bool if_perfo
     ),
     cur_errno(errno)
 {
+#ifdef __DEBUG__
+    __last_sysdarft_error__ = this->runtime_error::what();
+#endif
 }
 
 // Function to check if a string consists solely of digits
@@ -663,7 +668,7 @@ void handle_sigabrt(int signum)
 {
     const char * prefix = _RED_ _BOLD_ "[FATAL ERROR] Program is terminated using SIGABRT (Signal Abort)!" _REGULAR_ "\n";
     debug::verbose = true;
-    SysdarftBaseError Error("Abnormal termination!");
+    SysdarftBaseError Error("Abnormal termination!\nLast captured error:\n" + __last_sysdarft_error__ + "\n");
     std::string str = Error.what();
     write(STDERR_FILENO, prefix, strlen(prefix));
     write(STDERR_FILENO, str.c_str(), str.length() - 1);

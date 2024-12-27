@@ -8,7 +8,7 @@ if (!(Expression))                                                              
     throw IllegalInstruction("Assertion failed during instruction decoding at " \
         __FILE__ ":" + std::to_string(__LINE__)                                 \
         + ": " + std::string(__FUNCTION__) + ": " #Expression);                 \
-} __asm__("")
+}
 
 void processor::Target::do_setup_register_info()
 {
@@ -64,12 +64,31 @@ void processor::Target::do_setup_memory_info()
     Offset2 = get_target_content_in_u64bit_t();
     literal_off2 = literal;
 
-    Ratio = CPU.pop<8>();
+    switch (uint8_t Ratio_BCD = CPU.pop<8>())
+    {
+        case 0x01: Ratio = 1; break;
+        case 0x02: Ratio = 2; break;
+        case 0x04: Ratio = 4; break;
+        case 0x08: Ratio = 8; break;
+        case 0x16: Ratio = 16; break;
+        default: __illegal_instruction_assert__(false);
+    }
 
     TargetType = TypeMemory;
     TargetInformation.MemoryAddress = (BaseAddress + Offset1 + Offset2) * Ratio;
     TargetWidth = width;
+
+    uint8_t ActualWidth = 0;
+    switch (TargetWidth) {
+        case 0x08: ActualWidth = 8; break;
+        case 0x16: ActualWidth = 16; break;
+        case 0x32: ActualWidth = 32; break;
+        case 0x64: ActualWidth = 64; break;
+        default: __illegal_instruction_assert__(false);
+    }
+
     literal = "*" + std::to_string(Ratio) +
+        "&" + std::to_string(ActualWidth) +
         "(" + literal_base +
         ", " + literal_off1 +
         ", " + literal_off2 + ")";
@@ -137,6 +156,14 @@ uint64_t processor::Target::do_get_register()
         case 0x05: return CPU.Registers.FullyExtendedRegister5;
         case 0x06: return CPU.Registers.FullyExtendedRegister6;
         case 0x07: return CPU.Registers.FullyExtendedRegister7;
+        case 0x08: return CPU.Registers.FullyExtendedRegister8;
+        case 0x09: return CPU.Registers.FullyExtendedRegister9;
+        case 0x0a: return CPU.Registers.FullyExtendedRegister10;
+        case 0x0b: return CPU.Registers.FullyExtendedRegister11;
+        case 0x0c: return CPU.Registers.FullyExtendedRegister12;
+        case 0x0d: return CPU.Registers.FullyExtendedRegister13;
+        case 0x0e: return CPU.Registers.FullyExtendedRegister14;
+        case 0x0f: return CPU.Registers.FullyExtendedRegister15;
         case R_StackPointer: return CPU.Registers.StackPointer;
         case R_DataPointer: return CPU.Registers.DataPointer;
         case R_ExtendedSegmentPointer: return CPU.Registers.ExtendedSegmentPointer;

@@ -1,28 +1,28 @@
 #ifndef INSTRUCTIONS_H
 #define INSTRUCTIONS_H
 
-// Instruction prefix
+// Width
 #define _8bit_prefix  0x08
 #define _16bit_prefix 0x16
 #define _32bit_prefix 0x32
 #define _64bit_prefix 0x64
+#define FLOATING_POINT_PREFIX 0xFC
 
 // Prefix
 #define REGISTER_PREFIX 0x01
-#define MEMORY_PREFIX   0x02
-#define CONSTANT_PREFIX 0x03
+#define CONSTANT_PREFIX 0x02
+#define MEMORY_PREFIX   0x03
 
-// FPU
-#define FLOATING_POINT_PREFIX 0xC0
-
-// specific registers
-#define StackPointer 0xA0
-#define StackConfiguration 0xA1
-#define CodeConfiguration 0xA2
-#define DataPointer 0xA3
-#define DataConfiguration 0xA4
-#define ExtendedSegmentPointer 0xA5
-#define ExtendedSegmentConfiguration 0xA6
+// Specific Registers
+#define R_StackPointer                     0xA0
+#define R_StackConfiguration               0xA1
+#define R_CodeConfiguration                0xA2
+#define R_DataPointer                      0xA3
+#define R_DataConfiguration                0xA4
+#define R_ExtendedSegmentPointer           0xA5
+#define R_ExtendedSegmentConfiguration     0xA6
+#define R_SegmentationAccessTable          0xA7
+#define R_ControlRegister0                 0xA8
 
 #include <string>
 #include <iostream>
@@ -48,6 +48,7 @@ struct EXPORT parsed_target_t
         std::string MemoryBaseAddress;
         std::string MemoryOffset1;
         std::string MemoryOffset2;
+        std::string MemoryWidth;
     } memory;
 };
 
@@ -636,5 +637,7 @@ inline uint32_t pop32(std::vector<uint8_t> & input) {
 inline uint64_t pop64(std::vector<uint8_t> & input) {
     return std::any_cast<uint64_t>(pop<64>(input));
 }
+
+void EXPORT encode_instruction(std::vector<uint8_t> &, const std::string &);
 
 #endif //INSTRUCTIONS_H

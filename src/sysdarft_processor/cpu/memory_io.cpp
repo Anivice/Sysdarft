@@ -5,7 +5,7 @@ void processor::initialize_memory()
     std::lock_guard lock(MemoryAccessMutex);
     Memory.clear();
     for (uint64_t i = 0; i < TotalMemory / PAGE_SIZE; i++) {
-        Memory.emplace_back(std::array < unsigned char, PAGE_SIZE >());
+        Memory.emplace_back();
     }
 }
 
@@ -54,7 +54,7 @@ void processor::write_memory(const uint64_t address, const char* _source, const 
 
     auto copy_n = [](std::array < uint8_t, PAGE_SIZE > & _dest,
         const uint64_t offset,
-        const char * _source,
+        const char * source,
         const uint64_t _size)->uint64_t
     {
         if (offset + _size > PAGE_SIZE) {
@@ -62,7 +62,7 @@ void processor::write_memory(const uint64_t address, const char* _source, const 
         }
 
         for (uint64_t i = 0; i < _size; i++) {
-            _dest[offset + i] = _source[i];
+            _dest[offset + i] = source[i];
         }
 
         return _size;

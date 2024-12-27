@@ -43,22 +43,3 @@ processor::Target processor::__InstructionExecutorType__::pop_target()
 {
     return Target(CPU);
 }
-
-void processor::__InstructionExecutorType__::nop(const __uint128_t timestamp)
-{
-    debug::log("[PROCESSOR, ", timestamp, "]:\tNOP\n");
-    // No Operation
-}
-
-void processor::__InstructionExecutorType__::add(const __uint128_t timestamp)
-{
-    auto width = CPU.pop<8>();
-    auto operand1 = pop_target();
-    auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]:\tADD ", operand1.literal, ", ", operand2.literal, "\n");
-    operand1 = operand1.get<uint64_t>() + operand2.get<uint64_t>();
-}
-
-void processor::__InstructionExecutorType__::pushall(__uint128_t timestamp)
-{
-}

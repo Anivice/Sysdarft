@@ -88,6 +88,7 @@ string(REPLACE "\n" "\\n" SYSDARFT_INFO_CONTENT_ESCAPED "${SYSDARFT_INFO_CONTENT
 
 add_compile_definitions(SYSDARFT_VERSION="0.0.1")
 add_compile_definitions(SYSDARFT_INFORMATION="${SYSDARFT_INFO_CONTENT_ESCAPED}")
+add_compile_definitions(__DEBUG__)
 
 # Use ccache to significantly speed up compiling process
 find_program(CCACHE_PROGRAM ccache REQUIRED)
@@ -147,6 +148,7 @@ target_link_libraries(sysdarft_ncurses PUBLIC ${CURSES_LIBRARIES})
 
 # CPU
 add_library(sysdarft_processor OBJECT
+        src/sysdarft_processor/include/register_def.h
         src/sysdarft_processor/io/disk_hub.cpp
         src/sysdarft_processor/io/io_hub.cpp
         src/sysdarft_processor/io/external_device_hub.cpp
@@ -158,20 +160,32 @@ add_library(sysdarft_processor OBJECT
         src/sysdarft_processor/include/instance.h
         src/sysdarft_processor/hypervisor/hypervisor.cpp
         src/sysdarft_processor/interruptions/interruptions.cpp
-        src/sysdarft_processor/cpu/instruction_decoder.cpp
         src/sysdarft_processor/cpu/instruction_executor.cpp
         src/sysdarft_processor/cpu/protected_mode_target_access.cpp
         src/sysdarft_processor/cpu/register.cpp
-        src/sysdarft_processor/cpu/timestamp.cpp
         src/sysdarft_processor/cpu/real_mode_target_access.cpp
-        src/sysdarft_processor/cpu/clock.cpp
         src/sysdarft_processor/cpu/operation_triggerer.cpp
         src/sysdarft_processor/integrated_devices/integrated_gpu.cpp
         src/sysdarft_processor/instantiation/processor_instances_and_their_corresponding_init.cpp
         src/sysdarft_processor/include/cpu.inl
         src/sysdarft_processor/cpu/initialization.cpp
+        src/sysdarft_processor/cpu/operations/arithmetic.cpp
+        src/sysdarft_processor/cpu/operations/control_flow.cpp
+        src/sysdarft_processor/cpu/operations/data_transfer.cpp
+        src/sysdarft_processor/cpu/operations/fpu.cpp
+        src/sysdarft_processor/cpu/operations/io.cpp
+        src/sysdarft_processor/cpu/operations/logical_and_bitwise.cpp
+        src/sysdarft_processor/cpu/operations/miscellaneous.cpp
+        src/sysdarft_processor/cpu/operations/os.cpp
 )
 target_include_directories(sysdarft_processor PUBLIC src/include src/sysdarft_processor/include)
+
+# Encoder and decoder
+add_library(sysdarft_encoder OBJECT
+        src/helper/encoder/encode.instruction.cpp
+        src/helper/encoder/encode.target.cpp
+)
+target_include_directories(sysdarft_encoder PUBLIC src/include)
 
 # Sysdarft Shared Library:
 add_library(sysdarft SHARED src/sysdarft.cpp src/include/worker.h)
@@ -185,6 +199,7 @@ target_link_libraries(sysdarft PUBLIC
         sysdarft_cli
         sysdarft_ncurses
         sysdarft_processor
+        sysdarft_encoder
 )
 
 enable_testing()
@@ -208,23 +223,12 @@ add_unit_test(test.cli tests/test.cli.cpp)
 add_unit_test(test.curses tests/test.curses.cpp)
 add_unit_test(test.pure.curse tests/test.pure.curses.cpp)
 add_unit_test(test.timer tests/test.timer.cpp)
-add_unit_test(test.processor tests/test.processor.cpp)
+add_unit_test(test.arithmetic tests/test.arithmetic.cpp)
+add_unit_test(test.encoder tests/test.encoder.cpp)
 
 # Console Executable:
 add_executable(sysdarft-system src/main.cpp)
 target_link_libraries(sysdarft-system PUBLIC sysdarft)
-
-# Assembler
-add_executable(assembler
-        utils/shared/instruction.h
-        utils/Assembler/encode.target.cpp
-        utils/Assembler/encode.instruction.cpp
-        utils/Assembler/encode.misc.cpp
-)
-target_include_directories(assembler PUBLIC utils/shared src/include)
-target_link_libraries(assembler PUBLIC sysdarft)
-#add_unit_test(test.encode.target utils/tests/test.encode.target.cpp)
-#target_include_directories(test.encode.target PUBLIC utils/shared)
 
 # Modules
 link_libraries(sysdarft)
