@@ -347,9 +347,9 @@ private:
         Target pop_target();
 
     public:
-        void nop();
-        void add();
-        void pushall();
+        void nop(__uint128_t timestamp);
+        void add(__uint128_t timestamp);
+        void pushall(__uint128_t timestamp);
 
         explicit __InstructionExecutorType__(processor & _CPU) : CPU(_CPU) { }
     } InstructionExecutor;

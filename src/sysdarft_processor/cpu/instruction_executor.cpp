@@ -25,12 +25,12 @@ public:
 } __initialize_vector_instance__;
 
 // Sample operation function
-void processor::operation(__uint128_t timestamp)
+void processor::operation(const __uint128_t timestamp)
 {
     switch (pop<64>())
     {
-        case 0x00: InstructionExecutor.nop(); break;
-        case 0x01: InstructionExecutor.add(); break;
+        case 0x00: InstructionExecutor.nop(timestamp); break;
+        case 0x01: InstructionExecutor.add(timestamp); break;
         default: soft_interruption_ready(INT_ILLEGAL_INSTRUCTION); break;
     }
 }
@@ -44,21 +44,21 @@ processor::Target processor::__InstructionExecutorType__::pop_target()
     return Target(CPU);
 }
 
-void processor::__InstructionExecutorType__::nop()
+void processor::__InstructionExecutorType__::nop(const __uint128_t timestamp)
 {
-    debug::log("[PROCESSOR]:\tNOP\n");
+    debug::log("[PROCESSOR, ", timestamp, "]:\tNOP\n");
     // No Operation
 }
 
-void processor::__InstructionExecutorType__::add()
+void processor::__InstructionExecutorType__::add(const __uint128_t timestamp)
 {
     auto width = CPU.pop<8>();
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR]:\tADD ", operand1.literal, ", ", operand2.literal, "\n");
+    debug::log("[PROCESSOR, ", timestamp, "]:\tADD ", operand1.literal, ", ", operand2.literal, "\n");
     operand1 = operand1.get<uint64_t>() + operand2.get<uint64_t>();
 }
 
-void processor::__InstructionExecutorType__::pushall()
+void processor::__InstructionExecutorType__::pushall(__uint128_t timestamp)
 {
 }

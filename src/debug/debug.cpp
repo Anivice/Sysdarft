@@ -20,6 +20,7 @@
 #include <fstream>
 #include <cctype>
 #include <map>
+#include <algorithm>
 
 #define MAX_STACK_FRAMES 64
 
@@ -168,6 +169,31 @@ debug::cmd_status debug::_exec_command(const std::string& cmd, const std::vector
     }
 
     return result;
+}
+
+void debug::_log(const __uint128_t& param)
+{
+    if (param == 0) {
+        std::cout << "0";
+        return;
+    }
+
+    std::string str;
+    __uint128_t tmp = param;
+
+    // Convert the __uint128_t to a decimal string
+    while (tmp > 0)
+    {
+        const char digit = '0' + static_cast<char>(tmp % 10);
+        str += digit;
+        tmp /= 10;
+    }
+
+    // The digits are in reverse order, so reverse the string
+    std::reverse(str.begin(), str.end());
+
+    // Log the string (replace std::cout with your logging mechanism)
+    std::cout << str;
 }
 
 // Function to find the maximum line length in a string

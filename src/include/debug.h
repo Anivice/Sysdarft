@@ -286,6 +286,8 @@ namespace debug
     template <typename ParamType>
     void _log(const ParamType& param);
 
+    void _log(const __uint128_t& param);
+
     /**
      * @brief Logs multiple parameters to the standard output.
      *
