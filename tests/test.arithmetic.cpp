@@ -23,7 +23,20 @@ int main()
 
     encode_instruction(buffer, "sub .16bit <%EXR0>, <$(0xFFFF)>");
 
-    encode_instruction(buffer, "imul .16bit <$(-1)>");
+    encode_instruction(buffer, "mov .16bit <%EXR0>, <$(-32)>");
+    encode_instruction(buffer, "imul .16bit <$(-2)>");
+    encode_instruction(buffer, "mov .32bit <%HER0>, <$(65536)>");
+    encode_instruction(buffer, "mov .32bit <%HER2>, <$(0x02)>");
+    encode_instruction(buffer, "mul .32bit <%HER2>");
+
+    encode_instruction(buffer, "mov .64bit <%FER0>, <$(-65536)>");
+    encode_instruction(buffer, "mov .64bit <%FER1>, <$(-2)>");
+    encode_instruction(buffer, "idiv .64bit <%FER1>");
+    encode_instruction(buffer, "div .64bit <$(3)>");
+
+    encode_instruction(buffer, "neg .64bit <%FER0>");
+    encode_instruction(buffer, "cmp .16bit <%EXR0>, <%EXR1>");
+
     encode_instruction(buffer, "nop");
 
     for (const auto& code : buffer) {
@@ -41,6 +54,6 @@ int main()
 
     };
 
-    std::this_thread::sleep_for(std::chrono::microseconds(60000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     CPU.stop_triggering();
 }

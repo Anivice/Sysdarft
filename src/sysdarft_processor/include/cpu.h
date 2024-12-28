@@ -71,7 +71,32 @@ struct size_to_uint<64> {
     using type = uint64_t;
 };
 
-// Define the NumType concept
+// Type trait to map SIZE to corresponding signed integer type
+template <size_t SIZE>
+struct size_to_int;
+
+// Specializations for supported sizes
+template <>
+struct size_to_int<8> {
+    using type = int8_t;
+};
+
+template <>
+struct size_to_int<16> {
+    using type = int16_t;
+};
+
+template <>
+struct size_to_int<32> {
+    using type = int32_t;
+};
+
+template <>
+struct size_to_int<64> {
+    using type = int64_t;
+};
+
+// Define the NumType concept.
 template<typename T>
 concept NumType =
       std::same_as<T, int8_t>
@@ -104,7 +129,8 @@ private:
         processor & CPU;
         Target pop_target();
 
-        void check_overflow(uint8_t bcd_width, const __uint128_t val);
+        void check_overflow(uint8_t bcd_width, __uint128_t val);
+        static std::string bcd_width_str(uint8_t width);
 
     public:
         void nop(__uint128_t timestamp);
@@ -113,6 +139,12 @@ private:
         void sub(__uint128_t timestamp);
         void sbb(__uint128_t timestamp);
         void imul(__uint128_t timestamp);
+        void mul(__uint128_t timestamp);
+        void mov(__uint128_t timestamp);
+        void idiv(__uint128_t timestamp);
+        void div(__uint128_t timestamp);
+        void neg(__uint128_t timestamp);
+        void cmp(__uint128_t timestamp);
         void pushall(__uint128_t timestamp);
 
         explicit __InstructionExecutorType__(processor & _CPU) : CPU(_CPU) { }

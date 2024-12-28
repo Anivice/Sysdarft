@@ -26,6 +26,19 @@ void generate_reg_info(std::stringstream & ss,
         << suffix << _REGULAR_;
 }
 
+void generate_config_info(std::stringstream & ss,
+    const std::string & name,
+    const sysdarft_register_t::SegmentationConfigurationRegister & Configuration,
+    const int spacing = 2)
+{
+    ss  << _PURPLE_ "<" << name << ":BA>:" << std::string(spacing, ' ') << _REGULAR_ "[" _BLUE_
+        << std::hex << std::uppercase << std::setw(16) << std::setfill('0')
+        << Configuration.BaseAddress << _REGULAR_ "] "
+        << _PURPLE_ "<" << name << ":AL>:" << std::string(spacing, ' ') << _REGULAR_ "[" _BLUE_
+        << std::hex << std::uppercase << std::setw(16) << std::setfill('0')
+        << Configuration.AddressLimit << _REGULAR_ "]" << std::endl;
+}
+
 void processor::output_debug_info() {
     std::stringstream ss;
     uint64_t ip;
@@ -88,6 +101,50 @@ void processor::output_debug_info() {
         generate_reg_info(ss, ": ", " ", "FER14", Registers.FullyExtendedRegister14);
         generate_reg_info(ss, ": ", " ", "FER15", Registers.FullyExtendedRegister15);
         ip = Registers.InstructionPointer;
+
+        ss << std::endl;
+
+        ss  << _PURPLE_ "<FR:CF>: " _REGULAR_ "[" << _BLUE_ << (Registers.FlagRegister.Carry & 0x01) << _REGULAR_ "] "
+            << _PURPLE_ "<FR:OF>: " _REGULAR_ "[" << _BLUE_ << (Registers.FlagRegister.Overflow & 0x01) << _REGULAR_ "] "
+            << _PURPLE_ "<FR:LE>: " _REGULAR_ "[" << _BLUE_ << (Registers.FlagRegister.LessThan & 0x01) << _REGULAR_ "] "
+            << _PURPLE_ "<FR:GR>: " _REGULAR_ "[" << _BLUE_ << (Registers.FlagRegister.LargerThan & 0x01) << _REGULAR_ "] "
+            << _PURPLE_ "<FR:EQ>: " _REGULAR_ "[" << _BLUE_ << (Registers.FlagRegister.Equal & 0x01) << _REGULAR_ "] "
+            << _PURPLE_ "<FR:IM>: " _REGULAR_ "[" << _BLUE_ << (Registers.FlagRegister.InterruptionMask & 0x01) << _REGULAR_ "] "
+            << _PURPLE_ "<FR:CP>: " _REGULAR_ "[" << _BLUE_
+            << std::setw(2) << std::setfill('0') << std::uppercase
+            << (Registers.FlagRegister.CurrentPrivilegeLevel & 0xFF) << _REGULAR_ "]"
+            << std::endl;
+
+        ss  << _PURPLE_ "<CR0:PM>: " _REGULAR_ "["
+            << _BLUE_ << (Registers.ControlRegister0.ProtectedMode & 0x01) << _REGULAR_ "] "
+            << _PURPLE_ "<CR0:PG>: " _REGULAR_ "["
+            << _BLUE_ << (Registers.ControlRegister0.Paging & 0x01) << _REGULAR_ "] "
+            << std::endl;
+
+        generate_reg_info(ss, ":  ", " ", "SP", Registers.StackPointer);
+        ss << " ";
+        generate_config_info(ss, "SC", Registers.StackConfiguration);
+
+        generate_reg_info(ss, ":  ", " ", "IP", Registers.InstructionPointer);
+        ss << " ";
+        generate_config_info(ss, "CC", Registers.CodeConfiguration);
+
+        generate_reg_info(ss, ":  ", " ", "DP", Registers.DataPointer);
+        ss << " ";
+        generate_config_info(ss, "DC", Registers.DataConfiguration);
+
+        generate_reg_info(ss, ": ", " ", "ESP", Registers.ExtendedSegmentPointer);
+        ss << " ";
+        generate_config_info(ss, "ESC", Registers.ExtendedSegmentConfiguration, 1);
+
+        ss  << _PURPLE_ "XMM0: " _REGULAR_ _BLUE_ << Registers.XMM0 << _REGULAR_ << std::endl
+            << _PURPLE_ "XMM1: " _REGULAR_ _BLUE_ << Registers.XMM0 << _REGULAR_ << std::endl
+            << _PURPLE_ "XMM2: " _REGULAR_ _BLUE_ << Registers.XMM0 << _REGULAR_ << std::endl
+            << _PURPLE_ "XMM3: " _REGULAR_ _BLUE_ << Registers.XMM0 << _REGULAR_ << std::endl
+            << _PURPLE_ "XMM4: " _REGULAR_ _BLUE_ << Registers.XMM0 << _REGULAR_ << std::endl
+            << _PURPLE_ "XMM5: " _REGULAR_ _BLUE_ << Registers.XMM0 << _REGULAR_ << std::endl
+            << _PURPLE_ "XMM6: " _REGULAR_ _BLUE_ << Registers.XMM0 << _REGULAR_ << std::endl
+            << _PURPLE_ "XMM7: " _REGULAR_ _BLUE_ << Registers.XMM0 << _REGULAR_;
     }
 
     // Instruction decoder
@@ -98,7 +155,7 @@ void processor::output_debug_info() {
         rlmode_decode_instruction_within_range(ip, +256);
     replace_all(decoded, "\n", "\n" + std::string(16, ' '));
 
-    ss << _GREEN_ << " =============> " << _REGULAR_;
+    ss << _GREEN_ _BOLD_ " =============> " _REGULAR_;
 
     int line = 1;
     for (const auto & ch : decoded)

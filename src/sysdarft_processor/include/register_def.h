@@ -103,9 +103,12 @@ struct alignas(16) sysdarft_register_t
     {
         uint64_t Carry : 1;
         uint64_t Overflow : 1;
+        uint64_t LargerThan: 1;
+        uint64_t LessThan: 1;
+        uint64_t Equal: 1;
         uint64_t InterruptionMask : 1;
         uint64_t CurrentPrivilegeLevel : 8;
-        uint64_t __reserved : 53;
+        uint64_t __reserved : 50;
     } FlagRegister;
 
     struct {

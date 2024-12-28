@@ -42,6 +42,14 @@ void processor::operation(const __uint128_t timestamp)
     case OPCODE_SUB: InstructionExecutor.sub(timestamp); break;
     case OPCODE_SBB: InstructionExecutor.sbb(timestamp); break;
     case OPCODE_IMUL: InstructionExecutor.imul(timestamp); break;
+    case OPCODE_MUL: InstructionExecutor.mul(timestamp); break;
+    case OPCODE_IDIV: InstructionExecutor.idiv(timestamp); break;
+    case OPCODE_DIV: InstructionExecutor.div(timestamp); break;
+    case OPCODE_NEG: InstructionExecutor.neg(timestamp); break;
+    case OPCODE_CMP: InstructionExecutor.cmp(timestamp); break;
+
+    case OPCODE_MOV: InstructionExecutor.mov(timestamp); break;
+
     default: debug::log("[PROCESSOR]: Unhandled opcode: ", opcode, "\n");
             // TODO: INT_ILLEGAL_INSTRUCTION
     }
