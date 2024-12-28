@@ -26,6 +26,12 @@
 #define OPCODE_OR       (0x11)
 #define OPCODE_XOR      (0x12)
 #define OPCODE_NOT      (0x13)
+#define OPCODE_SHL      (0x14)
+#define OPCODE_SHR      (0x15)
+#define OPCODE_ROL      (0x16)
+#define OPCODE_ROR      (0x17)
+#define OPCODE_RCL      (0x18)
+#define OPCODE_RCR      (0x19)
 
 #define OPCODE_MOV      (0x20)
 
@@ -139,60 +145,48 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
     },
 
     {"SHL", {
-         {ENTRY_OPCODE, 0x14},
+         {ENTRY_OPCODE, OPCODE_SHL},
          {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },
 
     {"SHR", {
-         {ENTRY_OPCODE, 0x15},
-         {ENTRY_ARGUMENT_COUNT, 2},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
-     }
-    },
-
-    {"SAL", {
-         {ENTRY_OPCODE, 0x16},
-         {ENTRY_ARGUMENT_COUNT, 2},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
-     }
-    },
-
-    {"SAR", {
-         {ENTRY_OPCODE, 0x17},
-         {ENTRY_ARGUMENT_COUNT, 2},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
-     }
-    },
-
-    {"ROR", {
-         {ENTRY_OPCODE, 0x18},
+         {ENTRY_OPCODE, OPCODE_SHR},
          {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },
 
     {"ROL", {
-         {ENTRY_OPCODE, 0x19},
+                 {ENTRY_OPCODE, OPCODE_ROL},
+                 {ENTRY_ARGUMENT_COUNT, 2},
+                 {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+             }
+    },
+
+    {"ROR", {
+         {ENTRY_OPCODE, OPCODE_ROR},
          {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },
 
     {"RCL", {
-         {ENTRY_OPCODE, 0x1A},
+         {ENTRY_OPCODE, OPCODE_RCL},
          {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },
 
     {"RCR", {
-         {ENTRY_OPCODE, 0x1B},
+         {ENTRY_OPCODE, OPCODE_RCR},
          {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },
+
+    ////////////////////////////////////////////////////////////////////////////////////////////
 
     {"MOV", {
          {ENTRY_OPCODE, 0x20},

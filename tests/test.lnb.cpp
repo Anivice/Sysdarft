@@ -17,6 +17,17 @@ int main()
     encode_instruction(buffer, "mov .8bit <%R0>, <$(0x34)>");
     encode_instruction(buffer, "not .64bit <%FER0>");
 
+    encode_instruction(buffer, "shl .8bit <%R0>, <$(4)>");
+    encode_instruction(buffer, "shr .8bit <%R0>, <$(6)>");
+
+    encode_instruction(buffer, "mov .8bit <%R0>, <$(0xF4)>");
+    encode_instruction(buffer, "rol .8bit <%R0>, <$(2)>");
+    encode_instruction(buffer, "ror .8bit <%R0>, <$(1)>");
+
+    encode_instruction(buffer, "mov .8bit <%R0>, <$(0x8F)>");
+    encode_instruction(buffer, "rcl .8bit <%R0>, <$(1)>");
+    encode_instruction(buffer, "rcr .8bit <%R0>, <$(1)>");
+
     for (const auto& code : buffer) {
         BIOS[off++] = code;
     }

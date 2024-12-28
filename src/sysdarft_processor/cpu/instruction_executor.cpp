@@ -52,6 +52,12 @@ void processor::operation(const __uint128_t timestamp)
     case OPCODE_OR: InstructionExecutor.or_(timestamp); break;
     case OPCODE_XOR: InstructionExecutor.xor_(timestamp); break;
     case OPCODE_NOT: InstructionExecutor.not_(timestamp); break;
+    case OPCODE_SHL: InstructionExecutor.shl(timestamp); break;
+    case OPCODE_SHR: InstructionExecutor.shr(timestamp); break;
+    case OPCODE_ROL: InstructionExecutor.rol(timestamp); break;
+    case OPCODE_ROR: InstructionExecutor.ror(timestamp); break;
+    case OPCODE_RCL: InstructionExecutor.rcl(timestamp); break;
+    case OPCODE_RCR: InstructionExecutor.rcr(timestamp); break;
 
     case OPCODE_MOV: InstructionExecutor.mov(timestamp); break;
 

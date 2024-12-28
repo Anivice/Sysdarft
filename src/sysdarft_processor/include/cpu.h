@@ -150,6 +150,14 @@ private:
         void or_(__uint128_t timestamp);
         void xor_(__uint128_t timestamp);
         void not_(__uint128_t timestamp);
+        void shl(__uint128_t timestamp);
+        void shr(__uint128_t timestamp);
+        void sal(__uint128_t timestamp);
+        void sar(__uint128_t timestamp);
+        void ror(__uint128_t timestamp);
+        void rol(__uint128_t timestamp);
+        void rcl(__uint128_t timestamp);
+        void rcr(__uint128_t timestamp);
 
         void pushall(__uint128_t timestamp);
 

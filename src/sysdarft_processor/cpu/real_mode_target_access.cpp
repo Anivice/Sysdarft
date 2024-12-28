@@ -181,38 +181,38 @@ void processor::Target::do_set_register(uint64_t reg)
     switch (TargetWidth) {
     case 0x08:
         switch (TargetInformation.RegisterIndex) {
-        case 0x00: CPU.Registers.Register0 = (uint8_t)reg; return;
-        case 0x01: CPU.Registers.Register1 = (uint8_t)reg; return;
-        case 0x02: CPU.Registers.Register2 = (uint8_t)reg; return;
-        case 0x03: CPU.Registers.Register3 = (uint8_t)reg; return;
-        case 0x04: CPU.Registers.Register4 = (uint8_t)reg; return;
-        case 0x05: CPU.Registers.Register5 = (uint8_t)reg; return;
-        case 0x06: CPU.Registers.Register6 = (uint8_t)reg; return;
-        case 0x07: CPU.Registers.Register7 = (uint8_t)reg; return;
+        case 0x00: CPU.Registers.Register0 = (uint8_t)(reg & 0xFF); return;
+        case 0x01: CPU.Registers.Register1 = (uint8_t)(reg & 0xFF); return;
+        case 0x02: CPU.Registers.Register2 = (uint8_t)(reg & 0xFF); return;
+        case 0x03: CPU.Registers.Register3 = (uint8_t)(reg & 0xFF); return;
+        case 0x04: CPU.Registers.Register4 = (uint8_t)(reg & 0xFF); return;
+        case 0x05: CPU.Registers.Register5 = (uint8_t)(reg & 0xFF); return;
+        case 0x06: CPU.Registers.Register6 = (uint8_t)(reg & 0xFF); return;
+        case 0x07: CPU.Registers.Register7 = (uint8_t)(reg & 0xFF); return;
         default: __illegal_instruction_assert__(false);
         }
     case 0x16:
         switch (TargetInformation.RegisterIndex) {
-        case 0x00: CPU.Registers.ExtendedRegister0 = (uint16_t)reg; return;
-        case 0x01: CPU.Registers.ExtendedRegister1 = (uint16_t)reg; return;
-        case 0x02: CPU.Registers.ExtendedRegister2 = (uint16_t)reg; return;
-        case 0x03: CPU.Registers.ExtendedRegister3 = (uint16_t)reg; return;
-        case 0x04: CPU.Registers.ExtendedRegister4 = (uint16_t)reg; return;
-        case 0x05: CPU.Registers.ExtendedRegister5 = (uint16_t)reg; return;
-        case 0x06: CPU.Registers.ExtendedRegister6 = (uint16_t)reg; return;
-        case 0x07: CPU.Registers.ExtendedRegister7 = (uint16_t)reg; return;
+        case 0x00: CPU.Registers.ExtendedRegister0 = (uint16_t)(reg & 0xFFFF); return;
+        case 0x01: CPU.Registers.ExtendedRegister1 = (uint16_t)(reg & 0xFFFF); return;
+        case 0x02: CPU.Registers.ExtendedRegister2 = (uint16_t)(reg & 0xFFFF); return;
+        case 0x03: CPU.Registers.ExtendedRegister3 = (uint16_t)(reg & 0xFFFF); return;
+        case 0x04: CPU.Registers.ExtendedRegister4 = (uint16_t)(reg & 0xFFFF); return;
+        case 0x05: CPU.Registers.ExtendedRegister5 = (uint16_t)(reg & 0xFFFF); return;
+        case 0x06: CPU.Registers.ExtendedRegister6 = (uint16_t)(reg & 0xFFFF); return;
+        case 0x07: CPU.Registers.ExtendedRegister7 = (uint16_t)(reg & 0xFFFF); return;
         default: __illegal_instruction_assert__(false);
         }
     case 0x32:
         switch (TargetInformation.RegisterIndex) {
-        case 0x00: CPU.Registers.HalfExtendedRegister0 = (uint32_t)reg; return;
-        case 0x01: CPU.Registers.HalfExtendedRegister1 = (uint32_t)reg; return;
-        case 0x02: CPU.Registers.HalfExtendedRegister2 = (uint32_t)reg; return;
-        case 0x03: CPU.Registers.HalfExtendedRegister3 = (uint32_t)reg; return;
-        case 0x04: CPU.Registers.HalfExtendedRegister4 = (uint32_t)reg; return;
-        case 0x05: CPU.Registers.HalfExtendedRegister5 = (uint32_t)reg; return;
-        case 0x06: CPU.Registers.HalfExtendedRegister6 = (uint32_t)reg; return;
-        case 0x07: CPU.Registers.HalfExtendedRegister7 = (uint32_t)reg; return;
+        case 0x00: CPU.Registers.HalfExtendedRegister0 = (uint32_t)(reg & 0xFFFFFFFF); return;
+        case 0x01: CPU.Registers.HalfExtendedRegister1 = (uint32_t)(reg & 0xFFFFFFFF); return;
+        case 0x02: CPU.Registers.HalfExtendedRegister2 = (uint32_t)(reg & 0xFFFFFFFF); return;
+        case 0x03: CPU.Registers.HalfExtendedRegister3 = (uint32_t)(reg & 0xFFFFFFFF); return;
+        case 0x04: CPU.Registers.HalfExtendedRegister4 = (uint32_t)(reg & 0xFFFFFFFF); return;
+        case 0x05: CPU.Registers.HalfExtendedRegister5 = (uint32_t)(reg & 0xFFFFFFFF); return;
+        case 0x06: CPU.Registers.HalfExtendedRegister6 = (uint32_t)(reg & 0xFFFFFFFF); return;
+        case 0x07: CPU.Registers.HalfExtendedRegister7 = (uint32_t)(reg & 0xFFFFFFFF); return;
         default: __illegal_instruction_assert__(false);
         }
 
