@@ -132,10 +132,10 @@ void EXPORT encode_instruction(std::vector<uint8_t> & buffer, const std::string 
                     case _32bit_prefix: assertion(parsed_target.RegisterName[1] == 'H'); break;
                     case _64bit_prefix: assertion(
                         parsed_target.RegisterName[1] == 'F'
-                        or parsed_target.RegisterName == "%SP"
-                        or parsed_target.RegisterName == "%DP"
-                        or parsed_target.RegisterName == "%ESP"
-                        or parsed_target.RegisterName == "%CR0");
+                        || parsed_target.RegisterName == "%SP"
+                        || parsed_target.RegisterName == "%DP"
+                        || parsed_target.RegisterName == "%ESP"
+                        || parsed_target.RegisterName == "%CR0");
                     break;
 
                     // it should never reach this:

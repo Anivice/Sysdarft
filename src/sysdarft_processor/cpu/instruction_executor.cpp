@@ -48,6 +48,11 @@ void processor::operation(const __uint128_t timestamp)
     case OPCODE_NEG: InstructionExecutor.neg(timestamp); break;
     case OPCODE_CMP: InstructionExecutor.cmp(timestamp); break;
 
+    case OPCODE_AND: InstructionExecutor.and_(timestamp); break;
+    case OPCODE_OR: InstructionExecutor.or_(timestamp); break;
+    case OPCODE_XOR: InstructionExecutor.xor_(timestamp); break;
+    case OPCODE_NOT: InstructionExecutor.not_(timestamp); break;
+
     case OPCODE_MOV: InstructionExecutor.mov(timestamp); break;
 
     default: debug::log("[PROCESSOR]: Unhandled opcode: ", opcode, "\n");

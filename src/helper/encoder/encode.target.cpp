@@ -6,7 +6,6 @@
 #include <cassert>
 #include <cstdint>
 #include <debug.h>
-#include <any>
 #include <cctype>
 #include <iomanip>
 #include <instruction.h>
@@ -233,7 +232,7 @@ void encode_memory(std::vector<uint8_t> & buffer, const parsed_target_t & input)
             }
 
             // Not a 64bit register
-            if (tmp != "%FER" and param != "%SP" and param != "%DP" and param != "%ESP") {
+            if (tmp != "%FER" && param != "%SP" && param != "%DP" && param != "%ESP") {
                 throw TargetExpressionError("Not a 64bit Register: " + param);
             }
 

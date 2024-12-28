@@ -15,6 +15,14 @@ void processor::__InstructionExecutorType__::add(const __uint128_t timestamp)
     opnum2 = operand2.get<uint64_t>();
     const __uint128_t result = opnum1 + opnum2;
 
+    // clear the register
+    {
+        std::lock_guard lock(CPU.RegisterAccessMutex);
+        CPU.Registers.FlagRegister.LessThan = 0;
+        CPU.Registers.FlagRegister.LargerThan = 0;
+        CPU.Registers.FlagRegister.Equal = 0;
+    }
+
     check_overflow(width, result);
 
     operand1 = static_cast<uint64_t>(result);
@@ -41,6 +49,14 @@ void processor::__InstructionExecutorType__::adc(const __uint128_t timestamp)
 
     const __uint128_t result = opnum1 + opnum2 + get_cf();
 
+    // clear the register
+    {
+        std::lock_guard lock(CPU.RegisterAccessMutex);
+        CPU.Registers.FlagRegister.LessThan = 0;
+        CPU.Registers.FlagRegister.LargerThan = 0;
+        CPU.Registers.FlagRegister.Equal = 0;
+    }
+
     check_overflow(width, result);
 
     operand1 = static_cast<uint64_t>(result);
@@ -61,6 +77,14 @@ void processor::__InstructionExecutorType__::sub(const __uint128_t timestamp)
     opnum2 = operand2.get<uint64_t>();
 
     const __uint128_t result = opnum1 - opnum2;
+
+    // clear the register
+    {
+        std::lock_guard lock(CPU.RegisterAccessMutex);
+        CPU.Registers.FlagRegister.LessThan = 0;
+        CPU.Registers.FlagRegister.LargerThan = 0;
+        CPU.Registers.FlagRegister.Equal = 0;
+    }
 
     check_overflow(width, result);
 
@@ -87,6 +111,14 @@ void processor::__InstructionExecutorType__::sbb(const __uint128_t timestamp)
     opnum2 = operand2.get<uint64_t>();
 
     const __uint128_t result = opnum1 - opnum2 - get_cf();
+
+    // clear the register
+    {
+        std::lock_guard lock(CPU.RegisterAccessMutex);
+        CPU.Registers.FlagRegister.LessThan = 0;
+        CPU.Registers.FlagRegister.LargerThan = 0;
+        CPU.Registers.FlagRegister.Equal = 0;
+    }
 
     check_overflow(width, result);
 
@@ -118,6 +150,14 @@ void processor::__InstructionExecutorType__::imul(const __uint128_t timestamp)
     const int64_t factor = *(int64_t*)(&opnum);
     const int64_t base = *(int64_t*)(&TargetRegister0);
     __int128_t signed_result = factor * base;
+
+    // clear the register
+    {
+        std::lock_guard lock(CPU.RegisterAccessMutex);
+        CPU.Registers.FlagRegister.LessThan = 0;
+        CPU.Registers.FlagRegister.LargerThan = 0;
+        CPU.Registers.FlagRegister.Equal = 0;
+    }
 
     check_overflow(width, *(__uint128_t*)&signed_result);
 
@@ -156,6 +196,14 @@ void processor::__InstructionExecutorType__::mul(const __uint128_t timestamp)
     }
 
     const __uint128_t result = TargetRegister0 * opnum;
+
+    // clear the register
+    {
+        std::lock_guard lock(CPU.RegisterAccessMutex);
+        CPU.Registers.FlagRegister.LessThan = 0;
+        CPU.Registers.FlagRegister.LargerThan = 0;
+        CPU.Registers.FlagRegister.Equal = 0;
+    }
 
     check_overflow(width, result);
 
@@ -197,6 +245,14 @@ void processor::__InstructionExecutorType__::idiv(const __uint128_t timestamp)
     const int64_t base = *(int64_t*)(&TargetRegister0);
     __int128_t quotient = base / factor;
     __int128_t remainder = base % factor;
+
+    // clear the register
+    {
+        std::lock_guard lock(CPU.RegisterAccessMutex);
+        CPU.Registers.FlagRegister.LessThan = 0;
+        CPU.Registers.FlagRegister.LargerThan = 0;
+        CPU.Registers.FlagRegister.Equal = 0;
+    }
 
     check_overflow(width, *(__uint128_t*)&quotient);
     check_overflow(width, *(__uint128_t*)&remainder);
@@ -251,6 +307,14 @@ void processor::__InstructionExecutorType__::div(const __uint128_t timestamp)
     __int128_t quotient = base / factor;
     __int128_t remainder = base % factor;
 
+    // clear the register
+    {
+        std::lock_guard lock(CPU.RegisterAccessMutex);
+        CPU.Registers.FlagRegister.LessThan = 0;
+        CPU.Registers.FlagRegister.LargerThan = 0;
+        CPU.Registers.FlagRegister.Equal = 0;
+    }
+
     check_overflow(width, *(__uint128_t*)&quotient);
     check_overflow(width, *(__uint128_t*)&remainder);
 
@@ -287,7 +351,17 @@ void processor::__InstructionExecutorType__::neg(__uint128_t timestamp)
 
     opnum = operand1.get<uint64_t>();
     opnum = -opnum;
+
+    // clear the register
+    {
+        std::lock_guard lock(CPU.RegisterAccessMutex);
+        CPU.Registers.FlagRegister.LessThan = 0;
+        CPU.Registers.FlagRegister.LargerThan = 0;
+        CPU.Registers.FlagRegister.Equal = 0;
+    }
+
     check_overflow(width, opnum);
+
     operand1 = (uint64_t)(opnum & 0xFFFFFFFFFFFFFFFF);
 }
 
@@ -313,6 +387,14 @@ void processor::__InstructionExecutorType__::cmp(const __uint128_t timestamp)
     } else if (opnum1 == opnum2) {
         std::lock_guard lock(CPU.RegisterAccessMutex);
         CPU.Registers.FlagRegister.Equal = 1;
+    }
+
+    // clear the register
+    {
+        std::lock_guard lock(CPU.RegisterAccessMutex);
+        CPU.Registers.FlagRegister.LessThan = 0;
+        CPU.Registers.FlagRegister.LargerThan = 0;
+        CPU.Registers.FlagRegister.Equal = 0;
     }
 
     check_overflow(width, 0); // clear OF and CF

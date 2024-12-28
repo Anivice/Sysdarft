@@ -243,6 +243,7 @@ add_unit_test(test.pure.curse tests/test.pure.curses.cpp)
 add_unit_test(test.timer tests/test.timer.cpp)
 add_unit_test(test.arithmetic tests/test.arithmetic.cpp)
 add_unit_test(test.encoder tests/test.encoder.cpp)
+add_unit_test(test.lnb tests/test.lnb.cpp)
 
 # Console Executable:
 add_executable(sysdarft-system src/main.cpp)

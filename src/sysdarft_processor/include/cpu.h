@@ -145,6 +145,12 @@ private:
         void div(__uint128_t timestamp);
         void neg(__uint128_t timestamp);
         void cmp(__uint128_t timestamp);
+
+        void and_(__uint128_t timestamp);
+        void or_(__uint128_t timestamp);
+        void xor_(__uint128_t timestamp);
+        void not_(__uint128_t timestamp);
+
         void pushall(__uint128_t timestamp);
 
         explicit __InstructionExecutorType__(processor & _CPU) : CPU(_CPU) { }

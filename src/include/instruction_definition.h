@@ -22,6 +22,11 @@
 #define OPCODE_NEG      (0x09)
 #define OPCODE_CMP      (0x0A)
 
+#define OPCODE_AND      (0x10)
+#define OPCODE_OR       (0x11)
+#define OPCODE_XOR      (0x12)
+#define OPCODE_NOT      (0x13)
+
 #define OPCODE_MOV      (0x20)
 
 // Initialize the instruction to opcode mapping
@@ -103,29 +108,31 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
      }
     },
 
+    ////////////////////////////////////////////////////////////////////////////////////////////
+
     {"AND", {
-         {ENTRY_OPCODE, 0x10},
+         {ENTRY_OPCODE, OPCODE_AND},
          {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },
 
     {"OR", {
-         {ENTRY_OPCODE, 0x11},
+         {ENTRY_OPCODE, OPCODE_OR},
          {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },
 
     {"XOR", {
-         {ENTRY_OPCODE, 0x12},
+         {ENTRY_OPCODE, OPCODE_XOR},
          {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },
 
     {"NOT", {
-         {ENTRY_OPCODE, 0x13},
+         {ENTRY_OPCODE, OPCODE_NOT},
          {ENTRY_ARGUMENT_COUNT, 1},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }

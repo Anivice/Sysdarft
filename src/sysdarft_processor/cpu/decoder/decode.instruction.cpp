@@ -4,6 +4,7 @@
 std::string processor:: rlmode_decode_instruction_within_range(const uint64_t start, const uint64_t length)
 {
     uint64_t offset = 0;
+    uint64_t IP = 0;
     std::vector < std::string > output_buffer;
     while (offset < length)
     {
@@ -18,7 +19,7 @@ std::string processor:: rlmode_decode_instruction_within_range(const uint64_t st
                 {
                     buffer  << _YELLOW_
                             << std::hex << std::uppercase << std::setfill('0') << std::setw(16)
-                            << start + offset << _REGULAR_ ": "
+                            << start + IP << _REGULAR_ ": "
                             << _RED_ _BOLD_ << fst << _REGULAR_ " ";
 
                     if (snd.at(ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION) != 0)
@@ -54,6 +55,7 @@ std::string processor:: rlmode_decode_instruction_within_range(const uint64_t st
                     }
 
                     output_buffer.emplace_back(buffer.str());
+                    IP = offset;
                 }
             }
         } catch (...) {
