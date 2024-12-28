@@ -104,15 +104,21 @@ private:
         processor & CPU;
         Target pop_target();
 
+        void check_overflow(uint8_t bcd_width, const __uint128_t val);
+
     public:
         void nop(__uint128_t timestamp);
         void add(__uint128_t timestamp);
         void adc(__uint128_t timestamp);
+        void sub(__uint128_t timestamp);
+        void sbb(__uint128_t timestamp);
+        void imul(__uint128_t timestamp);
         void pushall(__uint128_t timestamp);
 
         explicit __InstructionExecutorType__(processor & _CPU) : CPU(_CPU) { }
     } InstructionExecutor;
 
+    void output_debug_info();
     void operation(__uint128_t timestamp);
     void soft_interruption_ready(const uint64_t int_code);
 
@@ -123,6 +129,7 @@ private:
     std::atomic<unsigned long long> frequencyHz = 1000_Hz;
     std::atomic<double> wait_scale = 1.0;
     std::atomic<bool> has_instance = false;
+    std::atomic<bool> is_at_breakpoint = false;
 
     std::mutex RegisterAccessMutex;
     SysdarftRegister Registers;
@@ -144,6 +151,45 @@ private:
     void write_memory(uint64_t address, const char* _source, uint64_t size);
     template <size_t SIZE> typename size_to_uint<SIZE>::type pop();
 
+    template < unsigned int LENGTH >
+    std::any rlmode_pop(const uint64_t begin, uint64_t & offset)
+    {
+        static_assert(LENGTH % 8 == 0);
+        __uint128_t result = 0;
+        auto buffer = (char*)(&result);
+        get_memory(begin + offset, buffer, LENGTH / 8);
+        offset += LENGTH / 8;
+        switch (LENGTH / 8)
+        {
+        case 1: /* 8bit */  return static_cast<uint8_t> (result & 0xFF);
+        case 2: /* 16bit */ return static_cast<uint16_t>(result & 0xFFFF);
+        case 4: /* 32bit */ return static_cast<uint32_t>(result & 0xFFFFFFFF);
+        case 8: /* 64bit */ return static_cast<uint64_t>(result & 0xFFFFFFFFFFFFFFFF);
+        default: throw TargetExpressionError("Unrecognized length");
+        }
+    }
+
+    uint8_t rlmode_pop8(const uint64_t begin, uint64_t & offset) {
+        return std::any_cast<uint8_t>(rlmode_pop<8>(begin, offset));
+    }
+
+    uint16_t rlmode_pop16(const uint64_t begin, uint64_t & offset) {
+        return std::any_cast<uint16_t>(rlmode_pop<16>(begin, offset));
+    }
+
+    uint32_t rlmode_pop32(const uint64_t begin, uint64_t & offset) {
+        return std::any_cast<uint32_t>(rlmode_pop<32>(begin, offset));
+    }
+
+    uint64_t rlmode_pop64(const uint64_t begin, uint64_t & offset) {
+        return std::any_cast<uint64_t>(rlmode_pop<64>(begin, offset));
+    }
+
+    void rlmode_decode_constant(std::vector<std::string> & output, uint64_t begin, uint64_t & offset);
+    void rlmode_decode_register(std::vector<std::string> & output, uint64_t begin, uint64_t & offset);
+    void rlmode_decode_memory(std::vector<std::string> & output, uint64_t begin, uint64_t & offset);
+    void rlmode_decode_target(std::vector<std::string> & output, uint64_t begin, uint64_t & offset);
+    std::string rlmode_decode_instruction_within_range(uint64_t start, uint64_t length);
 public:
     class Target {
     private:
@@ -194,10 +240,16 @@ public:
         friend class __InstructionExecutorType__;
     };
 
-    void collaboration();
+    void collaborate();
     void start_triggering();
     void stop_triggering();
     void load_bios(std::array<uint8_t, BIOS_SIZE> const &bios);
+
+    void break_here() { is_at_breakpoint = true; }
+    typedef void (*breakpoint_handler_t)(__uint128_t timestamp,
+        SysdarftRegister & register_,
+        decltype(Memory) & Memory_);
+    std::atomic<breakpoint_handler_t> breakpoint_handler;
 
     processor() :
         InstructionExecutor(*this),
@@ -205,6 +257,7 @@ public:
     {
         initialize_registers();
         initialize_memory();
+        breakpoint_handler = [](__uint128_t, decltype(Registers)&, decltype(Memory)& ) { };
     }
 
     friend class Target;

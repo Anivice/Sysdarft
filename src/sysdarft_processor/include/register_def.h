@@ -148,14 +148,14 @@ protected:
     sysdarft_register_t Registers{};
 
 public:
-    uint8_t& R0 = Registers.FullyExtendedRegister0.HalfExtendedRegister0.ExtendedRegister0.R0;
-    uint8_t& R1 = Registers.FullyExtendedRegister0.HalfExtendedRegister0.ExtendedRegister0.R1;
-    uint8_t& R2 = Registers.FullyExtendedRegister0.HalfExtendedRegister0.ExtendedRegister1.R2;
-    uint8_t& R3 = Registers.FullyExtendedRegister0.HalfExtendedRegister0.ExtendedRegister1.R3;
-    uint8_t& R4 = Registers.FullyExtendedRegister0.HalfExtendedRegister1.ExtendedRegister2.R4;
-    uint8_t& R5 = Registers.FullyExtendedRegister0.HalfExtendedRegister1.ExtendedRegister2.R5;
-    uint8_t& R6 = Registers.FullyExtendedRegister0.HalfExtendedRegister1.ExtendedRegister3.R6;
-    uint8_t& R7 = Registers.FullyExtendedRegister0.HalfExtendedRegister1.ExtendedRegister3.R7;
+    uint8_t& Register0 = Registers.FullyExtendedRegister0.HalfExtendedRegister0.ExtendedRegister0.R0;
+    uint8_t& Register1 = Registers.FullyExtendedRegister0.HalfExtendedRegister0.ExtendedRegister0.R1;
+    uint8_t& Register2 = Registers.FullyExtendedRegister0.HalfExtendedRegister0.ExtendedRegister1.R2;
+    uint8_t& Register3 = Registers.FullyExtendedRegister0.HalfExtendedRegister0.ExtendedRegister1.R3;
+    uint8_t& Register4 = Registers.FullyExtendedRegister0.HalfExtendedRegister1.ExtendedRegister2.R4;
+    uint8_t& Register5 = Registers.FullyExtendedRegister0.HalfExtendedRegister1.ExtendedRegister2.R5;
+    uint8_t& Register6 = Registers.FullyExtendedRegister0.HalfExtendedRegister1.ExtendedRegister3.R6;
+    uint8_t& Register7 = Registers.FullyExtendedRegister0.HalfExtendedRegister1.ExtendedRegister3.R7;
 
     uint16_t& ExtendedRegister0 = *(uint16_t*)(&Registers.FullyExtendedRegister0.HalfExtendedRegister0.
                                                           ExtendedRegister0);

@@ -27,7 +27,7 @@ void processor::triggerer_thread(std::atomic<bool> & running, std::atomic<bool> 
         auto op_end = std::chrono::steady_clock::now();
         if (const auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(op_end - op_start);
             duration > MAX_DURATION_NS) {
-            debug::log("[CPU] Delayed ", duration - MAX_DURATION_NS, " ns for current cycle!\n");
+            debug::log("[CPU] Delayed ", duration - MAX_DURATION_NS, " for current cycle!\n");
         } else {
             std::this_thread::sleep_for(MAX_DURATION_NS * wait_scale.load() - duration);
         }
@@ -38,7 +38,7 @@ void processor::triggerer_thread(std::atomic<bool> & running, std::atomic<bool> 
     stopped = true;
 }
 
-void processor::collaboration()
+void processor::collaborate()
 {
     debug::log("[CPU] CPU time frame precision collaboration started.\n");
     debug::log("[CPU] Please wait for 10 seconds for the collaboration procedure to finish!\n");

@@ -148,6 +148,8 @@ target_link_libraries(sysdarft_ncurses PUBLIC ${CURSES_LIBRARIES})
 
 # CPU
 add_library(sysdarft_processor OBJECT
+        src/include/instruction.h
+        src/include/instruction_definition.h
         src/sysdarft_processor/include/register_def.h
         src/sysdarft_processor/io/disk_hub.cpp
         src/sysdarft_processor/io/io_hub.cpp
@@ -175,6 +177,9 @@ add_library(sysdarft_processor OBJECT
         src/sysdarft_processor/cpu/operations/logical_and_bitwise.cpp
         src/sysdarft_processor/cpu/operations/miscellaneous.cpp
         src/sysdarft_processor/cpu/operations/os.cpp
+        src/sysdarft_processor/cpu/decoder/decode.instruction.cpp
+        src/sysdarft_processor/cpu/decoder/decode.target.cpp
+        src/sysdarft_processor/cpu/output_debug_info.cpp
 )
 target_include_directories(sysdarft_processor PUBLIC src/include src/sysdarft_processor/include)
 

@@ -12,6 +12,6 @@ public:
         GlobalEventProcessor.install_instance(SYSDARFT_PROCESSOR_INSTANCE, &CPU,
             SYSDARFT_PROCESSOR_STOP, &processor::stop_triggering);
         GlobalEventProcessor.install_instance(SYSDARFT_PROCESSOR_INSTANCE, &CPU,
-            SYSDARFT_PROCESSOR_COLLABORATION, &processor::collaboration);
+            SYSDARFT_PROCESSOR_COLLABORATION, &processor::collaborate);
     }
 } __sysdarft_instance_initialization_instance__;

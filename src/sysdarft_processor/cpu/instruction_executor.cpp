@@ -24,14 +24,24 @@ public:
     }
 } __initialize_vector_instance__;
 
+
+
 // Sample operation function
 void processor::operation(const __uint128_t timestamp)
 {
-    switch (auto opcode = pop<64>())
+    if (is_at_breakpoint) {
+        output_debug_info();
+        breakpoint_handler.load()(timestamp, Registers, Memory);
+    }
+
+    switch (const auto opcode = pop<64>())
     {
     case OPCODE_NOP: InstructionExecutor.nop(timestamp); break;
     case OPCODE_ADD: InstructionExecutor.add(timestamp); break;
     case OPCODE_ADC: InstructionExecutor.adc(timestamp); break;
+    case OPCODE_SUB: InstructionExecutor.sub(timestamp); break;
+    case OPCODE_SBB: InstructionExecutor.sbb(timestamp); break;
+    case OPCODE_IMUL: InstructionExecutor.imul(timestamp); break;
     default: debug::log("[PROCESSOR]: Unhandled opcode: ", opcode, "\n");
             // TODO: INT_ILLEGAL_INSTRUCTION
     }

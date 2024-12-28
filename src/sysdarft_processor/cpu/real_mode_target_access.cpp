@@ -113,14 +113,14 @@ uint64_t processor::Target::do_get_register()
     switch (TargetWidth) {
     case 0x08:
         switch (TargetInformation.RegisterIndex) {
-        case 0x00: return CPU.Registers.R0;
-        case 0x01: return CPU.Registers.R1;
-        case 0x02: return CPU.Registers.R2;
-        case 0x03: return CPU.Registers.R3;
-        case 0x04: return CPU.Registers.R4;
-        case 0x05: return CPU.Registers.R5;
-        case 0x06: return CPU.Registers.R6;
-        case 0x07: return CPU.Registers.R7;
+        case 0x00: return CPU.Registers.Register0;
+        case 0x01: return CPU.Registers.Register1;
+        case 0x02: return CPU.Registers.Register2;
+        case 0x03: return CPU.Registers.Register3;
+        case 0x04: return CPU.Registers.Register4;
+        case 0x05: return CPU.Registers.Register5;
+        case 0x06: return CPU.Registers.Register6;
+        case 0x07: return CPU.Registers.Register7;
         default: __illegal_instruction_assert__(false);
         }
     case 0x16:
@@ -181,14 +181,14 @@ void processor::Target::do_set_register(uint64_t reg)
     switch (TargetWidth) {
     case 0x08:
         switch (TargetInformation.RegisterIndex) {
-        case 0x00: CPU.Registers.R0 = (uint8_t)reg; return;
-        case 0x01: CPU.Registers.R1 = (uint8_t)reg; return;
-        case 0x02: CPU.Registers.R2 = (uint8_t)reg; return;
-        case 0x03: CPU.Registers.R3 = (uint8_t)reg; return;
-        case 0x04: CPU.Registers.R4 = (uint8_t)reg; return;
-        case 0x05: CPU.Registers.R5 = (uint8_t)reg; return;
-        case 0x06: CPU.Registers.R6 = (uint8_t)reg; return;
-        case 0x07: CPU.Registers.R7 = (uint8_t)reg; return;
+        case 0x00: CPU.Registers.Register0 = (uint8_t)reg; return;
+        case 0x01: CPU.Registers.Register1 = (uint8_t)reg; return;
+        case 0x02: CPU.Registers.Register2 = (uint8_t)reg; return;
+        case 0x03: CPU.Registers.Register3 = (uint8_t)reg; return;
+        case 0x04: CPU.Registers.Register4 = (uint8_t)reg; return;
+        case 0x05: CPU.Registers.Register5 = (uint8_t)reg; return;
+        case 0x06: CPU.Registers.Register6 = (uint8_t)reg; return;
+        case 0x07: CPU.Registers.Register7 = (uint8_t)reg; return;
         default: __illegal_instruction_assert__(false);
         }
     case 0x16:
