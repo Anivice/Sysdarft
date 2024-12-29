@@ -128,12 +128,6 @@ struct alignas(16) sysdarft_register_t
 
     struct
     {
-        uint64_t PointerBaseAddress;
-        uint64_t PointerLimit;
-    } SegmentationAccessTablePointer;
-
-    struct
-    {
         long double XMM0;
         long double XMM1;
         long double XMM2;
@@ -143,7 +137,11 @@ struct alignas(16) sysdarft_register_t
         long double XMM6;
         long double XMM7;
     } FPURegister;
+
+    uint64_t CurrentProcedureStackPreservationSpace;
 };
+
+class processor;
 
 class SysdarftRegister
 {
@@ -210,8 +208,6 @@ public:
     uint64_t& ExtendedSegmentPointer = Registers.ExtendedSegmentPointer;
     sysdarft_register_t::SegmentationConfigurationRegister& ExtendedSegmentConfiguration
         = Registers.ExtendedSegmentConfiguration;
-    decltype(Registers.SegmentationAccessTablePointer)& SegmentationAccessTable
-        = Registers.SegmentationAccessTablePointer;
 
     decltype(Registers.ControlRegister0) & ControlRegister0 = Registers.ControlRegister0;
 
@@ -224,7 +220,10 @@ public:
     long double& XMM6 = Registers.FPURegister.XMM6;
     long double& XMM7 = Registers.FPURegister.XMM7;
 
+    uint64_t & CurrentProcedureStackPreservationSpace = Registers.CurrentProcedureStackPreservationSpace;
+
     SysdarftRegister & operator=(const SysdarftRegister & other) = delete;
+    friend class processor;
 };
 
 #endif //REGISTER_DEF_H

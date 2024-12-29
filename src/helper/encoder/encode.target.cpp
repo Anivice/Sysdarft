@@ -164,7 +164,8 @@ std::optional<uint32_t> extractTrailingNumber(const std::string& input)
 
 void encode_register(std::vector<uint8_t> & buffer, const parsed_target_t & input)
 {
-    const auto register_index = extractTrailingNumber(input.RegisterName).value();
+    const auto register_index =  extractTrailingNumber(input.RegisterName).has_value() ?
+        extractTrailingNumber(input.RegisterName).value() : 0;
     push8(buffer, REGISTER_PREFIX);
     switch (input.RegisterName[1])
     {

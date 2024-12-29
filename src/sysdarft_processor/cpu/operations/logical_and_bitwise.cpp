@@ -14,16 +14,6 @@ void processor::__InstructionExecutorType__::and_(const __uint128_t timestamp)
     opnum1 = operand1.get<uint64_t>();
     opnum2 = operand2.get<uint64_t>();
     operand1 = static_cast<uint64_t>(opnum1 & opnum2);
-
-    // clear the register
-    {
-        std::lock_guard lock(CPU.RegisterAccessMutex);
-        CPU.Registers.FlagRegister.LessThan = 0;
-        CPU.Registers.FlagRegister.LargerThan = 0;
-        CPU.Registers.FlagRegister.Equal = 0;
-    }
-
-    check_overflow(width, 0); // clear OF and CF
 }
 
 void processor::__InstructionExecutorType__::or_(const __uint128_t timestamp)
@@ -40,18 +30,7 @@ void processor::__InstructionExecutorType__::or_(const __uint128_t timestamp)
     opnum1 = operand1.get<uint64_t>();
     opnum2 = operand2.get<uint64_t>();
     operand1 = static_cast<uint64_t>(opnum1 | opnum2);
-
-    // clear the register
-    {
-        std::lock_guard lock(CPU.RegisterAccessMutex);
-        CPU.Registers.FlagRegister.LessThan = 0;
-        CPU.Registers.FlagRegister.LargerThan = 0;
-        CPU.Registers.FlagRegister.Equal = 0;
-    }
-
-    check_overflow(width, 0); // clear OF and CF
 }
-
 
 void processor::__InstructionExecutorType__::xor_(const __uint128_t timestamp)
 {
@@ -67,16 +46,6 @@ void processor::__InstructionExecutorType__::xor_(const __uint128_t timestamp)
     opnum1 = operand1.get<uint64_t>();
     opnum2 = operand2.get<uint64_t>();
     operand1 = static_cast<uint64_t>(opnum1 ^ opnum2);
-
-    // clear the register
-    {
-        std::lock_guard lock(CPU.RegisterAccessMutex);
-        CPU.Registers.FlagRegister.LessThan = 0;
-        CPU.Registers.FlagRegister.LargerThan = 0;
-        CPU.Registers.FlagRegister.Equal = 0;
-    }
-
-    check_overflow(width, 0); // clear OF and CF
 }
 
 void processor::__InstructionExecutorType__::not_(const __uint128_t timestamp)
@@ -90,16 +59,6 @@ void processor::__InstructionExecutorType__::not_(const __uint128_t timestamp)
 
     opnum = operand.get<uint64_t>();
     operand = static_cast<uint64_t>(~opnum);
-
-    // clear the register
-    {
-        std::lock_guard lock(CPU.RegisterAccessMutex);
-        CPU.Registers.FlagRegister.LessThan = 0;
-        CPU.Registers.FlagRegister.LargerThan = 0;
-        CPU.Registers.FlagRegister.Equal = 0;
-    }
-
-    check_overflow(width, 0); // clear OF and CF
 }
 
 void processor::__InstructionExecutorType__::shl(const __uint128_t timestamp)
@@ -116,16 +75,6 @@ void processor::__InstructionExecutorType__::shl(const __uint128_t timestamp)
     opnum1 = operand1.get<uint64_t>();
     opnum2 = operand2.get<uint64_t>();
     operand1 = static_cast<uint64_t>(opnum1 << opnum2);
-
-    // clear the register
-    {
-        std::lock_guard lock(CPU.RegisterAccessMutex);
-        CPU.Registers.FlagRegister.LessThan = 0;
-        CPU.Registers.FlagRegister.LargerThan = 0;
-        CPU.Registers.FlagRegister.Equal = 0;
-    }
-
-    check_overflow(width, 0); // clear OF and CF
 }
 
 void processor::__InstructionExecutorType__::shr(const __uint128_t timestamp)
@@ -142,16 +91,6 @@ void processor::__InstructionExecutorType__::shr(const __uint128_t timestamp)
     opnum1 = operand1.get<uint64_t>();
     opnum2 = operand2.get<uint64_t>();
     operand1 = static_cast<uint64_t>(opnum1 >> opnum2);
-
-    // clear the register
-    {
-        std::lock_guard lock(CPU.RegisterAccessMutex);
-        CPU.Registers.FlagRegister.LessThan = 0;
-        CPU.Registers.FlagRegister.LargerThan = 0;
-        CPU.Registers.FlagRegister.Equal = 0;
-    }
-
-    check_overflow(width, 0); // clear OF and CF
 }
 
 template <unsigned SIZE>
@@ -196,16 +135,6 @@ void processor::__InstructionExecutorType__::rol(const __uint128_t timestamp)
     case 0x64: operand1 = rotate_left<64>(static_cast<uint64_t>(opnum1), opnum2); break;
     default: throw IllegalInstruction("Unknown width");
     }
-
-    // clear the register
-    {
-        std::lock_guard lock(CPU.RegisterAccessMutex);
-        CPU.Registers.FlagRegister.LessThan = 0;
-        CPU.Registers.FlagRegister.LargerThan = 0;
-        CPU.Registers.FlagRegister.Equal = 0;
-    }
-
-    check_overflow(width, 0); // clear OF and CF
 }
 
 void processor::__InstructionExecutorType__::ror(const __uint128_t timestamp)
@@ -229,16 +158,6 @@ void processor::__InstructionExecutorType__::ror(const __uint128_t timestamp)
     case 0x64: operand1 = rotate_right<64>(static_cast<uint64_t>(opnum1), opnum2); break;
     default: throw IllegalInstruction("Unknown width");
     }
-
-    // clear the register
-    {
-        std::lock_guard lock(CPU.RegisterAccessMutex);
-        CPU.Registers.FlagRegister.LessThan = 0;
-        CPU.Registers.FlagRegister.LargerThan = 0;
-        CPU.Registers.FlagRegister.Equal = 0;
-    }
-
-    check_overflow(width, 0); // clear OF and CF
 }
 
 // Function to rotate bits to the left with an extra_bit
@@ -305,7 +224,6 @@ constexpr typename size_to_uint<SIZE>::type rotate_right_through_bit(
     return rotated_value;
 }
 
-
 void processor::__InstructionExecutorType__::rcl(const __uint128_t timestamp)
 {
     const auto width = CPU.pop<8>();
@@ -337,15 +255,6 @@ void processor::__InstructionExecutorType__::rcl(const __uint128_t timestamp)
     {
         std::lock_guard lock(CPU.RegisterAccessMutex);
         CPU.Registers.FlagRegister.Carry = eb & 0x01;
-    }
-
-    // clear the register
-    {
-        std::lock_guard lock(CPU.RegisterAccessMutex);
-        CPU.Registers.FlagRegister.LessThan = 0;
-        CPU.Registers.FlagRegister.LargerThan = 0;
-        CPU.Registers.FlagRegister.Equal = 0;
-        CPU.Registers.FlagRegister.Overflow = 0;
     }
 }
 
@@ -380,14 +289,5 @@ void processor::__InstructionExecutorType__::rcr(const __uint128_t timestamp)
     {
         std::lock_guard lock(CPU.RegisterAccessMutex);
         CPU.Registers.FlagRegister.Carry = eb & 0x01;
-    }
-
-    // clear the register
-    {
-        std::lock_guard lock(CPU.RegisterAccessMutex);
-        CPU.Registers.FlagRegister.LessThan = 0;
-        CPU.Registers.FlagRegister.LargerThan = 0;
-        CPU.Registers.FlagRegister.Equal = 0;
-        CPU.Registers.FlagRegister.Overflow = 0;
     }
 }

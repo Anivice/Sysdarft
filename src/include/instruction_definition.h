@@ -34,6 +34,14 @@
 #define OPCODE_RCR      (0x19)
 
 #define OPCODE_MOV      (0x20)
+#define OPCODE_XCHG     (0x21)
+#define OPCODE_PUSH     (0x22)
+#define OPCODE_POP      (0x23)
+#define OPCODE_PUSHALL  (0x24)
+#define OPCODE_POPALL   (0x25)
+#define OPCODE_ENTER    (0x26)
+#define OPCODE_LEAVE    (0x27)
+#define OPCODE_MOVS     (0x28)
 
 // Initialize the instruction to opcode mapping
 const std::unordered_map<std::string, std::map<std::string, uint64_t>> instruction_map = {
@@ -189,88 +197,69 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
     ////////////////////////////////////////////////////////////////////////////////////////////
 
     {"MOV", {
-         {ENTRY_OPCODE, 0x20},
-         {ENTRY_ARGUMENT_COUNT, 2},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
-     }
-    },
-
-    {"LEA", {
-         {ENTRY_OPCODE, 0x21},
+         {ENTRY_OPCODE, OPCODE_MOV},
          {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },
 
     {"XCHG", {
-         {ENTRY_OPCODE, 0x22},
+         {ENTRY_OPCODE, OPCODE_XCHG},
          {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },
 
-    {"ENTER", {
-         {ENTRY_OPCODE, 0x23},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
-     }
-    },
-
     {"PUSH", {
-         {ENTRY_OPCODE, 0x24},
+         {ENTRY_OPCODE, OPCODE_PUSH},
          {ENTRY_ARGUMENT_COUNT, 1},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },
 
     {"POP", {
-         {ENTRY_OPCODE, 0x25},
+         {ENTRY_OPCODE, OPCODE_POP},
          {ENTRY_ARGUMENT_COUNT, 1},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },
 
-    {"MOVS", {
-         {ENTRY_OPCODE, 0x26},
-         {ENTRY_ARGUMENT_COUNT, 0},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
-     }
-    },
-
     {"PUSHALL", {
-         {ENTRY_OPCODE, 0x27},
+         {ENTRY_OPCODE, OPCODE_PUSHALL},
          {ENTRY_ARGUMENT_COUNT, 0},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"POPALL", {
-         {ENTRY_OPCODE, 0x28},
+         {ENTRY_OPCODE, OPCODE_POPALL},
          {ENTRY_ARGUMENT_COUNT, 0},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
-    {"PUSHF", {
-         {ENTRY_OPCODE, 0x29},
-         {ENTRY_ARGUMENT_COUNT, 0},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
-     }
-    },
-
-    {"POPF", {
-         {ENTRY_OPCODE, 0x2A},
-         {ENTRY_ARGUMENT_COUNT, 0},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
-     }
+    {"ENTER", {
+                 {ENTRY_OPCODE, OPCODE_ENTER},
+                 {ENTRY_ARGUMENT_COUNT, 1},
+                 {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+             }
     },
 
     {"LEAVE", {
-         {ENTRY_OPCODE, 0x2B},
+         {ENTRY_OPCODE, OPCODE_LEAVE},
          {ENTRY_ARGUMENT_COUNT, 0},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
+
+    {"MOVS", {
+                 {ENTRY_OPCODE, OPCODE_MOVS},
+                 {ENTRY_ARGUMENT_COUNT, 0},
+                 {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
+             }
+    },
+
+    ////////////////////////////////////////////////////////////////////////////////////////////
 
     {"JMP", {
          {ENTRY_OPCODE, 0x30},
@@ -363,6 +352,8 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
      }
     },
 
+    ////////////////////////////////////////////////////////////////////////////////////////////
+
     {"FADD", {
          {ENTRY_OPCODE, 0x40},
          {ENTRY_ARGUMENT_COUNT, 2},
@@ -412,6 +403,8 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
      }
     },
 
+    ////////////////////////////////////////////////////////////////////////////////////////////
+
     {"HLT", {
          {ENTRY_OPCODE, 0x50},
          {ENTRY_ARGUMENT_COUNT, 0},
@@ -447,40 +440,14 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
      }
     },
 
-    {"ENTVMFCXT", {
-         {ENTRY_OPCODE, 0x55},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
-     }
-    },
-
-    {"EXTVM", {
-         {ENTRY_OPCODE, 0x56},
-         {ENTRY_ARGUMENT_COUNT, 0},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
-     }
-    },
-
-    {"ENTPRTMD", {
-         {ENTRY_OPCODE, 0x57},
-         {ENTRY_ARGUMENT_COUNT, 0},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
-     }
-    },
-
-    {"SETPRT", {
+    {"SETCFG", {
          {ENTRY_OPCODE, 0x58},
          {ENTRY_ARGUMENT_COUNT, 1},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },
 
-    {"SETBND", {
-         {ENTRY_OPCODE, 0x59},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
-     }
-    },
+    ////////////////////////////////////////////////////////////////////////////////////////////
 
     {"INS", {
          {ENTRY_OPCODE, 0x60},
@@ -492,20 +459,6 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
     {"OUTS", {
          {ENTRY_OPCODE, 0x61},
          {ENTRY_ARGUMENT_COUNT, 2},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
-     }
-    },
-
-    {"LOCK", {
-         {ENTRY_OPCODE, 0x70},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
-     }
-    },
-
-    {"UNLOCK", {
-         {ENTRY_OPCODE, 0x71},
-         {ENTRY_ARGUMENT_COUNT, 1},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },

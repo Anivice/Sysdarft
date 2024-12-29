@@ -271,7 +271,7 @@ uint64_t processor::Target::get_target_content_in_u64bit_t()
     case TypeConstant: return TargetInformation.ConstantValue;
     case TypeMemory:
         uint64_t Value;
-        CPU.get_memory(TargetInformation.MemoryAddress, (char*)&Value, sizeof(Value));
+        CPU.read_memory(TargetInformation.MemoryAddress, (char*)&Value, sizeof(Value));
         return Value;
     default: __illegal_instruction_assert__(false);
     }

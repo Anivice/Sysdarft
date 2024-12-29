@@ -60,6 +60,14 @@ void processor::operation(const __uint128_t timestamp)
     case OPCODE_RCR: InstructionExecutor.rcr(timestamp); break;
 
     case OPCODE_MOV: InstructionExecutor.mov(timestamp); break;
+    case OPCODE_XCHG: InstructionExecutor.xchg(timestamp); break;
+    case OPCODE_PUSH : InstructionExecutor.push(timestamp); break;
+    case OPCODE_POP : InstructionExecutor.pop(timestamp); break;
+    case OPCODE_PUSHALL: InstructionExecutor.pushall(timestamp); break;
+    case OPCODE_POPALL: InstructionExecutor.popall(timestamp); break;
+    case OPCODE_ENTER: InstructionExecutor.enter(timestamp); break;
+    case OPCODE_LEAVE: InstructionExecutor.leave(timestamp); break;
+    case OPCODE_MOVS: InstructionExecutor.movs(timestamp); break;
 
     default: debug::log("[PROCESSOR]: Unhandled opcode: ", opcode, "\n");
             // TODO: INT_ILLEGAL_INSTRUCTION

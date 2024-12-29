@@ -243,6 +243,12 @@ void processor::__InstructionExecutorType__::idiv(const __uint128_t timestamp)
 
     const int64_t factor = *(int64_t*)(&opnum);
     const int64_t base = *(int64_t*)(&TargetRegister0);
+
+    if (factor == 0) {
+        // TODO: soft int for 0 divisor
+        return;
+    }
+
     __int128_t quotient = base / factor;
     __int128_t remainder = base % factor;
 
@@ -304,6 +310,12 @@ void processor::__InstructionExecutorType__::div(const __uint128_t timestamp)
 
     const uint64_t factor = opnum;
     const uint64_t base = TargetRegister0;
+
+    if (factor == 0) {
+        // TODO: soft int for 0 divisor
+        return;
+    }
+
     __int128_t quotient = base / factor;
     __int128_t remainder = base % factor;
 

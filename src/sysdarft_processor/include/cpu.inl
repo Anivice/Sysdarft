@@ -19,13 +19,13 @@ typename size_to_uint<SIZE>::type processor::pop()
         !control_register0.ProtectedMode)
     {
         // real mode
-        get_memory(Registers.InstructionPointer, (char*)&value, SIZE / 8);
+        read_memory(Registers.InstructionPointer, (char*)&value, SIZE / 8);
     }
     else
     {
         // protected mode
         if (Registers.InstructionPointer < Registers.CodeConfiguration.AddressLimit) {
-            get_memory(Registers.CodeConfiguration.BaseAddress + Registers.InstructionPointer,
+            read_memory(Registers.CodeConfiguration.BaseAddress + Registers.InstructionPointer,
                 (char*)&value, SIZE / 8);
         } else {
             throw IllegalMemoryAccessException("Instruction Pointer out of range");

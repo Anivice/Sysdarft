@@ -132,6 +132,23 @@ private:
         void check_overflow(uint8_t bcd_width, __uint128_t val);
         static std::string bcd_width_str(uint8_t width);
 
+        template < unsigned SIZE, typename ValueType = const char [SIZE] >
+        void rlmode_push_stack(ValueType val)
+        {
+            uint64_t lowerbond = CPU.Registers.StackPointer;
+            lowerbond -= SIZE;
+            CPU.write_memory(lowerbond, val, SIZE);
+            CPU.Registers.StackPointer = lowerbond;
+        }
+
+        template < unsigned SIZE, typename ValueType = const char [SIZE] >
+        void rlmode_pop_stack(ValueType val)
+        {
+            uint64_t lowerbond = CPU.Registers.StackPointer;
+            CPU.read_memory(lowerbond, val, SIZE);
+            CPU.Registers.StackPointer = lowerbond + SIZE;
+        }
+
     public:
         void nop(__uint128_t timestamp);
         void add(__uint128_t timestamp);
@@ -140,7 +157,6 @@ private:
         void sbb(__uint128_t timestamp);
         void imul(__uint128_t timestamp);
         void mul(__uint128_t timestamp);
-        void mov(__uint128_t timestamp);
         void idiv(__uint128_t timestamp);
         void div(__uint128_t timestamp);
         void neg(__uint128_t timestamp);
@@ -159,7 +175,15 @@ private:
         void rcl(__uint128_t timestamp);
         void rcr(__uint128_t timestamp);
 
+        void mov(__uint128_t timestamp);
+        void xchg(__uint128_t timestamp);
+        void push(__uint128_t timestamp);
+        void pop(__uint128_t timestamp);
         void pushall(__uint128_t timestamp);
+        void popall(__uint128_t timestamp);
+        void enter(__uint128_t timestamp);
+        void leave(__uint128_t timestamp);
+        void movs(__uint128_t timestamp);
 
         explicit __InstructionExecutorType__(processor & _CPU) : CPU(_CPU) { }
     } InstructionExecutor;
@@ -193,7 +217,7 @@ private:
 
     void initialize_registers();
     void initialize_memory();
-    void get_memory(uint64_t address, char * _dest, uint64_t size);
+    void read_memory(uint64_t address, char * _dest, uint64_t size);
     void write_memory(uint64_t address, const char* _source, uint64_t size);
     template <size_t SIZE> typename size_to_uint<SIZE>::type pop();
 
@@ -203,7 +227,7 @@ private:
         static_assert(LENGTH % 8 == 0);
         __uint128_t result = 0;
         auto buffer = (char*)(&result);
-        get_memory(begin + offset, buffer, LENGTH / 8);
+        read_memory(begin + offset, buffer, LENGTH / 8);
         offset += LENGTH / 8;
         switch (LENGTH / 8)
         {

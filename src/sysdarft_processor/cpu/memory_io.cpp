@@ -9,7 +9,7 @@ void processor::initialize_memory()
     }
 }
 
-void processor::get_memory(const uint64_t address, char * _dest, const uint64_t size)
+void processor::read_memory(const uint64_t address, char * _dest, const uint64_t size)
 {
     std::lock_guard lock(MemoryAccessMutex);
     const uint64_t page_address = address / PAGE_SIZE;
