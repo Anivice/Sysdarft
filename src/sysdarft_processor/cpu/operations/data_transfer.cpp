@@ -67,8 +67,6 @@ void processor::__InstructionExecutorType__::pop(const __uint128_t timestamp)
         bcd_width_str(width), "bit ",
         operand.literal, "\n");
 
-    opnum = operand.get<uint64_t>();
-
     {
         std::lock_guard lock(CPU.RegisterAccessMutex);
         switch (width) {
@@ -79,6 +77,8 @@ void processor::__InstructionExecutorType__::pop(const __uint128_t timestamp)
         default: throw IllegalInstruction("Unknown width");
         }
     }
+
+    operand = static_cast<uint64_t>(opnum);
 }
 
 struct alignas(8)
