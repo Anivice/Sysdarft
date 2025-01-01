@@ -119,7 +119,7 @@ add_library(SysdarftDebug OBJECT src/SysdarftDebug.cpp)
 target_include_directories(SysdarftDebug PUBLIC src/include)
 
 # Message Map:
-add_library(SysdarftMessageMap OBJECT src/MessageMap.cpp)
+add_library(SysdarftMessageMap OBJECT src/SysdarftMessageMap.cpp)
 target_include_directories(SysdarftMessageMap PUBLIC src/include)
 
 # Modular:
@@ -135,43 +135,24 @@ add_library(SysdarftCursesUI OBJECT src/SysdarftCursesUI.cpp)
 target_include_directories(SysdarftCursesUI PUBLIC src/include)
 target_link_libraries(SysdarftCursesUI PUBLIC ${CURSES_LIBRARIES})
 
-## CPU
-#add_library(sysdarft_processor OBJECT
-#        src/include/EncodingDecoding.h
-#        src/include/InstructionSet.h
-#        src/sysdarft_processor/include/register_def.h
-#        src/sysdarft_processor/io/disk_hub.cpp
-#        src/sysdarft_processor/io/io_hub.cpp
-#        src/sysdarft_processor/io/external_device_hub.cpp
-#        src/sysdarft_processor/cpu/memory_io.cpp
-#        src/sysdarft_processor/include/io.h
-#        src/sysdarft_processor/include/gpu.h
-#        src/sysdarft_processor/include/int.h
-#        src/sysdarft_processor/include/instance.h
-#        src/sysdarft_processor/interruptions/interruptions.cpp
-#        src/sysdarft_processor/cpu/instruction_executor.cpp
-#        src/sysdarft_processor/cpu/protected_mode_target_access.cpp
-#        src/sysdarft_processor/cpu/register.cpp
-#        src/sysdarft_processor/cpu/real_mode_target_access.cpp
-#        src/sysdarft_processor/cpu/operation_triggerer.cpp
-#        src/sysdarft_processor/integrated_devices/integrated_gpu.cpp
-#        src/sysdarft_processor/instantiation/prc_inst_n_init.cpp
-#        src/sysdarft_processor/include/cpu.inl
-#        src/sysdarft_processor/cpu/initialization.cpp
-#        src/sysdarft_processor/cpu/operations/arithmetic.cpp
-#        src/sysdarft_processor/cpu/operations/control_flow.cpp
-#        src/sysdarft_processor/cpu/operations/data_transfer.cpp
-#        src/sysdarft_processor/cpu/operations/fpu.cpp
-#        src/sysdarft_processor/cpu/operations/io.cpp
-#        src/sysdarft_processor/cpu/operations/logical_and_bitwise.cpp
-#        src/sysdarft_processor/cpu/operations/miscellaneous.cpp
-#        src/sysdarft_processor/cpu/operations/os.cpp
-#        src/sysdarft_processor/cpu/decoder/decode.instruction.cpp
-#        src/sysdarft_processor/cpu/decoder/decode.target.cpp
-#        src/sysdarft_processor/cpu/output_debug_info.cpp
-#        src/sysdarft_processor/cpu/operations/of_check.cpp
-#)
-#target_include_directories(sysdarft_processor PUBLIC src/include src/sysdarft_processor/include)
+# CPU
+add_library(SysdarftCPU OBJECT
+        src/include/SysdarftRegister.h
+        src/include/SysdarftMemory.h
+        src/cpu/SysdarftMemory.cpp
+        src/include/SysdarftInstructionExec.h
+        src/cpu/SysdarftInstructionExec.cpp
+        src/cpu/Operations/Arithmetic.cpp
+        src/cpu/Operations/Misc.cpp
+
+        src/include/SysdarftCPUDecoder.h
+        src/cpu/SysdarftCPUDecoder.cpp
+        src/include/SysdarftIOHub.h
+        src/include/SysdarftCPU.h
+        src/cpu/include/cpu.inl
+)
+target_include_directories(SysdarftCPU PUBLIC src/include src/cpu/include)
+set_target_properties(SysdarftCPU PROPERTIES LINKER_LANGUAGE CXX)
 
 # Encoder and decoder
 add_library(SysdarftCoding OBJECT
@@ -192,8 +173,7 @@ target_link_libraries(sysdarft PUBLIC
         SysdarftGlobalEvents
         SysdarftCursesUI
         SysdarftCoding
-#        sysdarft_processor
-#        sysdarft_encoder
+        SysdarftCPU
 )
 
 # Enable testing
@@ -203,7 +183,7 @@ enable_testing()
 function(add_unit_test TARGET_NAME TEST_FILE)
     add_executable(${TARGET_NAME} ${TEST_FILE})
     target_link_libraries(${TARGET_NAME} PUBLIC sysdarft)
-    add_test(NAME "unit_test_${TARGET_NAME}" COMMAND $<TARGET_FILE:${TARGET_NAME}>)
+    add_test(NAME "Unit Test: ${TARGET_NAME}" COMMAND $<TARGET_FILE:${TARGET_NAME}>)
 endfunction()
 
 add_unit_test(test.error tests/test.error.cpp)
@@ -216,10 +196,14 @@ add_dependencies(test.module ExampleModule)
 
 add_unit_test(test.message_map tests/test.message_map.cpp)
 add_unit_test(test.coding tests/test.coding.cpp)
+add_unit_test(test.register tests/test.register.cpp)
+add_unit_test(test.memory tests/test.memory.cpp)
+add_unit_test(test.operand tests/test.operand.cpp)
+add_unit_test(test.decode tests/test.decode.cpp)
 
 # Console Executable:
-#add_executable(sysdarft-system src/main.cpp)
-#target_link_libraries(sysdarft-system PUBLIC sysdarft)
+add_executable(sysdarft-system src/SysdarftMain.cpp)
+target_link_libraries(sysdarft-system PUBLIC sysdarft)
 
 #link_libraries(sysdarft)
 

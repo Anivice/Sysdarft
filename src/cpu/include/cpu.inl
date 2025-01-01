@@ -1,7 +1,7 @@
 #ifndef __CPU_INL__
 #define __CPU_INL__
 
-#include "cpu.h"
+#include "../../include/cpu.h"
 
 // Template pop function
 template <size_t SIZE>

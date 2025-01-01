@@ -2,24 +2,14 @@
 #define CPU_H
 
 #include <WorkerThread.h>
-#include <instance.h>
 #include <cstdint>
 #include <memory>
 #include <EncodingDecoding.h>
-#include <register_def.h>
-
-#define PAGE_SIZE 4096
+#include <SysdarftRegister.h>
 
 inline unsigned long long operator"" _Hz(const unsigned long long freq) {
     return freq;
 }
-
-class CPUConfigurationError final : public SysdarftBaseError
-{
-public:
-    explicit CPUConfigurationError(const std::string& msg) :
-        SysdarftBaseError("CPU configuration error: " + msg) { }
-};
 
 class MultipleCPUInstanceCreation final : public SysdarftBaseError
 {
@@ -27,95 +17,6 @@ public:
     explicit MultipleCPUInstanceCreation() :
         SysdarftBaseError("Trying to create multiple CPU instances!") { }
 };
-
-class IllegalMemoryAccessException final : public SysdarftBaseError {
-public:
-    explicit IllegalMemoryAccessException(const std::string & msg) :
-        SysdarftBaseError("Illegal memory access: " + msg) { }
-};
-
-class IllegalCoreRegisterException final : public SysdarftBaseError {
-public:
-    explicit IllegalCoreRegisterException(const std::string & msg) :
-        SysdarftBaseError("Illegal core register access: " + msg) { }
-};
-
-class IllegalInstruction final : public SysdarftBaseError {
-public:
-    explicit IllegalInstruction(const std::string & msg) :
-        SysdarftBaseError("Illegal instruction: " + msg) { }
-};
-
-// Type trait to map SIZE to corresponding unsigned integer type
-template <size_t SIZE>
-struct size_to_uint;
-
-// Specializations for supported sizes
-template <>
-struct size_to_uint<8> {
-    using type = uint8_t;
-};
-
-template <>
-struct size_to_uint<16> {
-    using type = uint16_t;
-};
-
-template <>
-struct size_to_uint<32> {
-    using type = uint32_t;
-};
-
-template <>
-struct size_to_uint<64> {
-    using type = uint64_t;
-};
-
-// Type trait to map SIZE to corresponding signed integer type
-template <size_t SIZE>
-struct size_to_int;
-
-// Specializations for supported sizes
-template <>
-struct size_to_int<8> {
-    using type = int8_t;
-};
-
-template <>
-struct size_to_int<16> {
-    using type = int16_t;
-};
-
-template <>
-struct size_to_int<32> {
-    using type = int32_t;
-};
-
-template <>
-struct size_to_int<64> {
-    using type = int64_t;
-};
-
-// Define the NumType concept.
-template<typename T>
-concept NumType =
-      std::same_as<T, int8_t>
-   || std::same_as<T, uint8_t>
-   || std::same_as<T, int16_t>
-   || std::same_as<T, uint16_t>
-   || std::same_as<T, int32_t>
-   || std::same_as<T, uint32_t>
-   || std::same_as<T, int64_t>
-   || std::same_as<T, uint64_t>;
-
-#define BIOS_START          0xC1800
-#define BIOS_END            0xFFFFF
-#define BIOS_SIZE           (BIOS_END - BIOS_START + 1)
-#define BOOT_LOADER_START   0x00000
-#define BOOT_LOADER_END     0x9FFFF
-#define BOOT_LOADER_SIZE    (BOOT_LOADER_END - BOOT_LOADER_START + 1)
-#define INTERRUPTION_VECTOR 0xA0000
-#define INTERRUPTION_VEC_L  (INTERRUPTION_VECTOR + 512 * 8)
 
 class SYSDARFT_EXPORT_SYMBOL processor
 {
@@ -202,17 +103,6 @@ private:
 
     std::mutex RegisterAccessMutex;
     SysdarftRegister Registers;
-
-    std::mutex MemoryAccessMutex;
-    /*
-     * Memory Layout:
-     * 0x00000 - 0x9FFFF [BOOT CODE]     - 640KB
-     * 0xA0000 - 0xC17FF [CONFIGURATION] - 134KB
-     *                   [4KB Interruption Table: 512 Interrupts]
-     * 0xC1800 - 0xFFFFF [FIRMWARE]      - 250KB
-     */
-    std::vector < std::array < unsigned char, PAGE_SIZE > > Memory;
-    std::atomic<uint64_t> TotalMemory = 32 * 1024 * 1024; // 32MB Memory
 
     void initialize_registers();
     void initialize_memory();
@@ -333,7 +223,7 @@ public:
     friend class __InstructionExecutorType__;
 };
 
-#include "cpu.inl"
+#include "../cpu/include/cpu.inl"
 
 #define INT_FATAL_ERROR             0x000
 #define INT_ILLEGAL_INSTRUCTION     0x001

@@ -1,17 +1,24 @@
+#include <iomanip>
 #include <EncodingDecoding.h>
 #include <InstructionSet.h>
 
 void decode_constant(std::vector<std::string> & output, std::vector < uint8_t > & input)
 {
     std::stringstream ret;
-    if (code_buffer_pop<uint8_t>(input) != _64bit_prefix) {
-        output.emplace_back("(bad)");
-        return;
+    const auto & prefix = code_buffer_pop<uint8_t>(input);
+
+    if (prefix == _64bit_prefix) {
+        const auto num = code_buffer_pop<uint64_t>(input);
+        ret << "$(0x" << std::hex << std::uppercase << num << ")";
+    } else if (prefix == _float_ptr_prefix) {
+        const auto num = code_buffer_pop<uint64_t>(input);
+        const double fltptr = *(double*)&num;
+        ret << "$(" << std::fixed << std::setprecision(16) << fltptr << ")";
+    } else {
+        ret << "(bad)";
     }
 
-    const auto num = code_buffer_pop<uint64_t>(input);
-    ret << "$(0x" << std::hex << std::uppercase << num << ")";
-    output.push_back(ret.str());
+    output.emplace_back(ret.str());
 }
 
 void decode_register(std::vector<std::string> & output, std::vector < uint8_t > & input)
@@ -35,13 +42,17 @@ void decode_register(std::vector<std::string> & output, std::vector < uint8_t > 
 
         switch (register_index)
         {
-        case R_StackPointer:           output.emplace_back("%SP"); return;
-        case R_DataPointer:            output.emplace_back("%DP"); return;
-        case R_ExtendedSegmentPointer: output.emplace_back("%ESP"); return;
+        case R_StackBase:       output.emplace_back("%SB"); return;
+        case R_StackPointer:    output.emplace_back("%SP"); return;
+        case R_CodeBase:        output.emplace_back("%CB"); return;
+        case R_DataBase:        output.emplace_back("%DB"); return;
+        case R_DataPointer:     output.emplace_back("%DP"); return;
+        case R_ExtendedBase:    output.emplace_back("%EB"); return;
+        case R_ExtendedPointer: output.emplace_back("%EP"); return;
         default: output.emplace_back("(bad)"); return;
         }
 
-    case FLOATING_POINT_PREFIX: prefix += "XMM"; break;
+    case _float_ptr_prefix: prefix += "XMM"; break;
     default: output.emplace_back("(bad)"); return;
     }
 

@@ -8,7 +8,7 @@ void decode_instruction(std::vector < std::string > & output, std::vector<uint8_
     {
         std::stringstream buffer;
         uint64_t instruction = 0;
-        instruction = code_buffer_pop64(input);
+        instruction = code_buffer_pop8(input);
 
         for (const auto &[fst, snd] : instruction_map)
         {
@@ -20,16 +20,14 @@ void decode_instruction(std::vector < std::string > & output, std::vector<uint8_
                 {
                     switch (code_buffer_pop8(input))
                     {
-                    case 0x08: buffer << " .8bit ";  break;
-                    case 0x16: buffer << " .16bit";  break;
-                    case 0x32: buffer << " .32bit";  break;
-                    case 0x64: buffer << " .64bit";  break;
+                    case _8bit_prefix:  buffer << " .8bit "; break;
+                    case _16bit_prefix: buffer << " .16bit";  break;
+                    case _32bit_prefix: buffer << " .32bit";  break;
+                    case _64bit_prefix: buffer << " .64bit";  break;
                     default:
                         output.emplace_back("(bad)");
                         return;
                     }
-                } else if (snd.at(ENTRY_ARGUMENT_COUNT) > 0) {
-                    buffer << " ";
                 }
 
                 for (uint64_t i = 0 ; i < snd.at(ENTRY_ARGUMENT_COUNT); i++)

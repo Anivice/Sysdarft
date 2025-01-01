@@ -259,6 +259,13 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
              }
     },
 
+    {"LEA", {
+                 {ENTRY_OPCODE, 0x29},
+                 {ENTRY_ARGUMENT_COUNT, 1},
+                 {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+             }
+    },
+
     ////////////////////////////////////////////////////////////////////////////////////////////
 
     {"JMP", {

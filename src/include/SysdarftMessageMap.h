@@ -57,7 +57,7 @@ std::any invoke_with_any(Func func, const std::vector<std::any>& args)
     }
 }
 
-class SYSDARFT_EXPORT_SYMBOL MessageMap
+class SYSDARFT_EXPORT_SYMBOL SysdarftMessageMap
 {
 private:
     class wrapper
@@ -75,7 +75,7 @@ private:
         }
 
         wrapper & operator=(const wrapper&) = delete;
-        friend class MessageMap;
+        friend class SysdarftMessageMap;
     };
 
 public:

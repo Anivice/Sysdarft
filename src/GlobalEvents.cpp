@@ -1,3 +1,3 @@
 #include <GlobalEvents.h>
 
-MessageMap GlobalEventProcessor;
+SysdarftMessageMap GlobalEventProcessor;

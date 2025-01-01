@@ -1,6 +1,6 @@
-#include <MessageMap.h>
+#include <SysdarftMessageMap.h>
 
-std::any MessageMap::invoke_instance(const std::string& instance_name, const std::string& method_name, const std::vector<std::any>& args)
+std::any SysdarftMessageMap::invoke_instance(const std::string& instance_name, const std::string& method_name, const std::vector<std::any>& args)
 {
     std::lock_guard lock(mutex);
 
@@ -12,7 +12,7 @@ std::any MessageMap::invoke_instance(const std::string& instance_name, const std
     return it->second(args);
 }
 
-MessageMap::wrapper MessageMap::operator()(const std::string& instance_name, const std::string& method_name)
+SysdarftMessageMap::wrapper SysdarftMessageMap::operator()(const std::string& instance_name, const std::string& method_name)
 {
     std::lock_guard lock(mutex);
 

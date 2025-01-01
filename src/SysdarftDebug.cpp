@@ -199,10 +199,11 @@ size_t max_line_length(const std::string& input)
     return max_length;
 }
 
-std::string initialize_error_msg(const std::string& msg, const int _errno,
-    const bool if_perform_code_backtrace)
+std::string initialize_error_msg(const std::string& msg, const int _errno)
 {
-    if (debug::verbose) {
+    std::string result;
+    if (debug::verbose)
+    {
         std::ostringstream err_msg;
 
         const std::string current_time = debug::get_current_date_time();
@@ -228,30 +229,28 @@ std::string initialize_error_msg(const std::string& msg, const int _errno,
         err_msg << "Error description:\n>>> " << processed_msg << "\n";
         err_msg << "System Error: errno=" << _errno << ": " << strerror(_errno)
                 << "\n";
+        const std::regex pattern(R"(([^\(]+)\(([^\)]*)\) \[([^\]]+)\])");
+        std::smatch matches;
 
-        if (if_perform_code_backtrace) {
-            const std::regex pattern(R"(([^\(]+)\(([^\)]*)\) \[([^\]]+)\])");
-            std::smatch matches;
+        err_msg << "\nBacktrace starts here:\n";
+        auto frame_backtrace = debug::obtain_stack_frame();
 
-            err_msg << "\nBacktrace starts here:\n";
-            auto frame_backtrace = debug::obtain_stack_frame();
+        for (size_t i = 0; i < frame_backtrace.size(); ++i)
+        {
+            std::stringstream prefix;
+            prefix << "Frame #" << i << " " << frame_backtrace[i].second << ": ";
+            err_msg << prefix.str();
 
-            for (size_t i = 0; i < frame_backtrace.size(); ++i)
+            if (std::regex_search(frame_backtrace[i].first, matches, pattern)
+                && matches.size() > 3)
             {
-                std::stringstream prefix;
-                prefix << "Frame #" << i << " " << frame_backtrace[i].second << ": ";
-                err_msg << prefix.str();
+                const std::string& executable_path = matches[1].str();
+                const std::string& traced_address = matches[2].str();
+                const std::string& traced_runtime_address
+                    = matches[3].str();
 
-                if (std::regex_search(frame_backtrace[i].first, matches, pattern)
-                    && matches.size() > 3)
-                {
-                    const std::string& executable_path = matches[1].str();
-                    const std::string& traced_address = matches[2].str();
-                    const std::string& traced_runtime_address
-                        = matches[3].str();
-
-                    auto generate_addr2line_trace_info
-                        = [&](const std::string& address)
+                auto generate_addr2line_trace_info
+                    = [&](const std::string& address)
                     {
                         auto [fd_stdout, fd_stderr, exit_status]
                             = debug::exec_command("addr2line",
@@ -285,34 +284,31 @@ std::string initialize_error_msg(const std::string& msg, const int _errno,
                         }
                     };
 
-                    if (traced_address.empty()) {
-                        generate_addr2line_trace_info(traced_runtime_address);
-                    } else {
-                        generate_addr2line_trace_info(traced_address);
-                    }
+                if (traced_address.empty()) {
+                    generate_addr2line_trace_info(traced_runtime_address);
                 } else {
-                    err_msg << "No trace information\n";
+                    generate_addr2line_trace_info(traced_address);
                 }
-                err_msg << "\n";
+            } else {
+                err_msg << "No trace information\n";
             }
-            err_msg << "Backtrace ends here.\n";
+            err_msg << "\n";
         }
+        err_msg << "Backtrace ends here.\n";
 
-        err_msg << "\nThread Information:\n"
-                << debug::get_verbose_info() << "\n";
+        err_msg << "\nThread Information:\n" << debug::get_verbose_info() << "\n";
 
-        std::string result = err_msg.str();
-        return result;
+        return err_msg.str();
     }
 
-    return msg + " (errno=" + std::to_string(_errno) + ")";
+    return ">>> " + msg + " (errno=" + std::to_string(_errno) + ") <<<";
 }
 
 std::string last_sysdarft_error_;
 
 SysdarftBaseError::SysdarftBaseError(
-    const std::string& msg, const bool if_perform_code_backtrace)
-    : runtime_error(initialize_error_msg(msg, errno, if_perform_code_backtrace))
+    const std::string& msg)
+    : runtime_error(initialize_error_msg(msg, errno))
     , cur_errno(errno)
 {
     last_sysdarft_error_ = this->runtime_error::what();

@@ -2,27 +2,25 @@
 #define INSTRUCTIONS_H
 
 // Width
-#define _8bit_prefix  0x08
-#define _16bit_prefix 0x16
-#define _32bit_prefix 0x32
-#define _64bit_prefix 0x64
-#define FLOATING_POINT_PREFIX 0xFC
+#define _8bit_prefix  (0x08)
+#define _16bit_prefix (0x16)
+#define _32bit_prefix (0x32)
+#define _64bit_prefix (0x64)
+#define _float_ptr_prefix (0xFC)
 
 // Prefix
-#define REGISTER_PREFIX 0x01
-#define CONSTANT_PREFIX 0x02
-#define MEMORY_PREFIX   0x03
+#define REGISTER_PREFIX (0x01)
+#define CONSTANT_PREFIX (0x02)
+#define MEMORY_PREFIX   (0x03)
 
-// Specific Registers
-#define R_StackPointer                     0xA0
-#define R_StackConfiguration               0xA1
-#define R_CodeConfiguration                0xA2
-#define R_DataPointer                      0xA3
-#define R_DataConfiguration                0xA4
-#define R_ExtendedSegmentPointer           0xA5
-#define R_ExtendedSegmentConfiguration     0xA6
-#define R_SegmentationAccessTable          0xA7
-#define R_ControlRegister0                 0xA8
+// Special Registers
+#define R_StackBase                     (0xA0)
+#define R_StackPointer                  (0xA1)
+#define R_CodeBase                      (0xA2)
+#define R_DataBase                      (0xA3)
+#define R_DataPointer                   (0xA4)
+#define R_ExtendedBase                  (0xA5)
+#define R_ExtendedPointer               (0xA6)
 
 #include <string>
 #include <algorithm>

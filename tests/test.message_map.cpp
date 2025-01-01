@@ -3,7 +3,7 @@
 #include <vector>
 #include <any>
 #include <cassert>
-#include <MessageMap.h>
+#include <SysdarftMessageMap.h>
 #include <SysdarftDebug.h>
 
 class Instance {
@@ -16,7 +16,7 @@ public:
     }
 };
 
-MessageMap msg_map;
+SysdarftMessageMap msg_map;
 Instance instance;
 std::atomic < unsigned int > finished = 0;
 

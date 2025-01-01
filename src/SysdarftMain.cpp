@@ -4,8 +4,8 @@
 #include <string>
 #include <getopt.h>
 #include <stdexcept>
-#include <debug.h>
-#include <module.h>
+#include <SysdarftDebug.h>
+#include <SysdarftModule.h>
 
 // Each option name maps to a list of string values.
 using ParsedOptions = std::map<std::string, std::vector<std::string>>;
@@ -86,8 +86,7 @@ void print_version()
 
 int main(int argc, char** argv)
 {
-    set_thread_name("Sysdarft Watcher");
-    std::vector < std::unique_ptr<Module> > modules;
+    debug::set_thread_name("Sysdarft Watcher");
 
     static struct option long_options[] = {
         {"help",    no_argument,       nullptr, 'h'},
@@ -97,7 +96,9 @@ int main(int argc, char** argv)
         {nullptr,   0,                 nullptr,  0 }
     };
 
-    try {
+    try
+    {
+        std::vector < std::unique_ptr<SysdarftModule> > loaded_modules;
         auto [parsed_options, positional_args] = get_args(argc, argv, long_options);
 
         if (parsed_options.empty() && positional_args.empty())
@@ -129,9 +130,8 @@ int main(int argc, char** argv)
         if (parsed_options.contains("module"))
         {
             const auto module_path = parsed_options["module"];
-            for (const auto & path : module_path)
-            {
-                modules.emplace_back(std::make_unique<Module>(path));
+            for (const auto & path : module_path) {
+                loaded_modules.emplace_back(std::make_unique<SysdarftModule>(path));
             }
         }
 
