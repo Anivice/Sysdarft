@@ -69,7 +69,7 @@ void processor::operation(const __uint128_t timestamp)
     case OPCODE_LEAVE: InstructionExecutor.leave(timestamp); break;
     case OPCODE_MOVS: InstructionExecutor.movs(timestamp); break;
 
-    default: debug::log("[PROCESSOR]: Unhandled opcode: ", opcode, "\n");
+    default: log("[PROCESSOR]: Unhandled opcode: ", opcode, "\n");
             // TODO: INT_ILLEGAL_INSTRUCTION
     }
 }

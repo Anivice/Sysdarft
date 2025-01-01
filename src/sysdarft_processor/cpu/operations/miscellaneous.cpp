@@ -13,6 +13,6 @@ std::string processor::__InstructionExecutorType__::bcd_width_str(const uint8_t 
 
 void processor::__InstructionExecutorType__::nop(const __uint128_t timestamp)
 {
-    debug::log("[PROCESSOR, ", timestamp, "]: NOP\n");
+    log("[PROCESSOR, ", timestamp, "]: NOP\n");
     // No Operation
 }

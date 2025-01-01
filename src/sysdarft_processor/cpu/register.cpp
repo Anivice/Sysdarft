@@ -1,4 +1,4 @@
-#include <worker.h>
+#include <WorkerThread.h>
 #include <cpu.h>
 
 void processor::initialize_registers()

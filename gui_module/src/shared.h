@@ -14,7 +14,7 @@
 #include <vector>
 #include <mutex>
 #include <atomic>
-#include <ui_curses.h>
+#include <SysdarftCursesUI.h>
 #include <fstream>
 #include <unordered_map>
 #include <cctype> // For std::tolower
@@ -173,7 +173,7 @@ private:
         cursor_worker_running = true;
         cursor_worker_finished = false;
         std::thread(&backend::swap_cursor_with_char_at_pos, this).detach();
-        debug::log("[Cursor] Started cursor worker thread\n");
+        log("[Cursor] Started cursor worker thread\n");
     }
 
     void stop_cursor_worker()
@@ -182,7 +182,7 @@ private:
         while (!cursor_worker_finished) {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-        debug::log("[Cursor] Stopped cursor worker thread\n");
+        log("[Cursor] Stopped cursor worker thread\n");
     }
 
 public:

@@ -1,61 +1,37 @@
-#include <ui_curses.h>
-#include <global.h>
-#include <thread>
+#include <SysdarftCursesUI.h>
+#include <atomic>
 
-class input_processor {
+std::atomic<bool> has_q = false;
+
+class dummy_ {
 public:
-    void input_monitor(int key)
-    {
-        auto cursor_pos = std::any_cast<cursor_position_t>(
-            GlobalEventProcessor(UI_INSTANCE_NAME, UI_GET_CURSOR_METHOD_NAME)());
-        GlobalEventProcessor(UI_INSTANCE_NAME, UI_DISPLAY_CHAR_METHOD_NAME)(
-            cursor_pos.x, cursor_pos.y, key);
-
-        int linear = cursor_pos.y * V_WIDTH + cursor_pos.x;
-        linear++;
-        const auto cursor_pos_y = (linear / V_WIDTH) & 31;
-        const auto cursor_pos_x = (linear % V_WIDTH) & 127;
-        cursor_pos = { .x = cursor_pos_x, .y = cursor_pos_y };
-
-        GlobalEventProcessor(UI_INSTANCE_NAME, UI_SET_CURSOR_METHOD_NAME)(
-            cursor_pos.x, cursor_pos.y);
-    }
-};
-
-int main(int argc, char**)
-{
-    debug::verbose = true;
-    input_processor processor;
-    ui_curses curses;
-
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &processor,
-        UI_INPUT_MONITOR_METHOD_NAME, &input_processor::input_monitor);
-
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-        UI_CLEANUP_METHOD_NAME, &ui_curses::cleanup);
-
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-        UI_INITIALIZE_METHOD_NAME, &ui_curses::initialize);
-
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-        UI_SET_CURSOR_METHOD_NAME, &ui_curses::set_cursor);
-
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-        UI_GET_CURSOR_METHOD_NAME, &ui_curses::get_cursor);
-
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-        UI_DISPLAY_CHAR_METHOD_NAME, &ui_curses::display_char);
-
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-        UI_SET_CURSOR_VISIBILITY_METHOD_NAME, &ui_curses::set_cursor_visibility);
-
-    GlobalEventProcessor(UI_INSTANCE_NAME, UI_INITIALIZE_METHOD_NAME)();
-    GlobalEventProcessor(UI_INSTANCE_NAME, UI_SET_CURSOR_VISIBILITY_METHOD_NAME)(true);
-    if (argc >= 2) {
-        set_thread_name("Main Loop");
-        while (true) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+    void input_processor(int input) {
+        if (input == 'q' || input == 'Q') {
+            has_q = true;
         }
     }
-    GlobalEventProcessor(UI_INSTANCE_NAME, UI_CLEANUP_METHOD_NAME)();
+} dummy;
+
+int main(int argc, char ** argv)
+{
+    SysdarftCursesUI curses;
+    g_input_processor_install(dummy, input_processor);
+
+    auto worker = [&]() {
+        curses.initialize();
+        if (argc >= 2) {
+            while (!has_q) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+        } else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        curses.cleanup();
+    };
+
+    for (int i = 0; i < 10; i++) {
+        worker();
+    }
+
+    return EXIT_SUCCESS;
 }

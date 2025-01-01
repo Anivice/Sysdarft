@@ -169,5 +169,5 @@ void processor::output_debug_info() {
         }
     }
 
-    debug::log(ss.str().c_str(), "\n");
+    log(ss.str().c_str(), "\n");
 }
