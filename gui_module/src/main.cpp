@@ -52,24 +52,12 @@ int EXPORT module_init(void)
     GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &_backend,
                                           UI_SET_CURSOR_VISIBILITY_METHOD_NAME, &backend::set_cursor_visibility);
     GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &input_dummy,
-                                      UI_INPUT_MONITOR_METHOD_NAME, &input_processor::input_monitor);
-    debug::log("UI instance overridden!\n");
+                                      UI_INPUT_PROCESSOR_METHOD_NAME, &input_processor::input_monitor);
+    log("UI instance overridden!\n");
     return 0;
 }
 
-void EXPORT module_exit(void) {
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-                                          UI_CLEANUP_METHOD_NAME, &ui_curses::cleanup);
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-                                          UI_INITIALIZE_METHOD_NAME, &ui_curses::initialize);
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-                                          UI_SET_CURSOR_METHOD_NAME, &ui_curses::set_cursor);
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-                                          UI_GET_CURSOR_METHOD_NAME, &ui_curses::get_cursor);
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-                                          UI_DISPLAY_CHAR_METHOD_NAME, &ui_curses::display_char);
-    GlobalEventProcessor.install_instance(UI_INSTANCE_NAME, &curses,
-                                          UI_SET_CURSOR_VISIBILITY_METHOD_NAME, &ui_curses::set_cursor_visibility);
-    debug::log("UI instance falling backed to ncurses!\n");
-    debug::log("Backend module exited!\n");
+void EXPORT module_exit(void)
+{
+    log("Backend module exited!\n");
 }

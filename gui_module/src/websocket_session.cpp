@@ -15,7 +15,7 @@ void websocket_session::run(http::request<http::string_body> req)
         req,
         [self](beast::error_code ec) {
             if (ec) {
-                debug::log("[WebSocket] accept error: ", ec.message(), "\n");
+                log("[WebSocket] accept error: ", ec.message(), "\n");
                 return;
             }
             self->do_read();
@@ -54,7 +54,7 @@ void websocket_session::close()
                            [self](beast::error_code ec)
                            {
                                if (ec) {
-                                   debug::log("[WebSocket] close error: ", ec.message(), "\n");
+                                   log("[WebSocket] close error: ", ec.message(), "\n");
                                }
                            });
                    }
@@ -75,20 +75,20 @@ void websocket_session::do_read()
                 self->buffer_.size());
 
             if (ec == websocket::error::closed) {
-                debug::log("[WebSocket] client closed websocket\n");
+                log("[WebSocket] client closed websocket\n");
                 return; // normal closure
             } else if (ec) {
                 // Some error
-                debug::log("[WebSocket] read error: ", ec.message(), "\n");
+                log("[WebSocket] read error: ", ec.message(), "\n");
                 return;
             }
 
             // We have "data"
-            debug::log("[WebSocket] Received: ", std::string(data), "\n");
+            log("[WebSocket] Received: ", std::string(data), "\n");
             auto input_handler = [](const std::string & _data) {
                 set_thread_name("Async Input Handler");
                 const auto key = convertJsonToKeyEvent(_data);
-                GlobalEventProcessor(UI_INSTANCE_NAME, UI_INPUT_MONITOR_METHOD_NAME)(key.keyCode);
+                GlobalEventProcessor(UI_INSTANCE_NAME, UI_INPUT_PROCESSOR_METHOD_NAME)(key.keyCode);
             };
             std::thread(input_handler, std::string(data)).detach();
 
@@ -118,7 +118,7 @@ void websocket_session::do_write()
         asio::buffer(message),
         [self, message](beast::error_code ec, std::size_t) {
             if (ec) {
-                debug::log("[WebSocket] write error: ", ec.message(), "\n");
+                log("[WebSocket] write error: ", ec.message(), "\n");
                 return;
             }
             // Send next message if any

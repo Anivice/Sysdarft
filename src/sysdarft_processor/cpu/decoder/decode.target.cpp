@@ -1,4 +1,4 @@
-#include <instruction.h>
+#include <EncodingDecoding.h>
 #include <cpu.h>
 
 void processor::rlmode_decode_constant(std::vector<std::string> & output, const uint64_t begin, uint64_t & offset)

@@ -1,11 +1,11 @@
 #ifndef CPU_H
 #define CPU_H
 
-#include <worker.h>
+#include <WorkerThread.h>
 #include <instance.h>
 #include <cstdint>
 #include <memory>
-#include <instruction.h>
+#include <EncodingDecoding.h>
 #include <register_def.h>
 
 #define PAGE_SIZE 4096
@@ -117,7 +117,7 @@ concept NumType =
 #define INTERRUPTION_VECTOR 0xA0000
 #define INTERRUPTION_VEC_L  (INTERRUPTION_VECTOR + 512 * 8)
 
-class EXPORT processor
+class SYSDARFT_EXPORT_SYMBOL processor
 {
 public:
     class Target;
@@ -192,9 +192,8 @@ private:
     void operation(__uint128_t timestamp);
     void soft_interruption_ready(const uint64_t int_code);
 
-    void triggerer_thread(std::atomic<bool>& running,
-                          std::atomic<bool>& stopped);
-    worker_thread triggerer;
+    void triggerer_thread(std::atomic<bool>& running);
+    WorkerThread triggerer;
 
     std::atomic<unsigned long long> frequencyHz = 1000_Hz;
     std::atomic<double> wait_scale = 1.0;
@@ -235,7 +234,7 @@ private:
         case 2: /* 16bit */ return static_cast<uint16_t>(result & 0xFFFF);
         case 4: /* 32bit */ return static_cast<uint32_t>(result & 0xFFFFFFFF);
         case 8: /* 64bit */ return static_cast<uint64_t>(result & 0xFFFFFFFFFFFFFFFF);
-        default: throw TargetExpressionError("Unrecognized length");
+        default: throw SysdarftCodeExpressionError("Unrecognized length");
         }
     }
 

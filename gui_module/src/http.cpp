@@ -15,7 +15,7 @@ void http_session::run()
             {
                 if(ec == boost::asio::error::operation_aborted)
                     return; // canceled
-                debug::log("[HTTP] Read error: ", ec.message(), "\n");
+                log("[HTTP] Read error: ", ec.message(), "\n");
                 return;
             }
 
@@ -68,7 +68,7 @@ void http_session::do_http_request()
     }
     else if(req_.method() == boost::beast::http::verb::get && req_.target() == "/shutdown")
     {
-        debug::log("[HTTP] Shutdown request received!\n");
+        log("[HTTP] Shutdown request received!\n");
         res_.result(boost::beast::http::status::ok);
         res_.set(boost::beast::http::field::server, "Sysdarft");
         res_.set(boost::beast::http::field::content_type, "text/plain");

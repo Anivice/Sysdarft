@@ -115,111 +115,85 @@ add_compile_definitions(
 include_directories(src/include)
 
 # Debug:
-add_library(sysdarft_debug OBJECT src/debug/debug.cpp)
-target_include_directories(sysdarft_debug PUBLIC src/include)
+add_library(SysdarftDebug OBJECT src/SysdarftDebug.cpp)
+target_include_directories(SysdarftDebug PUBLIC src/include)
 
 # Message Map:
-add_library(sysdarft_msg_map OBJECT src/modular/msg_map.cpp)
-target_include_directories(sysdarft_msg_map PUBLIC src/include)
+add_library(SysdarftMessageMap OBJECT src/MessageMap.cpp)
+target_include_directories(SysdarftMessageMap PUBLIC src/include)
 
 # Modular:
-add_library(sysdarft_modular OBJECT src/modular/module.cpp)
-target_include_directories(sysdarft_modular PUBLIC src/include)
+add_library(SysdarftModule OBJECT src/SysdarftModule.cpp)
+target_include_directories(SysdarftModule PUBLIC src/include)
 
-add_subdirectory(example_modules)
-
-# Config:
-add_library(sysdarft_config OBJECT src/config/config.cpp)
-target_include_directories(sysdarft_config PUBLIC src/include)
-
-add_custom_target(CopyConfigFiles ALL
-        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/tests/good_example.conf" "${CMAKE_CURRENT_BINARY_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/tests/bad_example.conf" "${CMAKE_CURRENT_BINARY_DIR}"
-        VERBATIM
-        DEPENDS tests/good_example.conf tests/bad_example.conf
-        COMMENT "Copying config files..."
-)
-
-# Global Event:
-add_library(sysdarft_global OBJECT src/modular/global.cpp)
-target_include_directories(sysdarft_global PUBLIC src/include)
-
-# CLI:
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(READLINE REQUIRED readline)
-add_library(sysdarft_cli OBJECT
-        src/cli/cli.cpp
-        src/cli/auto_completion.cpp
-        src/cli/utils.cpp
-        src/cli/ModuleForest.cpp
-)
-target_include_directories(sysdarft_cli PUBLIC src/include ${READLINE_INCLUDE_DIRS})
-target_link_libraries(sysdarft_cli PUBLIC ${READLINE_LIBRARIES})
+add_library(SysdarftGlobalEvents OBJECT src/GlobalEvents.cpp)
+target_include_directories(SysdarftGlobalEvents PUBLIC src/include)
 
 # Curses:
 find_package(Curses REQUIRED)
-add_library(sysdarft_ncurses OBJECT src/ui/ui_curses.cpp)
-target_include_directories(sysdarft_ncurses PUBLIC src/include)
-target_link_libraries(sysdarft_ncurses PUBLIC ${CURSES_LIBRARIES})
+add_library(SysdarftCursesUI OBJECT src/SysdarftCursesUI.cpp)
+target_include_directories(SysdarftCursesUI PUBLIC src/include)
+target_link_libraries(SysdarftCursesUI PUBLIC ${CURSES_LIBRARIES})
 
-# CPU
-add_library(sysdarft_processor OBJECT
-        src/include/instruction.h
-        src/include/instruction_definition.h
-        src/sysdarft_processor/include/register_def.h
-        src/sysdarft_processor/io/disk_hub.cpp
-        src/sysdarft_processor/io/io_hub.cpp
-        src/sysdarft_processor/io/external_device_hub.cpp
-        src/sysdarft_processor/cpu/memory_io.cpp
-        src/sysdarft_processor/include/io.h
-        src/sysdarft_processor/include/gpu.h
-        src/sysdarft_processor/include/int.h
-        src/sysdarft_processor/include/instance.h
-        src/sysdarft_processor/interruptions/interruptions.cpp
-        src/sysdarft_processor/cpu/instruction_executor.cpp
-        src/sysdarft_processor/cpu/protected_mode_target_access.cpp
-        src/sysdarft_processor/cpu/register.cpp
-        src/sysdarft_processor/cpu/real_mode_target_access.cpp
-        src/sysdarft_processor/cpu/operation_triggerer.cpp
-        src/sysdarft_processor/integrated_devices/integrated_gpu.cpp
-        src/sysdarft_processor/instantiation/prc_inst_n_init.cpp
-        src/sysdarft_processor/include/cpu.inl
-        src/sysdarft_processor/cpu/initialization.cpp
-        src/sysdarft_processor/cpu/operations/arithmetic.cpp
-        src/sysdarft_processor/cpu/operations/control_flow.cpp
-        src/sysdarft_processor/cpu/operations/data_transfer.cpp
-        src/sysdarft_processor/cpu/operations/fpu.cpp
-        src/sysdarft_processor/cpu/operations/io.cpp
-        src/sysdarft_processor/cpu/operations/logical_and_bitwise.cpp
-        src/sysdarft_processor/cpu/operations/miscellaneous.cpp
-        src/sysdarft_processor/cpu/operations/os.cpp
-        src/sysdarft_processor/cpu/decoder/decode.instruction.cpp
-        src/sysdarft_processor/cpu/decoder/decode.target.cpp
-        src/sysdarft_processor/cpu/output_debug_info.cpp
-        src/sysdarft_processor/cpu/operations/of_check.cpp
-)
-target_include_directories(sysdarft_processor PUBLIC src/include src/sysdarft_processor/include)
+## CPU
+#add_library(sysdarft_processor OBJECT
+#        src/include/EncodingDecoding.h
+#        src/include/InstructionSet.h
+#        src/sysdarft_processor/include/register_def.h
+#        src/sysdarft_processor/io/disk_hub.cpp
+#        src/sysdarft_processor/io/io_hub.cpp
+#        src/sysdarft_processor/io/external_device_hub.cpp
+#        src/sysdarft_processor/cpu/memory_io.cpp
+#        src/sysdarft_processor/include/io.h
+#        src/sysdarft_processor/include/gpu.h
+#        src/sysdarft_processor/include/int.h
+#        src/sysdarft_processor/include/instance.h
+#        src/sysdarft_processor/interruptions/interruptions.cpp
+#        src/sysdarft_processor/cpu/instruction_executor.cpp
+#        src/sysdarft_processor/cpu/protected_mode_target_access.cpp
+#        src/sysdarft_processor/cpu/register.cpp
+#        src/sysdarft_processor/cpu/real_mode_target_access.cpp
+#        src/sysdarft_processor/cpu/operation_triggerer.cpp
+#        src/sysdarft_processor/integrated_devices/integrated_gpu.cpp
+#        src/sysdarft_processor/instantiation/prc_inst_n_init.cpp
+#        src/sysdarft_processor/include/cpu.inl
+#        src/sysdarft_processor/cpu/initialization.cpp
+#        src/sysdarft_processor/cpu/operations/arithmetic.cpp
+#        src/sysdarft_processor/cpu/operations/control_flow.cpp
+#        src/sysdarft_processor/cpu/operations/data_transfer.cpp
+#        src/sysdarft_processor/cpu/operations/fpu.cpp
+#        src/sysdarft_processor/cpu/operations/io.cpp
+#        src/sysdarft_processor/cpu/operations/logical_and_bitwise.cpp
+#        src/sysdarft_processor/cpu/operations/miscellaneous.cpp
+#        src/sysdarft_processor/cpu/operations/os.cpp
+#        src/sysdarft_processor/cpu/decoder/decode.instruction.cpp
+#        src/sysdarft_processor/cpu/decoder/decode.target.cpp
+#        src/sysdarft_processor/cpu/output_debug_info.cpp
+#        src/sysdarft_processor/cpu/operations/of_check.cpp
+#)
+#target_include_directories(sysdarft_processor PUBLIC src/include src/sysdarft_processor/include)
 
 # Encoder and decoder
-add_library(sysdarft_encoder OBJECT
-        src/helper/encoder/encode.instruction.cpp
-        src/helper/encoder/encode.target.cpp
+add_library(SysdarftCoding OBJECT
+        src/coding/EncodeTarget.cpp
+        src/coding/DecodeTarget.cpp
+        src/coding/EncodeInstruction.cpp
+        src/coding/DecodeInstruction.cpp
 )
-target_include_directories(sysdarft_encoder PUBLIC src/include)
+target_include_directories(SysdarftCoding PUBLIC src/include)
 
 # Sysdarft Shared Library:
-add_library(sysdarft SHARED src/sysdarft.cpp src/include/worker.h)
+add_library(sysdarft SHARED src/include/WorkerThread.h)
 target_include_directories(sysdarft PUBLIC src/include)
 target_link_libraries(sysdarft PUBLIC
-        sysdarft_debug
-        sysdarft_msg_map
-        sysdarft_modular
-        sysdarft_config
-        sysdarft_global
-        sysdarft_cli
-        sysdarft_ncurses
-        sysdarft_processor
-        sysdarft_encoder
+        SysdarftDebug
+        SysdarftMessageMap
+        SysdarftModule
+        SysdarftGlobalEvents
+        SysdarftCursesUI
+        SysdarftCoding
+#        sysdarft_processor
+#        sysdarft_encoder
 )
 
 # Enable testing
@@ -232,25 +206,22 @@ function(add_unit_test TARGET_NAME TEST_FILE)
     add_test(NAME "unit_test_${TARGET_NAME}" COMMAND $<TARGET_FILE:${TARGET_NAME}>)
 endfunction()
 
+add_unit_test(test.error tests/test.error.cpp)
 add_unit_test(test.log tests/test.log.cpp)
-add_unit_test(test.sysdarft_error tests/test.sysdarft_error.cpp)
-add_unit_test(test.msgmap tests/test.msgmap.cpp)
-add_unit_test(test.modular tests/test.modular.cpp)
-add_unit_test(test.config tests/test.config.cpp)
-add_unit_test(test.cli tests/test.cli.cpp)
 add_unit_test(test.curses tests/test.curses.cpp)
-add_unit_test(test.pure.curse tests/test.pure.curses.cpp)
-add_unit_test(test.timer tests/test.timer.cpp)
-add_unit_test(test.arithmetic tests/test.arithmetic.cpp)
-add_unit_test(test.encoder tests/test.encoder.cpp)
-add_unit_test(test.lnb tests/test.lnb.cpp)
-add_unit_test(test.dat_tsf tests/test.dat_tsf.cpp)
+
+add_library(ExampleModule SHARED tests/example_module.cpp)
+add_unit_test(test.module tests/test.module.cpp)
+add_dependencies(test.module ExampleModule)
+
+add_unit_test(test.message_map tests/test.message_map.cpp)
+add_unit_test(test.coding tests/test.coding.cpp)
 
 # Console Executable:
-add_executable(sysdarft-system src/main.cpp)
-target_link_libraries(sysdarft-system PUBLIC sysdarft)
+#add_executable(sysdarft-system src/main.cpp)
+#target_link_libraries(sysdarft-system PUBLIC sysdarft)
 
-link_libraries(sysdarft)
+#link_libraries(sysdarft)
 
 # Modules
-add_subdirectory(gui_module)
+#add_subdirectory(gui_module)

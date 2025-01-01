@@ -6,7 +6,7 @@ void processor::__InstructionExecutorType__::and_(const __uint128_t timestamp)
     __uint128_t opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: AND .",
+    log("[PROCESSOR, ", timestamp, "]: AND .",
         bcd_width_str(width), "bit ",
         operand1.literal, ", ",
         operand2.literal, "\n");
@@ -22,7 +22,7 @@ void processor::__InstructionExecutorType__::or_(const __uint128_t timestamp)
     __uint128_t opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: OR .",
+    log("[PROCESSOR, ", timestamp, "]: OR .",
         bcd_width_str(width), "bit ",
         operand1.literal, ", ",
         operand2.literal, "\n");
@@ -38,7 +38,7 @@ void processor::__InstructionExecutorType__::xor_(const __uint128_t timestamp)
     __uint128_t opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: XOR .",
+    log("[PROCESSOR, ", timestamp, "]: XOR .",
         bcd_width_str(width), "bit ",
         operand1.literal, ", ",
         operand2.literal, "\n");
@@ -53,7 +53,7 @@ void processor::__InstructionExecutorType__::not_(const __uint128_t timestamp)
     const auto width = CPU.pop<8>();
     __uint128_t opnum = 0;
     auto operand = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: NOT .",
+    log("[PROCESSOR, ", timestamp, "]: NOT .",
         bcd_width_str(width), "bit ",
         operand.literal, "\n");
 
@@ -67,7 +67,7 @@ void processor::__InstructionExecutorType__::shl(const __uint128_t timestamp)
     __uint128_t opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: SHL .",
+    log("[PROCESSOR, ", timestamp, "]: SHL .",
         bcd_width_str(width), "bit ",
         operand1.literal, ", ",
         operand2.literal, "\n");
@@ -83,7 +83,7 @@ void processor::__InstructionExecutorType__::shr(const __uint128_t timestamp)
     __uint128_t opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: SHR .",
+    log("[PROCESSOR, ", timestamp, "]: SHR .",
         bcd_width_str(width), "bit ",
         operand1.literal, ", ",
         operand2.literal, "\n");
@@ -120,7 +120,7 @@ void processor::__InstructionExecutorType__::rol(const __uint128_t timestamp)
     __uint128_t opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: ROL .",
+    log("[PROCESSOR, ", timestamp, "]: ROL .",
         bcd_width_str(width), "bit ",
         operand1.literal, ", ",
         operand2.literal, "\n");
@@ -143,7 +143,7 @@ void processor::__InstructionExecutorType__::ror(const __uint128_t timestamp)
     __uint128_t opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: ROR .",
+    log("[PROCESSOR, ", timestamp, "]: ROR .",
         bcd_width_str(width), "bit ",
         operand1.literal, ", ",
         operand2.literal, "\n");
@@ -230,7 +230,7 @@ void processor::__InstructionExecutorType__::rcl(const __uint128_t timestamp)
     __uint128_t opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: RCL .",
+    log("[PROCESSOR, ", timestamp, "]: RCL .",
         bcd_width_str(width), "bit ",
         operand1.literal, ", ",
         operand2.literal, "\n");
@@ -264,7 +264,7 @@ void processor::__InstructionExecutorType__::rcr(const __uint128_t timestamp)
     __uint128_t opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: RCL .",
+    log("[PROCESSOR, ", timestamp, "]: RCL .",
         bcd_width_str(width), "bit ",
         operand1.literal, ", ",
         operand2.literal, "\n");

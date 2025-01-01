@@ -6,7 +6,7 @@ void processor::__InstructionExecutorType__::add(const __uint128_t timestamp)
     __uint128_t opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: ADD .",
+    log("[PROCESSOR, ", timestamp, "]: ADD .",
         bcd_width_str(width), "bit ",
         operand1.literal, ", ",
         operand2.literal, "\n");
@@ -39,7 +39,7 @@ void processor::__InstructionExecutorType__::adc(const __uint128_t timestamp)
     __uint128_t opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: ADC .",
+    log("[PROCESSOR, ", timestamp, "]: ADC .",
         bcd_width_str(width), "bit ",
         operand1.literal, ", ",
         operand2.literal, "\n");
@@ -68,7 +68,7 @@ void processor::__InstructionExecutorType__::sub(const __uint128_t timestamp)
     __uint128_t opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: SUB .",
+    log("[PROCESSOR, ", timestamp, "]: SUB .",
         bcd_width_str(width), "bit ",
         operand1.literal, ", ",
         operand2.literal, "\n");
@@ -102,7 +102,7 @@ void processor::__InstructionExecutorType__::sbb(const __uint128_t timestamp)
     __uint128_t opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: SBB .",
+    log("[PROCESSOR, ", timestamp, "]: SBB .",
         bcd_width_str(width), "bit ",
         operand1.literal, ", ",
         operand2.literal, "\n");
@@ -130,7 +130,7 @@ void processor::__InstructionExecutorType__::imul(const __uint128_t timestamp)
     const auto width = CPU.pop<8>();
     __uint128_t opnum = 0;
     auto operand1 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: IMUL .",
+    log("[PROCESSOR, ", timestamp, "]: IMUL .",
         bcd_width_str(width), "bit ", operand1.literal, "\n");
 
     opnum = operand1.get<uint64_t>();
@@ -178,7 +178,7 @@ void processor::__InstructionExecutorType__::mul(const __uint128_t timestamp)
     const auto width = CPU.pop<8>();
     __uint128_t opnum = 0;
     auto operand1 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: MUL .",
+    log("[PROCESSOR, ", timestamp, "]: MUL .",
         bcd_width_str(width), "bit ", operand1.literal, "\n");
 
     opnum = operand1.get<uint64_t>();
@@ -224,7 +224,7 @@ void processor::__InstructionExecutorType__::idiv(const __uint128_t timestamp)
     const auto width = CPU.pop<8>();
     __uint128_t opnum = 0;
     auto operand1 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: IDIV .",
+    log("[PROCESSOR, ", timestamp, "]: IDIV .",
         bcd_width_str(width), "bit ", operand1.literal, "\n");
 
     opnum = operand1.get<uint64_t>();
@@ -291,7 +291,7 @@ void processor::__InstructionExecutorType__::div(const __uint128_t timestamp)
     const auto width = CPU.pop<8>();
     __uint128_t opnum = 0;
     auto operand1 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: DIV .",
+    log("[PROCESSOR, ", timestamp, "]: DIV .",
         bcd_width_str(width), "bit ", operand1.literal, "\n");
 
     opnum = operand1.get<uint64_t>();
@@ -358,7 +358,7 @@ void processor::__InstructionExecutorType__::neg(__uint128_t timestamp)
     const auto width = CPU.pop<8>();
     __uint128_t opnum = 0;
     auto operand1 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: NEG .",
+    log("[PROCESSOR, ", timestamp, "]: NEG .",
         bcd_width_str(width), "bit ", operand1.literal, "\n");
 
     opnum = operand1.get<uint64_t>();
@@ -383,7 +383,7 @@ void processor::__InstructionExecutorType__::cmp(const __uint128_t timestamp)
     __uint128_t opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: CMP .",
+    log("[PROCESSOR, ", timestamp, "]: CMP .",
         bcd_width_str(width), "bit ",
         operand1.literal, ", ",
         operand2.literal, "\n");

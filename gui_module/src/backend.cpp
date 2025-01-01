@@ -18,7 +18,7 @@ std::string getSharedLibraryPath() {
 void backend::initialize()
 {
     if (is_instance_initialized_before) {
-        debug::log("[Backend] Creating multiple instances is NOT allowed! Exiting...\n");
+        log("[Backend] Creating multiple instances is NOT allowed! Exiting...\n");
         return;
     }
 
@@ -30,22 +30,22 @@ void backend::initialize()
 
     acceptor_.open(endpoint.protocol(), ec);
     if (ec) {
-        debug::log("[Backend] Acceptor open: ", ec.message(), "\b");
+        log("[Backend] Acceptor open: ", ec.message(), "\b");
         return;
     }
     acceptor_.set_option(asio::socket_base::reuse_address(true), ec);
     acceptor_.bind(endpoint, ec);
     if (ec) {
-        debug::log("[Backend] Acceptor bind: ", ec.message(), "\n");
+        log("[Backend] Acceptor bind: ", ec.message(), "\n");
         return;
     }
     acceptor_.listen(asio::socket_base::max_listen_connections, ec);
     if (ec) {
-        debug::log("[Backend] Acceptor listen: ", ec.message(), "\n");
+        log("[Backend] Acceptor listen: ", ec.message(), "\n");
         return;
     }
 
-    debug::log("[Backend] Endpoint created! TCP listening on port 8080...\n");
+    log("[Backend] Endpoint created! TCP listening on port 8080...\n");
     // Start async accept
     start_accept();
 
@@ -56,10 +56,10 @@ void backend::initialize()
             ioThreadExited = false;
             ioc_.run();
         } catch (std::exception &e) {
-            debug::log("[IO Thread] exception: ", e.what(), "\n");
+            log("[IO Thread] exception: ", e.what(), "\n");
         }
 
-        debug::log("[IO Thread] Thread exited!\n");
+        log("[IO Thread] Thread exited!\n");
         ioThreadExited = true;
     }).detach();
 
@@ -69,7 +69,7 @@ void backend::initialize()
     // 4) Start cursor worker
     start_cursor_worker();
 
-    debug::log("[Backend] Backend initialized! Instance created at http://127.0.0.1:8080\n");
+    log("[Backend] Backend initialized! Instance created at http://127.0.0.1:8080\n");
 }
 
 // Called on program exit or plugin unload
@@ -79,43 +79,43 @@ void backend::cleanup()
         // Already shutting down
         return;
     }
-    debug::log("[Backend] Sending shutdown request!\n");
+    log("[Backend] Sending shutdown request!\n");
     // Request shutdown
     request_shutdown();
 
-    debug::log("[Backend] Request sent, waiting for threads to finish!\n");
+    log("[Backend] Request sent, waiting for threads to finish!\n");
     // Wait for render loop to exit
     if (renderThread_.joinable()) {
         renderThread_.join();
     }
-    debug::log("[Backend] Threads finished!\n");
+    log("[Backend] Threads finished!\n");
 
-    debug::log("[Backend] Shutting down cursor worker!\n");
+    log("[Backend] Shutting down cursor worker!\n");
     // Stop cursor worker
     stop_cursor_worker();
-    debug::log("[Backend] Cursor worker shutdown complete!\n");
+    log("[Backend] Cursor worker shutdown complete!\n");
 
-    debug::log("[Backend] Shutting down acceptor!\n");
+    log("[Backend] Shutting down acceptor!\n");
     // The ioc_ won't stop until all async ops are done, but at least we
     // close the acceptor to avoid new connections
     beast::error_code ec;
     acceptor_.close(ec);
-    debug::log("[Backend] Acceptor stopped!\n");
+    log("[Backend] Acceptor stopped!\n");
 
-    debug::log("[Backend] Close all websockets!\n");
+    log("[Backend] Close all websockets!\n");
     // Force close all websockets
     close_all_websockets();
-    debug::log("[Backend] All websockets terminated!\n");
+    log("[Backend] All websockets terminated!\n");
 
-    debug::log("[Backend] Stopping event to IOC!\n");
+    log("[Backend] Stopping event to IOC!\n");
     // Post a stop event to ioc_
     ioc_.stop();
     while (!ioThreadExited) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    debug::log("[Backend] Stopped event to IOC!\n");
+    log("[Backend] Stopped event to IOC!\n");
 
-    debug::log("[Backend] Backend cleanup complete!\n");
+    log("[Backend] Backend cleanup complete!\n");
 }
 
 // Called from "/shutdown" or your own code
@@ -145,7 +145,7 @@ std::string backend::make_html_page()
     std::string webpage = prefix + "/resources/index.html";
     std::ifstream infile(webpage);
     if (!infile.is_open()) {
-        debug::log("[Backend] Failed to open webpage ", webpage, ", using embedded page!\n");
+        log("[Backend] Failed to open webpage ", webpage, ", using embedded page!\n");
         return fallback_page;
     }
 
@@ -243,7 +243,7 @@ void backend::render_loop()
         std::this_thread::sleep_for(5ms);
     }
 
-    debug::log("[Render] Exiting loop\n");
+    log("[Render] Exiting loop\n");
 }
 
 // Send a message to all WebSocket sessions

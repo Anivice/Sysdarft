@@ -7,7 +7,7 @@ void processor::__InstructionExecutorType__::mov(const __uint128_t timestamp)
     __uint128_t opnum = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: MOV .",
+    log("[PROCESSOR, ", timestamp, "]: MOV .",
         bcd_width_str(width), "bit ",
         operand1.literal, ", ",
         operand2.literal, "\n");
@@ -22,7 +22,7 @@ void processor::__InstructionExecutorType__::xchg(const __uint128_t timestamp)
     __uint128_t opnum1 = 0, opnum2 = 0;
     auto operand1 = pop_target();
     auto operand2 = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: XCHG .",
+    log("[PROCESSOR, ", timestamp, "]: XCHG .",
         bcd_width_str(width), "bit ",
         operand1.literal, ", ",
         operand2.literal, "\n");
@@ -40,7 +40,7 @@ void processor::__InstructionExecutorType__::push(const __uint128_t timestamp)
     const auto width = CPU.pop<8>();
     __uint128_t opnum;
     auto operand = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: PUSH .",
+    log("[PROCESSOR, ", timestamp, "]: PUSH .",
         bcd_width_str(width), "bit ",
         operand.literal, "\n");
 
@@ -63,7 +63,7 @@ void processor::__InstructionExecutorType__::pop(const __uint128_t timestamp)
     const auto width = CPU.pop<8>();
     __uint128_t opnum;
     auto operand = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: POP .",
+    log("[PROCESSOR, ", timestamp, "]: POP .",
         bcd_width_str(width), "bit ",
         operand.literal, "\n");
 
@@ -116,7 +116,7 @@ pushall_data
 
 void processor::__InstructionExecutorType__::pushall(const __uint128_t timestamp)
 {
-    debug::log("[PROCESSOR, ", timestamp, "]: PUSHALL\n");
+    log("[PROCESSOR, ", timestamp, "]: PUSHALL\n");
 
     {
         std::lock_guard lock(CPU.RegisterAccessMutex);
@@ -158,7 +158,7 @@ void processor::__InstructionExecutorType__::pushall(const __uint128_t timestamp
 
 void processor::__InstructionExecutorType__::popall(const __uint128_t timestamp)
 {
-    debug::log("[PROCESSOR, ", timestamp, "]: POPALL\n");
+    log("[PROCESSOR, ", timestamp, "]: POPALL\n");
 
     {
         std::lock_guard lock(CPU.RegisterAccessMutex);
@@ -201,7 +201,7 @@ void processor::__InstructionExecutorType__::enter(const __uint128_t timestamp)
     const auto width = CPU.pop<8>();
     __uint128_t opnum;
     auto operand = pop_target();
-    debug::log("[PROCESSOR, ", timestamp, "]: ENTER .",
+    log("[PROCESSOR, ", timestamp, "]: ENTER .",
         bcd_width_str(width), "bit ",
         operand.literal, "\n");
 
@@ -216,7 +216,7 @@ void processor::__InstructionExecutorType__::enter(const __uint128_t timestamp)
 
 void processor::__InstructionExecutorType__::leave(const __uint128_t timestamp)
 {
-    debug::log("[PROCESSOR, ", timestamp, "]: LEAVE\n");
+    log("[PROCESSOR, ", timestamp, "]: LEAVE\n");
 
     {
         std::lock_guard lock(CPU.RegisterAccessMutex);
@@ -227,7 +227,7 @@ void processor::__InstructionExecutorType__::leave(const __uint128_t timestamp)
 
 void processor::__InstructionExecutorType__::movs(const __uint128_t timestamp)
 {
-    debug::log("[PROCESSOR, ", timestamp, "]: MOVS\n");
+    log("[PROCESSOR, ", timestamp, "]: MOVS\n");
 
     uint64_t dest, src, count;
 

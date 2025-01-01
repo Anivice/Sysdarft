@@ -1,4 +1,4 @@
-#include <instruction.h>
+#include <EncodingDecoding.h>
 #include <cpu.h>
 
 std::string processor:: rlmode_decode_instruction_within_range(const uint64_t start, const uint64_t length)
