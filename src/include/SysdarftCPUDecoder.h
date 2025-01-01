@@ -108,11 +108,13 @@ protected:
     void do_decode_memory_without_prefix();
     void do_decode_operand();
 
-public:
     uint64_t do_access_operand_based_on_table();
     void store_value_to_operand_based_on_table(uint64_t value);
-    [[nodiscard]] std::string get_literal() const { return OperandReferenceTable.literal; }
 
+public:
+    [[nodiscard]] uint64_t get_val() { return do_access_operand_based_on_table(); }
+    void set_val(const uint64_t val) { store_value_to_operand_based_on_table(val); }
+    [[nodiscard]] std::string get_literal() const { return OperandReferenceTable.literal; }
     explicit OperandType(DecoderDataAccess & Access_) : Access(Access_) { do_decode_operand(); }
 };
 
@@ -123,7 +125,10 @@ protected:
         uint8_t opcode;
         uint8_t width;
         std::vector< OperandType > operands;
-        std::string literal;
+        std::string literal; // again, literals for FPU and signed operations are all wrong
+                             // it will remain this way to reduce the complicity
+                             // manually output these instruction literals
+                             // instead of relying on automatic literalization
     };
 
     ActiveInstructionType pop_instruction_from_ip_and_increase_ip();

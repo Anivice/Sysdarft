@@ -140,16 +140,15 @@ add_library(SysdarftCPU OBJECT
         src/include/SysdarftRegister.h
         src/include/SysdarftMemory.h
         src/cpu/SysdarftMemory.cpp
+        src/include/SysdarftCPUDecoder.h
+        src/cpu/SysdarftCPUDecoder.cpp
         src/include/SysdarftInstructionExec.h
         src/cpu/SysdarftInstructionExec.cpp
         src/cpu/Operations/Arithmetic.cpp
         src/cpu/Operations/Misc.cpp
-
-        src/include/SysdarftCPUDecoder.h
-        src/cpu/SysdarftCPUDecoder.cpp
+        src/cpu/Operations/DataTransfer.cpp
         src/include/SysdarftIOHub.h
         src/include/SysdarftCPU.h
-        src/cpu/include/cpu.inl
 )
 target_include_directories(SysdarftCPU PUBLIC src/include src/cpu/include)
 set_target_properties(SysdarftCPU PROPERTIES LINKER_LANGUAGE CXX)
@@ -200,6 +199,7 @@ add_unit_test(test.register tests/test.register.cpp)
 add_unit_test(test.memory tests/test.memory.cpp)
 add_unit_test(test.operand tests/test.operand.cpp)
 add_unit_test(test.decode tests/test.decode.cpp)
+add_unit_test(test.executor tests/test.executor.cpp)
 
 # Console Executable:
 add_executable(sysdarft-system src/SysdarftMain.cpp)
