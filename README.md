@@ -1,6 +1,6 @@
 # Sysdarft
-![Lines of Code](https://img.shields.io/badge/ProjectLines-10649-cyan)
-![Size of Code](https://img.shields.io/badge/ProjectSize-708%20K-yellow)
+![Lines of Code](https://img.shields.io/badge/ProjectLines-10427-cyan)
+![Size of Code](https://img.shields.io/badge/ProjectSize-692%20K-yellow)
 
 Sysdarft is a hypothetical binary 64bit architecture.
 It aims to have an ASM compiler, an invented high level language (higher than ASM, that is),

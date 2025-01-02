@@ -126,81 +126,113 @@ void SysdarftCPUInstructionExecutor::ror(__uint128_t, WidthAndOperandsType & Wid
     WidthAndOperands.second[0].set_val(result);
 }
 
-// Function to rotate bits to the left with an extra_bit
+// ---------------------------------------------------------------------------
+// 2) RCL: Rotate through carry LEFT by 'n' bits
+//    - value: the SIZE-bit operand
+//    - n: number of bits to rotate
+//    - cf: the carry flag (single bit, 0 or 1) passed by reference
+// ---------------------------------------------------------------------------
 template <unsigned SIZE>
-requires (SIZE == 8 || SIZE == 16 || SIZE == 32 || SIZE == 64)
-constexpr typename size_to_uint<SIZE>::type rotate_left_through_bit(
-    typename size_to_uint<SIZE>::type value, uint64_t n, int &extra_bit)
+  requires (SIZE == 8 || SIZE == 16 || SIZE == 32 || SIZE == 64)
+constexpr typename size_to_uint<SIZE>::type
+rcl(typename size_to_uint<SIZE>::type value, unsigned n, bool &cf)
 {
-    using uint_type = typename size_to_uint<SIZE>::type; // Type alias for convenience
-    constexpr unsigned bits = SIZE;
-    if (bits == 0) return value; // Avoid division by zero
+    using T = typename size_to_uint<SIZE>::type;
+    constexpr unsigned BITS = SIZE;
 
-    n %= bits; // Ensure n is within [0, bits-1]
-    if (n == 0) return value;
+    // RCL count is taken modulo (BITS + 1) for x86-like behavior
+    n %= (BITS + 1);
+    if (n == 0) {
+        return value;
+    }
 
-    // Mask to extract n bits
-    uint_type mask_n = (n == bits) ?
-        static_cast<uint_type>(-1) : ((static_cast<uint_type>(1) << n) - 1);
+    // Rotate bit-by-bit
+    for (unsigned i = 0; i < n; i++) {
+        // The top bit (bit BITS-1) becomes the new CF
+        bool new_cf = ((value >> (BITS - 1)) & 1) != 0;
 
-    // Extract incoming bits from extra_bit (lower n bits)
-    uint_type incoming_bits = static_cast<uint_type>(extra_bit) & mask_n;
+        // Shift left by 1
+        value <<= 1;
 
-    // Extract bits that will be rotated out (higher n bits of value)
-    uint_type bits_out = (value >> (bits - n)) & mask_n;
+        // Bring old CF into the lowest bit
+        if (cf) {
+            value |= 1U;  // set bit 0
+        } else {
+            value &= ~1U; // clear bit 0
+        }
 
-    // Update extra_bit with the bits rotated out
-    extra_bit = static_cast<int>(bits_out);
+        // Mask off any overflow beyond SIZE bits
+        // (Typically not needed if T is exactly SIZE bits wide, but it's safe.)
+        if constexpr (BITS < (sizeof(T) * 8)) {
+            T mask = (T{1} << BITS) - 1;
+            value &= mask;
+        }
 
-    // Perform the rotation
-    uint_type rotated_value = (value << n) | incoming_bits;
-
-    return rotated_value;
+        // Update CF
+        cf = new_cf;
+    }
+    return value;
 }
 
-// Function to rotate bits to the right with an extra_bit
+// ---------------------------------------------------------------------------
+// 3) RCR: Rotate through carry RIGHT by 'n' bits
+//    - value: the SIZE-bit operand
+//    - n: number of bits to rotate
+//    - cf: the carry flag (single bit, 0 or 1) passed by reference
+// ---------------------------------------------------------------------------
 template <unsigned SIZE>
-requires (SIZE == 8 || SIZE == 16 || SIZE == 32 || SIZE == 64)
-constexpr typename size_to_uint<SIZE>::type rotate_right_through_bit(
-    typename size_to_uint<SIZE>::type value, uint64_t n, int &extra_bit)
+  requires (SIZE == 8 || SIZE == 16 || SIZE == 32 || SIZE == 64)
+constexpr typename size_to_uint<SIZE>::type
+rcr(typename size_to_uint<SIZE>::type value, unsigned n, bool &cf)
 {
-    using uint_type = typename size_to_uint<SIZE>::type; // Type alias for convenience
-    constexpr unsigned bits = SIZE;
-    if (bits == 0) return value; // Avoid division by zero
+    using T = typename size_to_uint<SIZE>::type;
+    constexpr unsigned BITS = SIZE;
 
-    n %= bits; // Ensure n is within [0, bits-1]
-    if (n == 0) return value;
+    // RCR count is taken modulo (BITS + 1) for x86-like behavior
+    n %= (BITS + 1);
+    if (n == 0) {
+        return value;
+    }
 
-    // Mask to extract n bits
-    uint_type mask_n = (n == bits) ?
-        static_cast<uint_type>(-1) : ((static_cast<uint_type>(1) << n) - 1);
+    // Rotate bit-by-bit
+    for (unsigned i = 0; i < n; i++) {
+        // The lowest bit (bit 0) becomes the new CF
+        bool new_cf = (value & 1U) != 0;
 
-    // Extract incoming bits from extra_bit (lower n bits)
-    uint_type incoming_bits = static_cast<uint_type>(extra_bit) & mask_n;
+        // Shift right by 1
+        value >>= 1;
 
-    // Extract bits that will be rotated out (lower n bits of value)
-    uint_type bits_out = value & mask_n;
+        // Bring old CF into the highest bit
+        if (cf) {
+            value |= (T{1} << (BITS - 1));
+        } else {
+            // ensure that bit (BITS-1) is cleared
+            T mask = static_cast<T>(~(T{1} << (BITS - 1)));
+            value &= mask;
+        }
 
-    // Update extra_bit with the bits rotated out
-    extra_bit = static_cast<int>(bits_out);
+        // Mask to SIZE bits if T might be wider
+        if constexpr (BITS < (sizeof(T) * 8)) {
+            T mask = (T{1} << BITS) - 1;
+            value &= mask;
+        }
 
-    // Perform the rotation
-    uint_type rotated_value = (value >> n) | (incoming_bits << (bits - n));
-
-    return rotated_value;
+        // Update CF
+        cf = new_cf;
+    }
+    return value;
 }
-
 void SysdarftCPUInstructionExecutor::rcl(__uint128_t, WidthAndOperandsType & WidthAndOperands)
 {
     const auto operand1 = WidthAndOperands.second[0].get_val();
     const auto operand2 = WidthAndOperands.second[1].get_val();
-    int cf = SysdarftRegister::load<FlagRegisterType>().Carry;
+    bool cf = SysdarftRegister::load<FlagRegisterType>().Carry;
     uint64_t result;
     switch (WidthAndOperands.first) {
-    case _8bit_prefix:  result = rotate_left_through_bit<8> (static_cast<uint8_t>(operand1), operand2, cf); break;
-    case _16bit_prefix: result = rotate_left_through_bit<16>(static_cast<uint16_t>(operand1), operand2, cf); break;
-    case _32bit_prefix: result = rotate_left_through_bit<32>(static_cast<uint32_t>(operand1), operand2, cf); break;
-    case _64bit_prefix: result = rotate_left_through_bit<64>(operand1, operand2, cf); break;
+    case _8bit_prefix:  result = ::rcl<8> (static_cast<uint8_t>(operand1), operand2, cf); break;
+    case _16bit_prefix: result = ::rcl<16>(static_cast<uint16_t>(operand1), operand2, cf); break;
+    case _32bit_prefix: result = ::rcl<32>(static_cast<uint32_t>(operand1), operand2, cf); break;
+    case _64bit_prefix: result = ::rcl<64>(operand1, operand2, cf); break;
     default: throw IllegalInstruction("Unknown width");
     }
 
@@ -214,13 +246,13 @@ void SysdarftCPUInstructionExecutor::rcr(__uint128_t, WidthAndOperandsType & Wid
 {
     const auto operand1 = WidthAndOperands.second[0].get_val();
     const auto operand2 = WidthAndOperands.second[1].get_val();
-    int cf = SysdarftRegister::load<FlagRegisterType>().Carry;
+    bool cf = SysdarftRegister::load<FlagRegisterType>().Carry;
     uint64_t result;
     switch (WidthAndOperands.first) {
-    case _8bit_prefix:  result = rotate_right_through_bit<8> (static_cast<uint8_t>(operand1), operand2, cf); break;
-    case _16bit_prefix: result = rotate_right_through_bit<16>(static_cast<uint16_t>(operand1), operand2, cf); break;
-    case _32bit_prefix: result = rotate_right_through_bit<32>(static_cast<uint32_t>(operand1), operand2, cf); break;
-    case _64bit_prefix: result = rotate_right_through_bit<64>(operand1, operand2, cf); break;
+    case _8bit_prefix:  result = ::rcr<8> (static_cast<uint8_t>(operand1), operand2, cf); break;
+    case _16bit_prefix: result = ::rcr<16>(static_cast<uint16_t>(operand1), operand2, cf); break;
+    case _32bit_prefix: result = ::rcr<32>(static_cast<uint32_t>(operand1), operand2, cf); break;
+    case _64bit_prefix: result = ::rcr<64>(operand1, operand2, cf); break;
     default: throw IllegalInstruction("Unknown width");
     }
 
