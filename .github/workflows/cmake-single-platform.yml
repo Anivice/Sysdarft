@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [ "ugly" ]
+  pull_request:
+    branches: [ "ugly" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Install the necessary tools
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ccache \
+            cmake \
+            build-essential \
+            libncurses-dev \
+            bsdutils
+
+      - name: Install a more recent CMake
+        run: |
+          sudo apt-get purge --auto-remove cmake
+          sudo apt-get update
+          sudo apt-get install -y wget apt-transport-https gnupg
+          wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
+          sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main'
+          sudo apt-get update
+          sudo apt-get install cmake
+
+      # Configure + build
+      - name: Configure and build
+        run: |
+          cmake -S . -B build
+          cmake --build build
+
+      # Run tests
+      - name: Run tests
+        run: |
+          cd build
+          ctest --output-on-failure
