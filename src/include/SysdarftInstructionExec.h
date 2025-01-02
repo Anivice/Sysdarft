@@ -28,7 +28,7 @@ private:
         DataType val { };
         const auto SP = SysdarftRegister::load<StackPointerType>();
         const auto SB = SysdarftRegister::load<StackBaseType>();
-        SysdarftCPUMemoryAccess::write_memory(SB + SP, (char*)&val, sizeof(DataType));
+        SysdarftCPUMemoryAccess::read_memory(SB + SP, (char*)&val, sizeof(DataType));
         SysdarftRegister::store<StackPointerType>(SP + sizeof(DataType));
         return val;
     }

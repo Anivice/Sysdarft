@@ -211,6 +211,7 @@ add_unit_test(test.decode tests/test.decode.cpp)
 add_unit_test(test.executor tests/test.executor.cpp)
 add_unit_test(test.arithmetic tests/test.arithmetic.cpp)
 add_unit_test(test.lgAbit tests/test.lgAbit.cpp)
+add_unit_test(test.dataTsf tests/test.dataTsf.cpp)
 
 # Console Executable:
 add_executable(sysdarft-system src/SysdarftMain.cpp)

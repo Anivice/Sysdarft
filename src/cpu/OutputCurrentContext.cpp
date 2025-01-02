@@ -333,6 +333,21 @@ void SysdarftCPUInstructionExecutor::show_context()
     log(xxd_like_dump(ext_off, ext_buffer), "\n");
 
     ////////////////////////////////////////////////////////////////////////////////
+    // SHOW SB:SP (128 bytes)
+    ////////////////////////////////////////////////////////////////////////////////
+    log("==============================================================================\n");
+    log("[SB:SP]:\n")
+    auto stack_off = SysdarftRegister::load<StackBaseType>() + SysdarftRegister::load<StackPointerType>();
+    auto stack_len = std::min(TotalMemory - stack_off, 128ul);
+    std::vector<uint8_t> stack_buffer;
+    for (uint64_t i = 0; i < stack_len; i++) {
+        char c;
+        SysdarftCPUMemoryAccess::read_memory(stack_off + i, &c, 1);
+        stack_buffer.push_back(c);
+    }
+    log(xxd_like_dump(stack_off, stack_buffer), "\n");
+
+    ////////////////////////////////////////////////////////////////////////////////
     // SHOW NEXT 8 INSTRUCTIONS
     ////////////////////////////////////////////////////////////////////////////////
     log("==============================================================================\n");

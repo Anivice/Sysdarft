@@ -78,7 +78,7 @@ struct pushall_data
 
 void SysdarftCPUInstructionExecutor::pushall(__uint128_t, WidthAndOperandsType & WidthAndOperands)
 {
-    pushall_data data = {
+    const pushall_data data = {
         .FER0 = SysdarftRegister::load<FullyExtendedRegisterType, 0>(),
         .FER1 = SysdarftRegister::load<FullyExtendedRegisterType, 1>(),
         .FER2 = SysdarftRegister::load<FullyExtendedRegisterType, 2>(),
