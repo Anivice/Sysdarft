@@ -137,7 +137,7 @@ namespace debug
     }
 }
 
-#ifndef __DEBUG__
+#if !defined(__DEBUG__) || defined(__CLEAN_OUTPUT__)
 #define log(...) ::debug::_log(__VA_ARGS__);
 #else
 #define log(...) ::debug::_log(__FILE__, ":", __LINE__, ":", __PRETTY_FUNCTION__, ": ", __VA_ARGS__);

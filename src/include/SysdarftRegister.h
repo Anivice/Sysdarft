@@ -1,10 +1,9 @@
 #ifndef REGISTER_DEF_H
 #define REGISTER_DEF_H
 
-#include "SysdarftMemory.h"
-
 #include <cstdint>
 #include <SysdarftDebug.h>
+#include <SysdarftMemory.h>
 
 class UnknownRegisterIdentification final : public SysdarftBaseError {
 public:
@@ -526,6 +525,7 @@ protected:
     }
 
 public:
+    virtual ~SysdarftRegister() = default;
     SysdarftRegister & operator=(const SysdarftRegister & other) = delete;
 };
 

@@ -47,7 +47,7 @@ public:
     friend class OperandType;
 };
 
-// short lived type, valid only for current timestamp
+// short-lived type, valid only for current timestamp
 class SYSDARFT_EXPORT_SYMBOL OperandType
 {
 protected:

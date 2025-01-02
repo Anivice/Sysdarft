@@ -17,7 +17,35 @@ protected:
         ExecutorMap.emplace(opcode, method);
     }
 
-    std::atomic<bool> break_here = false;
+    void show_context();
+    bool default_is_break_here() { return false; }
+    void default_breakpoint_handler(__uint128_t, uint8_t, const WidthAndOperandsType &) { }
+
+    using IsBreakHereFn = std::function<bool()>;
+    using BreakpointHandlerFn = std::function<void(__uint128_t, uint8_t, const WidthAndOperandsType &)>;
+
+    IsBreakHereFn is_break_here;
+    BreakpointHandlerFn breakpoint_handler;
+
+    template < class InstanceType >
+    void bindIsBreakHere(InstanceType* instance, bool (InstanceType::*memFunc)())
+    {
+        is_break_here = [instance, memFunc]() -> bool {
+            return (instance->*memFunc)();
+        };
+    }
+
+    template < class InstanceType >
+    void bindBreakpointHandler(InstanceType* instance, void (InstanceType::*memFunc)(
+        __uint128_t, uint8_t, const WidthAndOperandsType &))
+    {
+        breakpoint_handler = [instance, memFunc](__uint128_t val,
+            uint8_t opcode,
+            const WidthAndOperandsType & wapr)
+        {
+            (instance->*memFunc)(val, opcode, wapr);
+        };
+    }
 
     // Misc
     void nop(__uint128_t, WidthAndOperandsType &);

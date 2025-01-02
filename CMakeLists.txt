@@ -109,6 +109,7 @@ add_compile_definitions(
         SYSDARFT_VERSION="0.0.1"
         SYSDARFT_INFORMATION="${SYSDARFT_INFO_CONTENT_ESCAPED}"
         __DEBUG__
+        __CLEAN_OUTPUT__
 )
 
 # Define include directories globally (can be refined per target)
@@ -144,6 +145,8 @@ add_library(SysdarftCPU OBJECT
         src/cpu/SysdarftCPUDecoder.cpp
         src/include/SysdarftInstructionExec.h
         src/cpu/SysdarftInstructionExec.cpp
+        src/cpu/OutputCurrentContext.cpp
+        src/cpu/Operations/Helper.cpp
         src/cpu/Operations/Arithmetic.cpp
         src/cpu/Operations/Misc.cpp
         src/cpu/Operations/DataTransfer.cpp

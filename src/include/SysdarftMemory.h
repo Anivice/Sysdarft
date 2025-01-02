@@ -89,6 +89,7 @@ protected:
     }
 
 public:
+    virtual ~SysdarftCPUMemoryAccess() = default;
     SysdarftCPUMemoryAccess operator=(const SysdarftCPUMemoryAccess&) = delete;
 };
 
