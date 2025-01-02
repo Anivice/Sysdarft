@@ -23,10 +23,16 @@ jobs:
             cmake \
             build-essential \
             libncurses-dev \
-            bsdutils
+            bsdutils \
+            libboost-dev \
+            libboost-filesystem-dev \
+            libboost-thread-dev \
+            nlohmann-json3-dev \
+            libcurl4-openssl-dev
 
       - name: Install a more recent CMake
         run: |
+          sudo apt-get install software-properties-common
           sudo apt-get purge --auto-remove cmake
           sudo apt-get update
           sudo apt-get install -y wget apt-transport-https gnupg
@@ -38,8 +44,8 @@ jobs:
       # Configure + build
       - name: Configure and build
         run: |
-          cmake -S . -B build
-          cmake --build build
+          cmake -DCOMPILE_GUI_BACKEND="True" -S . -B build
+          cmake --build build -j 16
 
       # Run tests
       - name: Run tests
