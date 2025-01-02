@@ -1,4 +1,4 @@
-#include "shared.h"
+#include "gui_module_head.h"
 
 websocket_session::websocket_session(asio::ip::tcp::socket socket)
     : ws_(std::move(socket))
@@ -19,8 +19,7 @@ void websocket_session::run(http::request<http::string_body> req)
                 return;
             }
             self->do_read();
-        }
-        );
+        });
 }
 
 // Called to send data (e.g., from a render loop)
@@ -44,7 +43,8 @@ void websocket_session::close()
 {
     auto self = shared_from_this();
     asio::post(ws_.get_executor(),
-               [self]() {
+               [self]()
+               {
                    if (!self->closed_) {
                        self->closed_ = true;
                        beast::error_code ignored;
@@ -60,6 +60,13 @@ void websocket_session::close()
                    }
                }
         );
+
+    for (auto & Th : input_processor_threads_)
+    {
+        if (Th.joinable()) {
+            Th.join();
+        }
+    }
 }
 
 // Read loop
@@ -68,7 +75,7 @@ void websocket_session::do_read()
     auto self = shared_from_this();
     ws_.async_read(
         buffer_,
-        [self](beast::error_code ec, std::size_t bytes_transferred)
+        [self, this](const beast::error_code &ec, std::size_t bytes_transferred)
         {
             beast::string_view data(
                 static_cast<const char *>(self->buffer_.data().data()),
@@ -86,11 +93,12 @@ void websocket_session::do_read()
             // We have "data"
             log("[WebSocket] Received: ", std::string(data), "\n");
             auto input_handler = [](const std::string & _data) {
-                set_thread_name("Async Input Handler");
+                debug::set_thread_name("Async Input Handler");
                 const auto key = convertJsonToKeyEvent(_data);
-                GlobalEventProcessor(UI_INSTANCE_NAME, UI_INPUT_PROCESSOR_METHOD_NAME)(key.keyCode);
+                g_input_processor(key.keyCode);
             };
-            std::thread(input_handler, std::string(data)).detach();
+
+            input_processor_threads_.emplace_back(input_handler, std::string(data));
 
             // consume buffer
             self->buffer_.consume(self->buffer_.size());

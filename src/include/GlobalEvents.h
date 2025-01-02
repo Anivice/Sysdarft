@@ -28,14 +28,20 @@ struct SYSDARFT_EXPORT_SYMBOL CursorPosition
 #define _g_method_install(instance_name, instance, method_name, method) \
     GlobalEventProcessor.install_instance(                              \
                 instance_name, &instance,                               \
-                method_name, &decltype(instance)::method);
+                method_name, &decltype(instance)::method)
 
 #define g_ui_cleanup() GlobalEventProcessor(UI_INSTANCE_NAME, UI_CLEANUP_METHOD_NAME)()
+#define g_ui_cleanup_install(instance, method) _g_method_install(UI_INSTANCE_NAME, instance, UI_CLEANUP_METHOD_NAME, method)
 #define g_ui_initialize() GlobalEventProcessor(UI_INSTANCE_NAME, UI_INITIALIZE_METHOD_NAME)()
+#define g_ui_initialize_install(instance, method) _g_method_install(UI_INSTANCE_NAME, instance, UI_INITIALIZE_METHOD_NAME, method)
 #define g_ui_set_cursor(x, y) GlobalEventProcessor(UI_INSTANCE_NAME, UI_SET_CURSOR_METHOD_NAME)(x, y)
-#define g_ui_get_cursor() GlobalEventProcessor(UI_INSTANCE_NAME, UI_GET_CURSOR_METHOD_NAME)()
+#define g_ui_set_cursor_install(instance, method) _g_method_install(UI_INSTANCE_NAME, instance, UI_SET_CURSOR_METHOD_NAME, method)
+#define g_ui_get_cursor() std::any_cast<CursorPosition>(GlobalEventProcessor(UI_INSTANCE_NAME, UI_GET_CURSOR_METHOD_NAME)())
+#define g_ui_get_cursor_install(instance, method) _g_method_install(UI_INSTANCE_NAME, instance, UI_GET_CURSOR_METHOD_NAME, method)
 #define g_ui_display_char(x, y, ch) GlobalEventProcessor(UI_INSTANCE_NAME, UI_DISPLAY_CHAR_METHOD_NAME)(x, y, ch)
+#define g_ui_display_char_install(instance, method) _g_method_install(UI_INSTANCE_NAME, instance, UI_DISPLAY_CHAR_METHOD_NAME, method)
 #define g_ui_set_cur_vsb(vsb) GlobalEventProcessor(UI_INSTANCE_NAME, UI_SET_CURSOR_VISIBILITY_METHOD_NAME)(vsb)
+#define g_ui_set_cur_vsb_install(instance, method) _g_method_install(UI_INSTANCE_NAME, instance, UI_SET_CURSOR_VISIBILITY_METHOD_NAME, method)
 #define g_input_processor(ch) GlobalEventProcessor(UI_INSTANCE_NAME, UI_INPUT_PROCESSOR_METHOD_NAME)(ch)
 #define g_input_processor_install(instance, method) _g_method_install(UI_INSTANCE_NAME, instance, UI_INPUT_PROCESSOR_METHOD_NAME, method)
 

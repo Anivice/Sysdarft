@@ -1,4 +1,5 @@
-#include "shared.h"
+// input.cpp
+#include "gui_module_head.h"
 // Note: For letters and digits, we'll map them based on their ASCII values directly
 
 /************************************************************

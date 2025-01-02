@@ -8,8 +8,6 @@
 #include <thread>
 #include <string>
 #include <dlfcn.h>
-#include <debug.h>
-#include <global.h>
 #include <cstdio>
 #include <vector>
 #include <mutex>
@@ -18,6 +16,8 @@
 #include <fstream>
 #include <unordered_map>
 #include <cctype> // For std::tolower
+#include <SysdarftDebug.h>
+#include <GlobalEvents.h>
 
 using json = nlohmann::json;
 namespace asio = boost::asio;
@@ -31,7 +31,7 @@ class websocket_session : public std::enable_shared_from_this<websocket_session>
 public:
     explicit websocket_session(asio::ip::tcp::socket socket);
 
-    // Start the asynchronous accept, then read loop.
+    // Start the asynchronous acceptance, then read loop.
     void run(http::request<http::string_body> req);
 
     // Called to send data (e.g., from a render loop)
@@ -50,9 +50,10 @@ private:
     websocket::stream<beast::tcp_stream> ws_;
     beast::flat_buffer buffer_;
 
-    bool closed_ = false; // track if we've initiated a close
-    bool writing_ = false; // track if a write is in progress
+    std::atomic <bool> closed_ = false; // track if we've initiated a close
+    std::atomic <bool> writing_ = false; // track if a write is in progress
     std::deque<std::string> outbox_; // queued messages
+    std::vector < std::thread > input_processor_threads_;
 };
 
 class http_session : public std::enable_shared_from_this<http_session> {
@@ -102,34 +103,17 @@ private:
     /* raw buffer */
     /* needs to be converted and discard non-ASCII characters */
     std::mutex BinaryBufferMutex;
-    std::array < std::array < int, V_HEIGHT >, V_WIDTH > binary_video_buffer;
+    std::array < std::array < int, V_HEIGHT >, V_WIDTH > binary_video_buffer{};
 
     std::atomic<bool> is_instance_initialized_before = {false};
     std::atomic<bool> video_memory_changed = {true};
-
-    std::atomic<bool> ioThreadExited = {true};
+    std::thread IOThread;
 public:
     backend()
         : ioc_()
           , acceptor_(ioc_)
           , videoBuffer_(V_HEIGHT + 1, std::string(V_WIDTH, '.'))
-    {
-        for (int y = 0; y < V_HEIGHT; y++) {
-            for (int x = 0; x < V_WIDTH; x++) {
-                binary_video_buffer[x][y] = '.';
-            }
-        }
-
-        // Place a message in the middle
-        const char* msg = "(Video Memory Not Initialized)";
-        const int msg_len     = static_cast<int>(std::strlen(msg));
-        const int mid_x       = (V_WIDTH  - msg_len) / 2;
-        constexpr int mid_y   = (V_HEIGHT - 1) / 2;
-
-        for (int i = 0; i < msg_len; i++) {
-            binary_video_buffer[mid_x + i][mid_y] = msg[i];
-        }
-    }
+    { }
 
     // Called once: start acceptor + run ioc in a thread, start render thread
     void initialize();
@@ -159,36 +143,36 @@ private:
     // Close all websockets gracefully
     void close_all_websockets();
 
-    std::atomic<cursor_position_t> cursor_pos_ = { { 0, 0 } };
+    std::atomic<CursorPosition> cursor_pos_ = { { 0, 0 } };
     std::atomic<int> char_at_cursor_position = '.';
     std::atomic<bool> cursor_position_is_cursor_char_itself = false;
     std::atomic<char> cursor_char = '_';
     std::atomic<bool> cursor_visibility = true;
     std::atomic<bool> cursor_worker_running = false;
-    std::atomic<bool> cursor_worker_finished = true;
+    std::thread cursor_worker_thread;
     void swap_cursor_with_char_at_pos();
 
     void start_cursor_worker()
     {
         cursor_worker_running = true;
-        cursor_worker_finished = false;
-        std::thread(&backend::swap_cursor_with_char_at_pos, this).detach();
+        cursor_worker_thread = std::thread(&backend::swap_cursor_with_char_at_pos, this);
         log("[Cursor] Started cursor worker thread\n");
     }
 
     void stop_cursor_worker()
     {
         cursor_worker_running = false;
-        while (!cursor_worker_finished) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        if (cursor_worker_thread.joinable()) {
+            cursor_worker_thread.join();
         }
+
         log("[Cursor] Stopped cursor worker thread\n");
     }
 
 public:
     // dummy
     void set_cursor(int, int);
-    cursor_position_t get_cursor();
+    CursorPosition get_cursor();
     void display_char(int, int, int);
     void set_cursor_visibility(bool);
 };

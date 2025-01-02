@@ -1,4 +1,5 @@
-#include "shared.h"
+// backend.cpp
+#include "gui_module_head.h"
 
 // -----------------------------------------------------------------------------
 // 2) Utility function to get the shared library path (from your code)
@@ -18,15 +19,42 @@ std::string getSharedLibraryPath() {
 void backend::initialize()
 {
     if (is_instance_initialized_before) {
-        log("[Backend] Creating multiple instances is NOT allowed! Exiting...\n");
+        log("[Backend] Active instance initialized already!\n");
         return;
     }
 
     is_instance_initialized_before = true;
+    shuttingDown_ = false;
+    runLoop_ = true;
+    video_memory_changed = {true};
+    for (int y = 0; y < V_HEIGHT; y++) {
+        for (int x = 0; x < V_WIDTH; x++) {
+            binary_video_buffer[x][y] = '.';
+        }
+    }
+
+    // Place a message in the middle
+    const char* msg = "(Video Memory Not Initialized)";
+    const int msg_len     = static_cast<int>(std::strlen(msg));
+    const int mid_x       = (V_WIDTH  - msg_len) / 2;
+    constexpr int mid_y   = (V_HEIGHT - 1) / 2;
+
+    for (int i = 0; i < msg_len; i++) {
+        binary_video_buffer[mid_x + i][mid_y] = msg[i];
+    }
+
+    cursor_pos_ = { 0, 0 };
+    char_at_cursor_position = '.';
+    cursor_position_is_cursor_char_itself = false;
+    cursor_char = '_';
+    cursor_visibility = true;
+    cursor_worker_running = false;
+
+    ioc_.restart();
 
     // 1) Start accepting connections on port 8080 (async style)
     beast::error_code ec;
-    tcp::endpoint endpoint(tcp::v4(), 8080);
+    const tcp::endpoint endpoint(tcp::v4(), 8080);
 
     acceptor_.open(endpoint.protocol(), ec);
     if (ec) {
@@ -50,18 +78,16 @@ void backend::initialize()
     start_accept();
 
     // 2) Launch a thread to run the io_context so async ops happen
-    std::thread([this] {
-        set_thread_name("IO Thread");
+    IOThread = std::thread([this] {
+        debug::set_thread_name("IO Thread");
         try {
-            ioThreadExited = false;
             ioc_.run();
         } catch (std::exception &e) {
             log("[IO Thread] exception: ", e.what(), "\n");
         }
 
         log("[IO Thread] Thread exited!\n");
-        ioThreadExited = true;
-    }).detach();
+    });
 
     // 3) Launch the render loop in a separate thread
     renderThread_ = std::thread(&backend::render_loop, this);
@@ -110,11 +136,12 @@ void backend::cleanup()
     log("[Backend] Stopping event to IOC!\n");
     // Post a stop event to ioc_
     ioc_.stop();
-    while (!ioThreadExited) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    if (IOThread.joinable()) {
+        IOThread.join();
     }
     log("[Backend] Stopped event to IOC!\n");
 
+    is_instance_initialized_before = false;
     log("[Backend] Backend cleanup complete!\n");
 }
 
@@ -187,7 +214,7 @@ void backend::start_accept()
 // The render loop: updates video buffer, sends frames to all websockets
 void backend::render_loop()
 {
-    set_thread_name("UI Render");
+    debug::set_thread_name("UI Render");
 
     int frameCount = 0;
     while (runLoop_) {
@@ -278,7 +305,7 @@ void backend::close_all_websockets()
 
 void backend::swap_cursor_with_char_at_pos()
 {
-    set_thread_name("UI Cursor");
+    debug::set_thread_name("UI Cursor");
     while (cursor_worker_running)
     {
         if (cursor_visibility)
@@ -301,8 +328,6 @@ void backend::swap_cursor_with_char_at_pos()
 
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
-
-    cursor_worker_finished = true;
 }
 
 void backend::set_cursor(int x, int y)
@@ -310,7 +335,7 @@ void backend::set_cursor(int x, int y)
     cursor_pos_.store({x, y});
 }
 
-cursor_position_t backend::get_cursor()
+CursorPosition backend::get_cursor()
 {
     return cursor_pos_;
 }
@@ -319,7 +344,7 @@ void backend::display_char(int x, int y, int ch)
 {
     std::lock_guard<std::mutex> lock(BinaryBufferMutex);
     if (const auto cur_pos = cursor_pos_.load();
-        cur_pos == cursor_position_t { .x = x, .y = y  })
+        cur_pos == CursorPosition { .x = x, .y = y  })
     {
         cursor_position_is_cursor_char_itself = false; // force update
     }

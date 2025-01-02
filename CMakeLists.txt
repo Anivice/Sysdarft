@@ -208,7 +208,9 @@ add_unit_test(test.executor tests/test.executor.cpp)
 add_executable(sysdarft-system src/SysdarftMain.cpp)
 target_link_libraries(sysdarft-system PUBLIC sysdarft)
 
-#link_libraries(sysdarft)
+link_libraries(sysdarft)
 
 # Modules
-#add_subdirectory(gui_module)
+add_subdirectory(gui_module)
+add_unit_test(test.backend tests/test.backend.cpp)
+add_dependencies(test.backend sysdarft_backend)

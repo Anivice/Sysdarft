@@ -1,4 +1,5 @@
-#include "shared.h"
+// http.cpp
+#include "gui_module_head.h"
 
 // Start the session
 void http_session::run()
