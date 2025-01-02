@@ -112,10 +112,12 @@ void OperandType::do_decode_constant_without_prefix()
     if (const auto & prefix = Access.pop_code8();
         prefix == _64bit_prefix || prefix == _float_ptr_prefix)
     {
+        std::stringstream ss;
         const auto num = Access.pop_code64();
         OperandReferenceTable.OperandType = ConstantOperand;
         OperandReferenceTable.OperandInfo.ConstantValue = num;
-        OperandReferenceTable.literal = "$(" + std::to_string(num) + ")";
+        ss << "0x" << std::uppercase << std::hex << num;
+        OperandReferenceTable.literal = "$(" + ss.str() + ")";
     } else {
         throw IllegalInstruction("Unknown constant width");
     }

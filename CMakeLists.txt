@@ -116,7 +116,12 @@ add_compile_definitions(
 include_directories(src/include)
 
 # Debug:
-add_library(SysdarftDebug OBJECT src/SysdarftDebug.cpp)
+add_library(SysdarftDebug OBJECT
+        src/SysdarftDebug.cpp
+        src/include/SysdarftDebug.h
+        src/include/SysdarftDebug.inl
+        src/ProprocessingFlagChecker.cpp
+)
 target_include_directories(SysdarftDebug PUBLIC src/include)
 
 # Message Map:
@@ -150,6 +155,7 @@ add_library(SysdarftCPU OBJECT
         src/cpu/Operations/Arithmetic.cpp
         src/cpu/Operations/Misc.cpp
         src/cpu/Operations/DataTransfer.cpp
+        src/cpu/Operations/LogicalAndBitwise.cpp
         src/include/SysdarftIOHub.h
         src/include/SysdarftCPU.h
 )
@@ -203,6 +209,7 @@ add_unit_test(test.memory tests/test.memory.cpp)
 add_unit_test(test.operand tests/test.operand.cpp)
 add_unit_test(test.decode tests/test.decode.cpp)
 add_unit_test(test.executor tests/test.executor.cpp)
+add_unit_test(test.arithmetic tests/test.arithmetic.cpp)
 
 # Console Executable:
 add_executable(sysdarft-system src/SysdarftMain.cpp)
@@ -211,6 +218,8 @@ target_link_libraries(sysdarft-system PUBLIC sysdarft)
 link_libraries(sysdarft)
 
 # Modules
-add_subdirectory(gui_module)
-add_unit_test(test.backend tests/test.backend.cpp)
-add_dependencies(test.backend sysdarft_backend)
+if ("${COMPILE_GUI_BACKEND}" STREQUAL "True")
+    add_subdirectory(gui_module)
+    add_unit_test(test.backend tests/test.backend.cpp)
+    add_dependencies(test.backend sysdarft_backend)
+endif ()

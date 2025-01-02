@@ -4,10 +4,34 @@
 #include <any>
 #include <SysdarftCPUDecoder.h>
 
+#define add_instruction_exec(name) void name(__uint128_t, WidthAndOperandsType &)
+
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInstructionExecutor : public SysdarftCPUInstructionDecoder
 {
 private:
     uint64_t check_overflow(uint8_t BCDWidth, __uint128_t Value);
+    uint64_t check_overflow_signed(uint8_t BCDWidth, __uint128_t Value);
+
+    template < typename DataType >
+    void push_stack(const DataType & val)
+    {
+        const auto SP = SysdarftRegister::load<StackPointerType>();
+        const auto SB = SysdarftRegister::load<StackBaseType>();
+        const auto StackNewLowerEnd = SP - sizeof(DataType);
+        SysdarftCPUMemoryAccess::write_memory(StackNewLowerEnd + SB, (char*)&val, sizeof(DataType));
+        SysdarftRegister::store<StackPointerType>(StackNewLowerEnd);
+    }
+
+    template < typename DataType >
+    DataType pop_stack()
+    {
+        DataType val { };
+        const auto SP = SysdarftRegister::load<StackPointerType>();
+        const auto SB = SysdarftRegister::load<StackBaseType>();
+        SysdarftCPUMemoryAccess::write_memory(SB + SP, (char*)&val, sizeof(DataType));
+        SysdarftRegister::store<StackPointerType>(SP + sizeof(DataType));
+        return val;
+    }
 
 protected:
     typedef std::pair < uint8_t /* width */, std::vector < OperandType > > WidthAndOperandsType;
@@ -51,13 +75,42 @@ protected:
     }
 
     // Misc
-    void nop(__uint128_t, WidthAndOperandsType &);
+    add_instruction_exec(nop);
 
     // Arithmetic
-    void add(__uint128_t, WidthAndOperandsType &);
+    add_instruction_exec(add);
+    add_instruction_exec(adc);
+    add_instruction_exec(sub);
+    add_instruction_exec(sbb);
+    add_instruction_exec(imul);
+    add_instruction_exec(mul);
+    add_instruction_exec(idiv);
+    add_instruction_exec(div);
+    add_instruction_exec(neg);
+    add_instruction_exec(cmp);
 
-    // Data transfer
-    void mov(__uint128_t, WidthAndOperandsType &);
+    // Data Transfer
+    add_instruction_exec(mov);
+    add_instruction_exec(xchg);
+    add_instruction_exec(push);
+    add_instruction_exec(pop);
+    add_instruction_exec(pushall);
+    add_instruction_exec(popall);
+    add_instruction_exec(enter);
+    add_instruction_exec(leave);
+    add_instruction_exec(movs);
+
+    // Logic and Bitwise
+    add_instruction_exec(and_);
+    add_instruction_exec(or_);
+    add_instruction_exec(xor_);
+    add_instruction_exec(not_);
+    add_instruction_exec(shl);
+    add_instruction_exec(shr);
+    add_instruction_exec(rol);
+    add_instruction_exec(ror);
+    add_instruction_exec(rcl);
+    add_instruction_exec(rcr);
 
     // initialization
     SysdarftCPUInstructionExecutor();
@@ -65,5 +118,7 @@ protected:
     // general code execution
     void execute(__uint128_t timestamp);
 };
+
+#undef add_instruction_exec
 
 #endif //SYSDARFTINSTRUCTIONEXEC_H

@@ -140,7 +140,7 @@ struct RegisterTypeIdentifier<RegisterType> {
 
 template <>
 struct RegisterTypeIdentifier<FPURegisterType> {
-    using type = long double;
+    using type = double;
 };
 
 template <>
