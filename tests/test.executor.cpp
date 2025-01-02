@@ -42,9 +42,9 @@ public:
         bindIsBreakHere(this, &Exec::h_is_break_here);
 
         std::vector<uint8_t> buffer;
-        encode_instruction(buffer, "mov .64bit <*2&64($(255), %FER14, $(4))>, <$(114514)>");
-        encode_instruction(buffer, "add .64bit <*2&64($(255), %FER14, $(4))>, <$(114514)>");
-        encode_instruction(buffer, "mov .64bit <%FER0>, <*2&64($(255), %FER14, $(4))>");
+        encode_instruction(buffer, "mov .64bit <%DB>, <$(1234)>");
+        encode_instruction(buffer, "add .64bit <*1&64($(0), $(0), $(0))>, <$(114514)>");
+        encode_instruction(buffer, "mov .64bit <%FER0>, <*1&64($(0), $(0), $(0))>");
         encode_instruction(buffer, "add .8bit <%R2>, <$(0xFF)>");
         encode_instruction(buffer, "add .8bit <%R3>, <$(0xA0)>");
         encode_instruction(buffer, "add .8bit <%R0>, <$(0x02)>");

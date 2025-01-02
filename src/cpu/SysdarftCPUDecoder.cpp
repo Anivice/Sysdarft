@@ -290,8 +290,9 @@ void OperandType::store_value_to_memory_based_on_table(const uint64_t value)
     default: throw IllegalInstruction("Unknown Error!");
     }
 
+    auto DB = Access.load<DataBaseType>();
     Access.write_memory(
-        OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryAddress,
+        DB + OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryAddress,
         (const char*)&value,
         width);
 }

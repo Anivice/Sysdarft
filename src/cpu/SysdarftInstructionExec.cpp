@@ -24,12 +24,12 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
 
     WidthAndOperandsType Arg = std::make_pair(width, operands);
 
+    // FIXME: Mask FPU and Signed output
+    log("[CPU] ", literal, "\n");
+
     if (is_break_here()) {
         log("[CPU] Breakpoint reached!\n");
         breakpoint_handler(timestamp, opcode, Arg);
-    } else {
-        // FIXME: Mask FPU and Signed output
-        log("[CPU] ", literal, "\n");
     }
 
     try {

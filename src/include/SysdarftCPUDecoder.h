@@ -59,10 +59,8 @@ protected:
     {
         OperandType_t OperandType;
 
-        union
-        {
+        struct {
             uint64_t ConstantValue;
-
             struct {
                 uint8_t RegisterWidthBCD;
                 uint8_t RegisterIndex;
@@ -72,7 +70,7 @@ protected:
                 uint64_t MemoryAddress;
                 uint8_t RegisterWidthBCD;
             } CalculatedMemoryAddress;
-        } OperandInfo;
+        } OperandInfo { };
 
         std::string literal; // literal will be wrong for all FPU and signed instructions
                              // since it decodes to unsigned only.
@@ -84,9 +82,9 @@ protected:
     template < typename DataType >
     DataType do_width_ambiguous_access_memory_based_on_table()
     {
-        return Access.pop_memory_from<DataType>(
-            Access.load<DataBaseType>(),
-            OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryAddress);
+        const auto DB = Access.load<DataBaseType>();
+        auto DP = OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryAddress;
+        return Access.pop_memory_from<DataType>(DB, DP);
     }
 
     uint64_t do_access_width_specified_access_memory_based_on_table()
