@@ -6,6 +6,9 @@
 
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInstructionExecutor : public SysdarftCPUInstructionDecoder
 {
+private:
+    uint64_t check_overflow(uint8_t BCDWidth, __uint128_t Value);
+
 protected:
     typedef std::pair < uint8_t /* width */, std::vector < OperandType > > WidthAndOperandsType;
     std::map <uint8_t /* opcode */,

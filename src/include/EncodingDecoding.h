@@ -127,9 +127,9 @@ inline uint64_t code_buffer_pop64(std::vector<uint8_t> & buffer) {
 
 struct SYSDARFT_EXPORT_SYMBOL parsed_target_t
 {
-    enum { NOTaValidType, REGISTER, CONSTANT, MEMORY } TargetType;
-    std::string RegisterName;
-    std::string ConstantExpression;
+    enum { NOTaValidType, REGISTER, CONSTANT, MEMORY } TargetType { };
+    std::string RegisterName { };
+    std::string ConstantExpression { };
 
     struct {
         std::string MemoryAccessRatio;
@@ -137,7 +137,7 @@ struct SYSDARFT_EXPORT_SYMBOL parsed_target_t
         std::string MemoryOffset1;
         std::string MemoryOffset2;
         std::string MemoryWidth;
-    } memory;
+    } memory { };
 };
 
 parsed_target_t encode_target(std::vector<uint8_t> &, const std::string&);

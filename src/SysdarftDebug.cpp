@@ -537,7 +537,7 @@ std::string debug::get_verbose_info()
     return ret.str();
 }
 
-void handle_sigabrt(int signum)
+void handle_sigabrt(int /* signum */)
 {
     const char* prefix
         = "[FATAL ERROR] Program is terminated using SIGABRT (Signal Abort)!\n";

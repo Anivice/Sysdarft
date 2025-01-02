@@ -12,7 +12,7 @@ public:
     }
 } dummy;
 
-int main(int argc, char ** argv)
+int main(int argc, char **)
 {
     SysdarftCursesUI curses;
     g_input_processor_install(dummy, input_processor);

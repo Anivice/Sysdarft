@@ -65,7 +65,7 @@ std::string xxd_like_dump(const uint64_t offset, const std::vector<uint8_t>& dat
             // For each missing byte, we skip 2 chars in hex + possible space.
             // A simpler approach: figure out how many 2-byte groups remain.
             const std::size_t groupsMissing = ((BYTES_PER_LINE - bytesOnThisLine) + 1) / 2;
-            for (int gm = 0; gm < groupsMissing; ++gm)
+            for (uint64_t gm = 0; gm < groupsMissing; ++gm)
             {
                 ss << "     ";
             }
@@ -310,7 +310,7 @@ void SysdarftCPUInstructionExecutor::show_context()
     auto data_off = SysdarftRegister::load<DataBaseType>() + SysdarftRegister::load<DataPointerType>();
     auto data_len = std::min(TotalMemory - data_off, 128ul);
     std::vector<uint8_t> data_buffer;
-    for (auto i = 0; i < data_len; i++) {
+    for (uint64_t i = 0; i < data_len; i++) {
         char c;
         SysdarftCPUMemoryAccess::read_memory(data_off + i, &c, 1);
         data_buffer.push_back(c);
@@ -325,7 +325,7 @@ void SysdarftCPUInstructionExecutor::show_context()
     auto ext_off = SysdarftRegister::load<ExtendedBaseType>() + SysdarftRegister::load<ExtendedPointerType>();
     auto ext_len = std::min(TotalMemory - ext_off, 128ul);
     std::vector<uint8_t> ext_buffer;
-    for (auto i = 0; i < ext_len; i++) {
+    for (uint64_t i = 0; i < ext_len; i++) {
         char c;
         SysdarftCPUMemoryAccess::read_memory(ext_off + i, &c, 1);
         ext_buffer.push_back(c);

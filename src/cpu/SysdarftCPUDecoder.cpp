@@ -129,7 +129,7 @@ void OperandType::do_decode_memory_without_prefix()
 
     auto decode_each_parameter = [&](std::string & literal, uint64_t & val)
     {
-        switch(auto prefix = Access.pop_code8())
+        switch(/*auto prefix = */Access.pop_code8())
         {
         case REGISTER_PREFIX:
             do_decode_register_without_prefix();
@@ -169,7 +169,7 @@ void OperandType::do_decode_memory_without_prefix()
 
 void OperandType::do_decode_operand()
 {
-    switch (auto prefix = Access.pop_code8())
+    switch (/*auto prefix = */Access.pop_code8())
     {
         case REGISTER_PREFIX: do_decode_register_without_prefix(); break;
         case CONSTANT_PREFIX: do_decode_constant_without_prefix(); break;
