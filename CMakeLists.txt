@@ -191,7 +191,7 @@ enable_testing()
 function(add_unit_test TARGET_NAME TEST_FILE)
     add_executable(${TARGET_NAME} ${TEST_FILE})
     target_link_libraries(${TARGET_NAME} PUBLIC sysdarft)
-    add_test(NAME "Unit Test: ${TARGET_NAME}" COMMAND $<TARGET_FILE:${TARGET_NAME}>)
+    add_test(NAME "Unit Test: ${TARGET_NAME}" COMMAND script -q -c ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME})
 endfunction()
 
 add_unit_test(test.error tests/test.error.cpp)
