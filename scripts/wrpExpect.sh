@@ -1,7 +1,7 @@
 #!/usr/bin/expect -f
 
 # Disable output buffering
-log_user 0
+log_user 1
 
 # Check if a command is provided
 if { $argc < 1 } {

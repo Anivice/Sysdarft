@@ -211,8 +211,7 @@ function(add_unit_test TARGET_NAME TEST_FILE)
     target_link_libraries(${TARGET_NAME} PUBLIC sysdarft)
 # FIXME: WRAPPER PERMISSION INCORRECT
     add_test(NAME "Unit Test: ${TARGET_NAME}" 
-        COMMAND expect -f 
-            ${CMAKE_CURRENT_SOURCE_DIR}/wrpExpect.sh 
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/wrpExpect.sh 
             ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME})
 endfunction()
 
