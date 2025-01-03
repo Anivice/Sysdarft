@@ -117,8 +117,8 @@ void process_base16(std::string & input)
 std::string execute_bc(const std::string& input)
 {
     std::stringstream cmd;
-    cmd << "bc <<< \"" << input << '"';
-    const auto result = debug::exec_command("bash", "-c", cmd.str().c_str());
+    cmd << "echo \"" << input << "\" | bc";
+    const auto result = debug::exec_command("sh", "-c", cmd.str().c_str());
     auto cmd_str = cmd.str();
     if (result.exit_status != 0) {
         throw SysdarftCodeExpressionError(input + ": " + std::to_string(result.exit_status));
