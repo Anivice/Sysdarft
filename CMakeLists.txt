@@ -52,12 +52,6 @@ set(compiler_options
         -fno-eliminate-unused-debug-types
         -fno-omit-frame-pointer
 
-        # Sanitize memory and thread issues
-        -fsanitize=address                   # Detect illegal memory access such as buffer overflows and use-after-free
-        -fsanitize=undefined                 # Detect undefined behavior like integer overflows and null dereferencing
-        # Uncomment if debugging threading issues:
-        # -fsanitize=thread                   # Ensure thread safety by detecting data races
-
         # Code coverage options
         -fprofile-arcs                       # Enable code coverage instrumentation
         -ftest-coverage                      # Generate coverage test data
@@ -79,12 +73,6 @@ set(linker_options
         -fno-eliminate-unused-debug-types
         -fno-omit-frame-pointer
 
-        # AddressSanitizer and UndefinedBehaviorSanitizer linking
-        -fsanitize=address                      # Link the AddressSanitizer runtime for memory integrity
-        -fsanitize=undefined                    # Link the UndefinedBehaviorSanitizer for detecting undefined behavior
-        # Uncomment if debugging threading issues:
-        # -fsanitize=thread                       # Link the ThreadSanitizer runtime for thread safety
-
         # Stack protection
         -fstack-protector-all                   # Link with stack protection for all functions
 
@@ -93,6 +81,36 @@ set(linker_options
         -ftest-coverage                         # Generate coverage test data
         -lasan -lubsan -fPIC --pie --whole-file
 )
+
+if ("${COMPILE_WITH_MEMORY_SANITIZERS}" STREQUAL "True")
+    list(APPEND compiler_options
+        # Sanitize memory issues
+        -fsanitize=address                   # Detect illegal memory access such as buffer overflows and use-after-free
+        -fsanitize=undefined                 # Detect undefined behavior like integer overflows and null dereferencing
+        # Uncomment if debugging threading issues:
+        # -fsanitize=thread                   # Ensure thread safety by detecting data races
+)
+    list(APPEND linker_options
+        # AddressSanitizer and UndefinedBehaviorSanitizer linking
+        -fsanitize=address                      # Link the AddressSanitizer runtime for memory integrity
+        -fsanitize=undefined                    # Link the UndefinedBehaviorSanitizer for detecting undefined behavior
+        # Uncomment if debugging threading issues:
+        # -fsanitize=thread                       # Link the ThreadSanitizer runtime for thread safety
+)
+endif ()
+
+if ("${COMPILE_WITH_THREAD_SANITIZERS}" STREQUAL "True")
+    list(APPEND compiler_options
+        -fsanitize=undefined                 # Detect undefined behavior like integer overflows and null dereferencing
+        # Uncomment if debugging threading issues:
+        -fsanitize=thread                   # Ensure thread safety by detecting data races
+)
+    list(APPEND linker_options
+        -fsanitize=undefined                    # Link the UndefinedBehaviorSanitizer for detecting undefined behavior
+        # Uncomment if debugging threading issues:
+        -fsanitize=thread                       # Link the ThreadSanitizer runtime for thread safety
+)
+endif ()
 
 add_compile_options(${compiler_options})
 add_link_options(${linker_options})
