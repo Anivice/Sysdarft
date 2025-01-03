@@ -121,7 +121,7 @@ std::string execute_bc(const std::string& input)
     const auto result = debug::exec_command("bash", "-c", cmd.str().c_str());
     auto cmd_str = cmd.str();
     if (result.exit_status != 0) {
-        throw SysdarftCodeExpressionError(input + ": " + std::to_string(result.exit_status));
+        throw SysdarftCodeExpressionError(input + " failed, exit: " + std::to_string(result.exit_status) + ": " + result.fd_stderr);
     }
 
     return result.fd_stdout;
