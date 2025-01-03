@@ -49,6 +49,8 @@ jobs:
 
       # Run tests
       - name: Run tests
+        env:
+            TERM: xterm-256color
         run: |
           cd build
           ctest --extra-verbose
