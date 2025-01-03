@@ -29,32 +29,33 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 
+# WARNING:  Standard C++14 library can cause thread sanitizers to report data race in certain areas,
+#           which is considered a false positive, but will cause the unit test to fail. In C++23 this
+#           issue simply does not exist
+
 # Universal compiler and linker flags
 set(compiler_options
         # Warnings and diagnostics
-        -Wall                                # Enable common warnings
-        -Wextra                              # Enable extra warnings
-        -Wpedantic                           # Strict compliance with the standard
-        -Wunused                             # Warn about unused variables, functions, etc.
-        -Wuninitialized                      # Warn if variables are used uninitialized
-        -fdiagnostics-show-option            # Show which option triggered the warning
-        -fdiagnostics-color=always           # Enable colored diagnostics for better readability
+        -Wall                                   # Enable common warnings
+        -Wextra                                 # Enable extra warnings
+        -Wpedantic                              # Strict compliance with the standard
+        -Wunused                                # Warn about unused variables, functions, etc.
+        -Wuninitialized                         # Warn if variables are used uninitialized
+        -fdiagnostics-show-option               # Show which option triggered the warning
+        -fdiagnostics-color=always              # Enable colored diagnostics for better readability
 
         # Debugging and stack protection
-        -g3                                  # Maximum debug information, including macro expansions
+        -g3                                     # Maximum debug information, including macro expansions
         -O0
-        -fstack-usage                        # Generate stack usage info for each function
-        -fstack-protector-all                # Protect all functions with a stack canary to prevent stack overflow attacks
-        # -D_FORTIFY_SOURCE=2                  # Buffer overflow detection on safer libc functions (e.g., memcpy).
+        -fstack-usage                           # Generate stack usage info for each function
+        -fstack-protector-all                   # Protect all functions with a stack canary to prevent stack overflow attacks
+        # -D_FORTIFY_SOURCE=2                   # Buffer overflow detection on safer libc functions (e.g., memcpy).
         # You need to enable optimization for _FORTIFY_SOURCE to work!
-        -gdwarf-4                            # Generate DWARF version 4 debug information
+        -gdwarf-4                               # Generate DWARF version 4 debug information
 
         -fno-eliminate-unused-debug-types
         -fno-omit-frame-pointer
-
-        # Code coverage options
-        -fprofile-arcs                       # Enable code coverage instrumentation
-        -ftest-coverage                      # Generate coverage test data
+        -std=c++23
         -lasan -lubsan -fPIC --pie
 )
 
@@ -75,41 +76,44 @@ set(linker_options
 
         # Stack protection
         -fstack-protector-all                   # Link with stack protection for all functions
-
-        # Code coverage options
-        -fprofile-arcs                          # Enable code coverage instrumentation
-        -ftest-coverage                         # Generate coverage test data
+        -std=c++23
         -lasan -lubsan -fPIC --pie --whole-file
 )
 
 if ("${COMPILE_WITH_MEMORY_SANITIZERS}" STREQUAL "True")
+    message(STATUS "Sanitizers for memory enabled")
     list(APPEND compiler_options
-        # Sanitize memory issues
-        -fsanitize=address                   # Detect illegal memory access such as buffer overflows and use-after-free
-        -fsanitize=undefined                 # Detect undefined behavior like integer overflows and null dereferencing
-        # Uncomment if debugging threading issues:
-        # -fsanitize=thread                   # Ensure thread safety by detecting data races
-)
+            -fsanitize=address                  # Detect illegal memory access such as buffer overflows and use-after-free
+            -fsanitize=undefined                # Detect undefined behavior like integer overflows and null dereferencing
+            # Code coverage options
+            -fprofile-arcs                      # Enable code coverage instrumentation
+            -ftest-coverage                     # Generate coverage test data
+    )
+
     list(APPEND linker_options
-        # AddressSanitizer and UndefinedBehaviorSanitizer linking
-        -fsanitize=address                      # Link the AddressSanitizer runtime for memory integrity
-        -fsanitize=undefined                    # Link the UndefinedBehaviorSanitizer for detecting undefined behavior
-        # Uncomment if debugging threading issues:
-        # -fsanitize=thread                       # Link the ThreadSanitizer runtime for thread safety
-)
+            -fsanitize=address                  # Link the AddressSanitizer runtime for memory integrity
+            -fsanitize=undefined                # Link the UndefinedBehaviorSanitizer for detecting undefined behavior
+            # Code coverage options
+            -fprofile-arcs                      # Enable code coverage instrumentation
+            -ftest-coverage                     # Generate coverage test data
+    )
 endif ()
 
 if ("${COMPILE_WITH_THREAD_SANITIZERS}" STREQUAL "True")
+    message(STATUS "Sanitizers for thread enabled")
     list(APPEND compiler_options
-        -fsanitize=undefined                 # Detect undefined behavior like integer overflows and null dereferencing
-        # Uncomment if debugging threading issues:
-        -fsanitize=thread                   # Ensure thread safety by detecting data races
-)
+        -fsanitize=undefined                    # Detect undefined behavior like integer overflows and null dereferencing
+        -fsanitize=thread                       # Ensure thread safety by detecting data races
+    )
     list(APPEND linker_options
         -fsanitize=undefined                    # Link the UndefinedBehaviorSanitizer for detecting undefined behavior
-        # Uncomment if debugging threading issues:
         -fsanitize=thread                       # Link the ThreadSanitizer runtime for thread safety
-)
+    )
+endif ()
+
+# Sanity check
+if (("${COMPILE_WITH_MEMORY_SANITIZERS}" STREQUAL "True") AND ("${COMPILE_WITH_THREAD_SANITIZERS}" STREQUAL "True"))
+    message(FATAL_ERROR "Memory sanitizers and thread sanitizers are mutually exclusive!")
 endif ()
 
 add_compile_options(${compiler_options})

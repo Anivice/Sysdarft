@@ -5,90 +5,86 @@
 #include <atomic>
 #include <chrono>
 
-// Include your SysdarftMemoryAccess header
+// Your SysdarftCPUMemoryAccess header
 #include <SysdarftMemory.h>
 
-// A simple derived class that just uses the SysdarftCPUMemoryAccess
-class Memory : public SysdarftCPUMemoryAccess
+// A derived class that uses SysdarftCPUMemoryAccess
+class Memory final : public SysdarftCPUMemoryAccess
 {
 public:
     Memory() = default;
-
     const uint64_t TotalMemory = SysdarftCPUMemoryAccess::TotalMemory;
 
-    // Helper function for a random write
+    // Random write helper
     void random_write(std::mt19937 &gen,
                       std::uniform_int_distribution<uint64_t> &dist_addr,
                       std::uniform_int_distribution<size_t> &dist_len,
                       std::uniform_int_distribution<int> &dist_byte)
     {
-        // Pick a random address and length
-        uint64_t address = dist_addr(gen);
-        size_t   length  = dist_len(gen);
+        const uint64_t address = dist_addr(gen);
+        size_t length          = dist_len(gen);
 
-        // Ensure we don't go out of bounds
+        // Clip length to avoid going out of bounds
         if (address + length > TotalMemory) {
             length = TotalMemory - address;
         }
 
-        // Generate random data
+        // Create random data
         std::vector<char> buffer(length);
         for (auto &b : buffer) {
             b = static_cast<char>(dist_byte(gen));
         }
 
-        // Write to memory
+        // Write (we assume SysdarftCPUMemoryAccess is internally thread-safe)
         write_memory(address, buffer.data(), length);
     }
 
-    // Helper function for a random read
+    // Random read helper
     void random_read(std::mt19937 &gen,
                      std::uniform_int_distribution<uint64_t> &dist_addr,
                      std::uniform_int_distribution<size_t> &dist_len)
     {
-        // Pick a random address and length
-        uint64_t address = dist_addr(gen);
-        size_t   length  = dist_len(gen);
+        const uint64_t address = dist_addr(gen);
+        size_t length          = dist_len(gen);
 
-        // Ensure we don't go out of bounds
+        // Clip length to avoid going out of bounds
         if (address + length > TotalMemory) {
             length = TotalMemory - address;
         }
 
-        // Read from memory
+        // Read (we assume SysdarftCPUMemoryAccess is internally thread-safe)
         std::vector<char> buffer(length);
         read_memory(address, buffer.data(), length);
-
-        // We do NOT verify what's in 'buffer' here
-        // because other threads may have overwritten it.
-        // This test is purely to ensure no crashes, no corruption,
-        // and correct bounds/mutex usage.
+        // We don't verify buffer content here.
     }
 };
 
 int main()
 {
-    // Create the memory object (32 MB or whatever you have in SysdarftMemory)
+    // Instantiate your memory object.
+    // (E.g., if SysdarftCPUMemoryAccess has a fixed size of 32MB, it’s already set.)
     Memory memory;
 
-    // We will run multiple threads: half do random writes, half do random reads.
-    // Or you can do a 1:1 ratio, etc.
-    const unsigned NUM_THREADS = 8;
-    const unsigned NUM_WRITERS = NUM_THREADS / 2; // e.g., 4
-    const unsigned NUM_READERS = NUM_THREADS / 2; // e.g., 4
+    // Number of threads
+    constexpr unsigned NUM_THREADS = 8;
+    constexpr unsigned NUM_WRITERS = NUM_THREADS / 2; // e.g., 4
+    constexpr unsigned NUM_READERS = NUM_THREADS / 2; // e.g., 4
 
-    // Each thread will run until 'running' becomes false
+    // Atomic flag to control the run loop of each thread
     std::atomic<bool> running(true);
 
     // Writer thread function
     auto writer_func = [&memory, &running](unsigned thread_id)
     {
-        // Each thread uses its own RNG to avoid data races in the PRNG
+        // Each thread uses its own RNG engine -> no shared RNG => no data race here
         std::mt19937 gen(std::random_device{}() + thread_id);
+
+        // Distributions
         std::uniform_int_distribution<uint64_t> dist_addr(0, memory.TotalMemory - 1);
-        std::uniform_int_distribution<size_t>   dist_len(1, 512); // can tweak max length
+        std::uniform_int_distribution<size_t>   dist_len(1, 512);
         std::uniform_int_distribution<int>      dist_byte(0, 255);
 
+        // Loop until 'running' is set to false
         while (running.load(std::memory_order_relaxed)) {
             memory.random_write(gen, dist_addr, dist_len, dist_byte);
         }
@@ -97,9 +93,8 @@ int main()
     // Reader thread function
     auto reader_func = [&memory, &running](unsigned thread_id)
     {
-        // Each thread uses its own RNG
-        // Add 10000 to separate seeds from writers if you like
         std::mt19937 gen(std::random_device{}() + 10000 + thread_id);
+
         std::uniform_int_distribution<uint64_t> dist_addr(0, memory.TotalMemory - 1);
         std::uniform_int_distribution<size_t>   dist_len(1, 512);
 
@@ -108,32 +103,37 @@ int main()
         }
     };
 
-    // Create threads
-    std::vector<std::thread> pool;
-    pool.reserve(NUM_THREADS);
+    // We store threads here. Note that we only push_back in the main thread,
+    // and only after we finish spawning do we start them concurrently.
+    // Then we only join them after we've stopped them.
+    std::vector<std::thread> threads;
+    threads.reserve(NUM_THREADS);
 
-    // Launch writer threads
-    for (unsigned i = 0; i < NUM_WRITERS; i++) {
-        pool.emplace_back(writer_func, i);
-    }
-    // Launch reader threads
-    for (unsigned i = 0; i < NUM_READERS; i++) {
-        pool.emplace_back(reader_func, i);
+    // Spawn writer threads
+    for (unsigned i = 0; i < NUM_WRITERS; ++i) {
+        threads.emplace_back(writer_func, i);
     }
 
-    // Let them run for ~5 seconds
+    // Spawn reader threads
+    for (unsigned i = 0; i < NUM_READERS; ++i) {
+        threads.emplace_back(reader_func, i);
+    }
+
+    // Let the threads run for ~5 seconds
     std::this_thread::sleep_for(std::chrono::seconds(5));
 
     // Signal all threads to stop
     running.store(false, std::memory_order_relaxed);
 
-    // Join
-    for (auto &th : pool) {
-        th.join();
+    // Join all threads before exiting.
+    for (auto &t : threads) {
+        if (t.joinable()) {
+            t.join();
+        }
     }
 
-    std::cout << "All threads finished. If the program did not crash "
-              << "or throw exceptions, the read/write is likely thread-safe.\n";
+    std::cout << "All threads finished. If TSan reports no data races here, "
+              << "any future TSan warnings likely come from SysdarftCPUMemoryAccess.\n";
 
     return 0;
 }
