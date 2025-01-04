@@ -3,169 +3,34 @@
 #include <cstdio>
 #include <cstring>
 #include <mutex>
-#include <ncurses.h>
+#include <algorithm>
 #include <SysdarftCursesUI.h>
 #include <GlobalEvents.h>
-
-void SysdarftCursesUI::run(std::atomic<bool>& running)
-{
-    debug::set_thread_name("UI Runner");
-
-    // 1) Initialize ncurses
-    initscr();            // Start curses mode
-    cbreak();             // Disable line buffering, pass key presses directly
-    noecho();             // Do not echo typed characters automatically
-    keypad(stdscr, true); // Enable arrow keys, F-keys, etc.
-
-    // Non-blocking getch() so we can do other logic if needed
-    // (Alternatively, you could block, but this is common in interactive UIs.)
-    nodelay(stdscr, true);
-    // ^ Setting this to 'false' means getch() will block.
-    //   If you want partial concurrency or periodic checks, use 'true'.
-
-    // 2) Enable mouse events (for scrolling)
-    mousemask(ALL_MOUSE_EVENTS, nullptr);
-
-    // 3) Initialize video memory
-    {
-        std::lock_guard<std::mutex> lock(g_data_mutex);
-        init_video_memory();
-    }
-
-    // 4) Perform an initial rendering
-    {
-        std::lock_guard<std::mutex> lock(g_data_mutex);
-        render_screen();
-    }
-    refresh();
-
-    while (running)
-    {
-        // Wait for a key or mouse event
-        int ch = getch();
-
-        // Check if we actually got something
-        if (ch == ERR) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(3));
-            continue;
-        }
-
-        // Handle user input
-        {
-            // 1) Check for mouse events (wheel up/down)
-            if (ch == KEY_MOUSE)
-            {
-                MEVENT me;
-                if (getmouse(&me) == OK)
-                {
-                    // Wheel up -> bstate & BUTTON4_PRESSED
-                    // Wheel down -> bstate & BUTTON5_PRESSED
-                    if (me.bstate & BUTTON4_PRESSED)
-                    {
-                        if (offset_y > 0)
-                        {
-                            std::lock_guard<std::mutex> lock(g_data_mutex);
-                            --offset_y;
-                            render_screen();
-                            refresh();
-                        }
-                    }
-                    else if (me.bstate & BUTTON5_PRESSED)
-                    {
-                        std::lock_guard<std::mutex> lock(g_data_mutex);
-                        ++offset_y;
-                        render_screen();
-                        refresh();
-                    }
-                }
-            }
-            // 2) **Press Ctrl+L to re-render** (Ctrl+L is ASCII 12) (or it just resizes itself)
-            else if (ch == 12 || ch == 410)
-            {
-                std::lock_guard<std::mutex> lock(g_data_mutex);
-                // Just re-render the screen
-                render_screen();
-                refresh();
-            } else {
-                g_input_processor(ch);
-            }
-
-            if (video_memory_changed)
-            {
-                std::lock_guard<std::mutex> lock(g_data_mutex);
-                render_screen();
-                refresh();
-                video_memory_changed = false;
-            }
-
-            // 3 ms delay
-            std::this_thread::sleep_for(std::chrono::milliseconds(3));
-        }
-    }
-
-    // Clean up
-    endwin();
-}
 
 // -----------------------------------------------------
 // init_video_memory()
 //  Fill the buffer with dots and place a sample message
 // -----------------------------------------------------
-void SysdarftCursesUI::init_video_memory()
+void SysdarftCursesUI::init_video_memory() const
 {
-    for (int y = 0; y < V_HEIGHT; y++) {
-        for (int x = 0; x < V_WIDTH; x++) {
-            video_memory[x][y] = '.';
-        }
-    }
+    // Initialize all positions with a dot
+    std::fill_n(video_memory, V_WIDTH * V_HEIGHT, '.');
 
     // Place a message in the middle
-    const auto msg = "(Video Memory Not Initialized)";
-    const int msg_len     = static_cast<int>(std::strlen(msg));
-    const int mid_x       = (V_WIDTH  - msg_len) / 2;
-    constexpr int mid_y       = (V_HEIGHT - 1) / 2;
+    const auto msg = "(Video Memory Initialized)";
+    const int msg_len = static_cast<int>(std::strlen(msg));
+    int mid_x = (V_WIDTH - msg_len) / 2;
+    int mid_y = (V_HEIGHT - 1) / 2;
 
-    for (int i = 0; i < msg_len; i++) {
-        video_memory[mid_x + i][mid_y] = static_cast<unsigned char>(msg[i]);
-    }
-}
+    // Ensure mid_x and mid_y are within bounds
+    mid_x = std::max(0, std::min(mid_x, V_WIDTH - msg_len));
+    mid_y = std::max(0, std::min(mid_y, V_HEIGHT - 1));
 
-// -----------------------------------------------------
-// render_screen()
-//  Clear the terminal and draw the portion of video_memory
-// -----------------------------------------------------
-void SysdarftCursesUI::render_screen()
-{
-    int rows, cols;
-    getmaxyx(stdscr, rows, cols);
+    // Calculate the starting index for the message
+    const int start_index = mid_y * V_WIDTH + mid_x;
 
-    recalc_offsets(rows, cols);
-
-    curs_set(FALSE);
-    clear();
-
-    // Clip the drawing to what fits on the screen
-    const int max_x = (cols >= V_WIDTH)  ? V_WIDTH  : cols;
-    const int max_y = (rows >= V_HEIGHT) ? V_HEIGHT : rows;
-
-    for (int y = 0; y < max_y; y++)
-    {
-        for (int x = 0; x < max_x; x++)
-        {
-            const int sx = offset_x + x;
-            const int sy = offset_y + y;
-
-            if (sx >= 0 && sx < cols && sy >= 0 && sy < rows) {
-                mvaddch(sy, sx, video_memory[x][y]);
-            }
-        }
-    }
-
-    const auto [x, y] = current_cursor_position.load();
-    const int screen_x = offset_x + x;
-    const int screen_y = offset_y + y;
-    move(screen_y, screen_x);
-    curs_set(TRUE);
+    // Insert the message into video_memory
+    std::memcpy(&video_memory[start_index], msg, msg_len);
 }
 
 // -----------------------------------------------------
@@ -173,7 +38,7 @@ void SysdarftCursesUI::render_screen()
 //  If the terminal is larger than V_WIDTH/V_HEIGHT, center.
 //  Otherwise, clamp so we don't go off screen.
 // -----------------------------------------------------
-void SysdarftCursesUI::recalc_offsets(int rows, int cols)
+void SysdarftCursesUI::recalc_offsets(const int rows, const int cols)
 {
     // Horizontal
     if (cols >= V_WIDTH) {
@@ -200,39 +65,164 @@ void SysdarftCursesUI::recalc_offsets(int rows, int cols)
     }
 }
 
-void SysdarftCursesUI::initialize()
+// -----------------------------------------------------
+// render_screen()
+//  Clear the terminal and draw the portion of video_memory
+// -----------------------------------------------------
+void SysdarftCursesUI::render_screen()
 {
-    renderer.start();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    int rows, cols;
+    getmaxyx(stdscr, rows, cols);
+
+    // Recalculate offsets based on current terminal size
+    recalc_offsets(rows, cols);
+
+    // Hide the cursor during rendering for performance
+    curs_set(FALSE);
+    clear();
+
+    // Determine the drawable width and height based on terminal size and video_memory offsets
+    int drawable_width  = std::min(cols - offset_x, V_WIDTH);
+    int drawable_height = std::min(rows - offset_y, V_HEIGHT);
+
+    // Ensure drawable dimensions are non-negative
+    drawable_width  = std::max(drawable_width, 0);
+    drawable_height = std::max(drawable_height, 0);
+
+    // Iterate over each row and column within the drawable area
+    for (int y = 0; y < drawable_height; y++)
+    {
+        for (int x = 0; x < drawable_width; x++)
+        {
+            // Calculate the source position in video_memory
+            const int screen_x = offset_x + x;
+            const int screen_y = offset_y + y;
+
+            // Ensure the index is within video_memory bounds
+            if (const int index = y * V_WIDTH + x;
+                index >= 0 && index < V_WIDTH * V_HEIGHT)
+            {
+                mvaddch(screen_y, screen_x, video_memory[index]);
+            }
+        }
+    }
+
+    // Update the cursor position relative to the current offsets
+    const auto [cursor_x, cursor_y] = current_cursor_position;
+    const int screen_x = cursor_x - offset_x;
+
+    // Ensure the cursor is within the drawable area
+    if (const int screen_y = cursor_y - offset_y;
+        screen_x >= 0 && screen_x < drawable_width &&
+        screen_y >= 0 && screen_y < drawable_height)
+    {
+        move(screen_y, screen_x);
+    }
+
+    // Show the cursor again
+    curs_set(TRUE);
 }
 
+// -----------------------------------------------------
+// initialize()
+//  Initialize ncurses and set up the initial state
+// -----------------------------------------------------
+void SysdarftCursesUI::initialize()
+{
+    // 1) Initialize ncurses
+    initscr();                  // Start curses mode
+    cbreak();                   // Disable line buffering, pass key presses directly
+    noecho();                   // Do not echo typed characters automatically
+    keypad(stdscr, TRUE);       // Enable arrow keys, F-keys, etc.
+
+    // 2) Enable mouse events (for scrolling)
+    mousemask(ALL_MOUSE_EVENTS, nullptr);
+
+    // 3) Initialize video memory
+    {
+        std::lock_guard<std::mutex> lock(g_data_mutex);
+        init_video_memory();
+        render_screen();
+    }
+    refresh();
+}
+
+// -----------------------------------------------------
+// cleanup()
+//  Shutdown ncurses and perform cleanup
+// -----------------------------------------------------
 void SysdarftCursesUI::cleanup()
 {
-    log("[Curses] Stopping renderer...\n");
-    renderer.stop();
+    std::lock_guard<std::mutex> lock(g_data_mutex);
+    endwin();
     log("[Curses] Shutdown procedure finished!\n");
 }
 
+// -----------------------------------------------------
+// set_cursor()
+//  Set the cursor position within video_memory
+// -----------------------------------------------------
 void SysdarftCursesUI::set_cursor(const int x, const int y)
 {
-    const decltype(current_cursor_position.load()) pos = {.x = x, .y = y};
-    current_cursor_position = pos;
+    std::lock_guard<std::mutex> lock(g_data_mutex);
+    current_cursor_position.x = std::max(0, std::min(x, V_WIDTH - 1));
+    current_cursor_position.y = std::max(0, std::min(y, V_HEIGHT - 1));
 }
 
+// -----------------------------------------------------
+// get_cursor()
+//  Get the current cursor position within video_memory
+// -----------------------------------------------------
 CursorPosition SysdarftCursesUI::get_cursor()
 {
+    std::lock_guard<std::mutex> lock(g_data_mutex);
     return current_cursor_position;
 }
 
-void SysdarftCursesUI::display_char(int x, int y, int ch)
+// -----------------------------------------------------
+// set_cursor_visibility()
+//  Show or hide the cursor
+// -----------------------------------------------------
+void SysdarftCursesUI::set_cursor_visibility(const bool visible)
 {
     std::lock_guard<std::mutex> lock(g_data_mutex);
-    video_memory[x][y] = ch;
-    video_memory_changed = true;
+    curs_set(visible ? 1 : 0);
 }
 
-void SysdarftCursesUI::set_cursor_visibility(bool visible)
+// -----------------------------------------------------
+// commit_changes()
+//  Commit changes by re-rendering the screen and updating the cursor
+// -----------------------------------------------------
+void SysdarftCursesUI::commit_changes()
 {
     std::lock_guard<std::mutex> lock(g_data_mutex);
-    curs_set(visible);
+
+    // Hide cursor temporarily to prevent flickering
+    curs_set(FALSE);
+
+    // Re-render the screen with updated video_memory
+    render_screen();
+    refresh();
+
+    // Calculate screen position for cursor based on current offsets
+    const auto [x, y] = current_cursor_position;
+    const int screen_x = x - offset_x;
+    const int screen_y = y - offset_y;
+
+    // Ensure the cursor is within the drawable area before moving
+    int rows, cols;
+    getmaxyx(stdscr, rows, cols);
+    int drawable_width  = std::min(cols, V_WIDTH  - offset_x);
+    int drawable_height = std::min(rows, V_HEIGHT - offset_y);
+    drawable_width  = std::max(drawable_width, 0);
+    drawable_height = std::max(drawable_height, 0);
+
+    if (screen_x >= 0 && screen_x < drawable_width &&
+        screen_y >= 0 && screen_y < drawable_height)
+    {
+        move(screen_y, screen_x);
+    }
+
+    // Show cursor again
+    curs_set(TRUE);
 }

@@ -213,8 +213,7 @@ enable_testing()
 function(add_unit_test TARGET_NAME TEST_FILE)
     add_executable(${TARGET_NAME} ${TEST_FILE})
     target_link_libraries(${TARGET_NAME} PUBLIC sysdarft)
-# FIXME: WRAPPER PERMISSION INCORRECT
-    add_test(NAME "Unit Test: ${TARGET_NAME}" 
+    add_test(NAME "Unit Test: ${TARGET_NAME}"
         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/wrpExpect.sh 
             ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME})
 endfunction()
@@ -231,6 +230,7 @@ add_unit_test(test.message_map tests/test.message_map.cpp)
 add_unit_test(test.coding tests/test.coding.cpp)
 add_unit_test(test.register tests/test.register.cpp)
 add_unit_test(test.memory tests/test.memory.cpp)
+set_tests_properties("Unit Test: test.memory" PROPERTIES LABELS "ThreadSanitizerExclude")
 add_unit_test(test.operand tests/test.operand.cpp)
 add_unit_test(test.decode tests/test.decode.cpp)
 add_unit_test(test.executor tests/test.executor.cpp)
@@ -247,6 +247,6 @@ link_libraries(sysdarft)
 # Modules
 if ("${COMPILE_GUI_BACKEND}" STREQUAL "True")
     add_subdirectory(gui_module)
-    add_unit_test(test.backend tests/test.backend.cpp)
-    add_dependencies(test.backend sysdarft_backend)
+#    add_unit_test(test.backend tests/test.backend.cpp)
+#    add_dependencies(test.backend sysdarft_backend)
 endif ()

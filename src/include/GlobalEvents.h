@@ -12,6 +12,7 @@
 #define UI_DISPLAY_CHAR_METHOD_NAME             "display_char"
 #define UI_SET_CURSOR_VISIBILITY_METHOD_NAME    "set_cursor_visibility"
 #define UI_INPUT_PROCESSOR_METHOD_NAME          "input_processor"
+#define UI_GET_INPUT                            "get_input"
 
 extern SYSDARFT_EXPORT_SYMBOL SysdarftMessageMap GlobalEventProcessor;
 
@@ -44,5 +45,7 @@ struct SYSDARFT_EXPORT_SYMBOL CursorPosition
 #define g_ui_set_cur_vsb_install(instance, method) _g_method_install(UI_INSTANCE_NAME, instance, UI_SET_CURSOR_VISIBILITY_METHOD_NAME, method)
 #define g_input_processor(ch) GlobalEventProcessor(UI_INSTANCE_NAME, UI_INPUT_PROCESSOR_METHOD_NAME)(ch)
 #define g_input_processor_install(instance, method) _g_method_install(UI_INSTANCE_NAME, instance, UI_INPUT_PROCESSOR_METHOD_NAME, method)
+#define g_get_input() std::any_cast<int>(GlobalEventProcessor(UI_INSTANCE_NAME, UI_GET_INPUT)())
+#define g_get_input_install(instance, method) _g_method_install(UI_INSTANCE_NAME, instance, UI_GET_INPUT, method)
 
 #endif //GLOBAL_EVENT_H

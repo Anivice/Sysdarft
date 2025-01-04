@@ -1,51 +1,128 @@
-// main.cpp
-#include "gui_module_head.h"
+#include <iostream>
+#include <cstring>
+#include <stdexcept>
+#include <rfb/rfb.h>
 
-// -----------------------------------------------------------------------------
-// 6) The actual global object, plus C ABI for module_init / module_exit
-static backend backend_;
+// Constants
+constexpr int FRAMEBUFFER_WIDTH = 800;
+constexpr int FRAMEBUFFER_HEIGHT = 600;
 
-static class input_processor {
+// Class representing the VNC Minimal Server
+class VNCMiniServer {
 public:
-    void input_monitor(int key)
+    VNCMiniServer(int argc, char** argv)
+        : server_(nullptr)
     {
-        auto cursor_pos = g_ui_get_cursor();
-        g_ui_display_char(cursor_pos.x, cursor_pos.y, key);
-
-        int linear = cursor_pos.y * V_WIDTH + cursor_pos.x;
-        linear++;
-        const auto cursor_pos_y = (linear / V_WIDTH) & 31;
-        const auto cursor_pos_x = (linear % V_WIDTH) & 127;
-        cursor_pos = { .x = cursor_pos_x, .y = cursor_pos_y };
-
-        g_ui_set_cursor(cursor_pos.x, cursor_pos.y);
+        setupServer(argc, argv);
     }
-} input_dummy;
 
-extern "C" {
-int SYSDARFT_EXPORT_SYMBOL module_init(void);
-void SYSDARFT_EXPORT_SYMBOL module_exit(void);
-std::vector<std::string> SYSDARFT_EXPORT_SYMBOL module_dependencies(void);
-}
+    ~VNCMiniServer()
+    {
+        if (server_) {
+            rfbScreenCleanup(server_);
+        }
+    }
 
-std::vector<std::string> SYSDARFT_EXPORT_SYMBOL module_dependencies(void) {
-    return {};
-}
+    void run()
+    {
+        std::cout << "Entering server loop.\n";
+        while (rfbIsActive(server_))
+        {
+            if (server_->bitsPerPixel != 0)
+            {
+                // Cast the framebuffer to a 32-bit integer array for efficient assignment
+                auto* fb = reinterpret_cast<uint32_t*>(server_->frameBuffer);
+                constexpr size_t total_pixels = FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT;
 
-int SYSDARFT_EXPORT_SYMBOL module_init(void)
+                // Assign the blue color to each pixel
+                for (size_t i = 0; i < total_pixels; ++i)
+                {
+                    const uint32_t blue_pixel = 0xFF0000FF;
+                    fb[i] = blue_pixel;
+                }
+
+                // Mark the entire screen as modified to ensure the client updates
+                rfbMarkRectAsModified(server_, 0, 0, server_->width, server_->height);
+            }
+
+            // Process events with a timeout of 100 ms
+            rfbProcessEvents(server_, 100000); // 100 ms timeout
+        }
+
+        std::cout << "Server loop exited.\n";
+    }
+
+    [[nodiscard]] int getPort() const {
+        return server_->port;
+    }
+
+private:
+    rfbScreenInfoPtr server_;
+
+    void setupServer(int argc, char** argv) {
+        // Initialize the VNC server with 32 bits per pixel, 24 depth initially
+        server_ = rfbGetScreen(&argc, argv, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT, 32, 24, 0);
+        if (!server_) {
+            throw std::runtime_error("Failed to initialize VNC server.");
+        }
+
+        // Manually set pixel format fields
+        server_->serverFormat.bitsPerPixel = 32;
+        server_->serverFormat.depth = 32; // Changed from 24 to 32 to match bitsPerPixel
+        server_->serverFormat.bigEndian = 0;
+        server_->serverFormat.trueColour = 1;
+        server_->serverFormat.redMax = 255;
+        server_->serverFormat.greenMax = 255;
+        server_->serverFormat.blueMax = 255;
+        server_->serverFormat.redShift = 16;
+        server_->serverFormat.greenShift = 8;
+        server_->serverFormat.blueShift = 0;
+
+        // Correctly set the standalone bitsPerPixel and depth fields
+        server_->bitsPerPixel = server_->serverFormat.bitsPerPixel;
+        server_->depth = server_->serverFormat.depth;
+
+        // Log pixel format
+        std::cout << "Pixel Format:\n"
+                  << "BitsPerPixel: " << static_cast<int>(server_->serverFormat.bitsPerPixel) << "\n"
+                  << "Depth: " << static_cast<int>(server_->serverFormat.depth) << "\n"
+                  << "BigEndian: " << static_cast<int>(server_->serverFormat.bigEndian) << "\n"
+                  << "TrueColour: " << static_cast<int>(server_->serverFormat.trueColour) << "\n"
+                  << "RedMax: " << static_cast<int>(server_->serverFormat.redMax) << "\n"
+                  << "GreenMax: " << static_cast<int>(server_->serverFormat.greenMax) << "\n"
+                  << "BlueMax: " << static_cast<int>(server_->serverFormat.blueMax) << "\n"
+                  << "RedShift: " << static_cast<int>(server_->serverFormat.redShift) << "\n"
+                  << "GreenShift: " << static_cast<int>(server_->serverFormat.greenShift) << "\n"
+                  << "BlueShift: " << static_cast<int>(server_->serverFormat.blueShift) << "\n";
+
+        // Allocate framebuffer (32 bits per pixel)
+        server_->frameBuffer = static_cast<char*>(malloc(FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4));
+        if (!server_->frameBuffer) {
+            throw std::runtime_error("Failed to allocate framebuffer.");
+        }
+        std::memset(server_->frameBuffer, 0, FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4); // Initialize to black
+
+        // Set framebuffer format properties
+        server_->desktopName = const_cast<char*>("VNC Minimal Server");
+        server_->alwaysShared = TRUE;
+
+        // Initialize the server
+        rfbInitServer(server_);
+    }
+};
+
+int main(int argc, char** argv)
 {
-    g_ui_cleanup_install(backend_, cleanup);
-    g_ui_initialize_install(backend_, initialize);
-    g_ui_set_cursor_install(backend_, set_cursor);
-    g_ui_get_cursor_install(backend_, get_cursor);
-    g_ui_display_char_install(backend_, display_char);
-    g_ui_set_cur_vsb_install(backend_, set_cursor_visibility);
-    g_input_processor_install(input_dummy, input_monitor);
-    log("UI instance overridden!\n");
-    return 0;
-}
+    try {
+        // Create and run the minimal VNC server
+        VNCMiniServer server(argc, argv);
+        std::cout << "Starting VNC minimal server on port " << server.getPort() << "...\n";
+        server.run();
+    }
+    catch (const std::exception& ex) {
+        std::cerr << "Error: " << ex.what() << "\n";
+        return EXIT_FAILURE;
+    }
 
-void SYSDARFT_EXPORT_SYMBOL module_exit(void)
-{
-    log("Backend module exited!\n");
+    return EXIT_SUCCESS;
 }

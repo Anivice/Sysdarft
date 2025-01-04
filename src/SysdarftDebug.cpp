@@ -304,14 +304,11 @@ std::string initialize_error_msg(const std::string& msg, const int _errno)
     return ">>> " + msg + " (errno=" + std::to_string(_errno) + ") <<<";
 }
 
-std::string last_sysdarft_error_;
-
 SysdarftBaseError::SysdarftBaseError(
     const std::string& msg)
     : runtime_error(initialize_error_msg(msg, errno))
     , cur_errno(errno)
 {
-    last_sysdarft_error_ = this->runtime_error::what();
 }
 
 bool isDigits(const std::string& str)
@@ -536,35 +533,3 @@ std::string debug::get_verbose_info()
 
     return ret.str();
 }
-
-void handle_sigabrt(int /* signum */)
-{
-    const char* prefix
-        = "[FATAL ERROR] Program is terminated using SIGABRT (Signal Abort)!\n";
-#ifdef __DEBUG__
-    debug::verbose = true;
-    const SysdarftBaseError Error(
-        "Abnormal termination!\nLast captured error:\n" + last_sysdarft_error_
-        + "\n");
-    const std::string str = Error.what();
-    write(STDERR_FILENO, prefix, strlen(prefix));
-    write(STDERR_FILENO, str.c_str(), str.length() - 1);
-#endif // __DEBUG__
-    _exit(EXIT_FAILURE);
-}
-
-class SysdarftDebugInitialization {
-public:
-    SysdarftDebugInitialization()
-    {
-        struct sigaction sa { };
-        sa.sa_handler = handle_sigabrt;
-        sigemptyset(&sa.sa_mask);
-        sa.sa_flags = 0;
-
-        if (sigaction(SIGABRT, &sa, nullptr) == -1) {
-            perror("Error setting up SIGABRT handler");
-            exit(EXIT_FAILURE);
-        }
-    }
-} SysdarftDebugInitializationInstance;
