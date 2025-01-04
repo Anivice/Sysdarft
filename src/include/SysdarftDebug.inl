@@ -4,11 +4,11 @@
 #include <iostream>
 
 template <typename... Strings>
-debug::cmd_status debug::exec_command(const std::string &cmd,
+debug::cmd_status debug::exec_command(const std::string &cmd, const std::string &input,
                                       Strings &&...args)
 {
     const std::vector<std::string> vec{std::forward<Strings>(args)...};
-    return _exec_command(cmd, vec);
+    return _exec_command(cmd, vec, input);
 }
 
 template <typename Container>

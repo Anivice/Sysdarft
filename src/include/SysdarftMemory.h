@@ -10,11 +10,7 @@
  * 0xA0000 - 0xC17FF [CONFIGURATION] - 134KB
  *                    - 0xA0000 - 0xA1000 [4KB Interruption Table: 512 Interrupts]
  *                    - 0xB8000 - 0xB9000 [4KB Video Memory]
- *                                        - 0xB8000 - 0xB8F60 [Video Memory Region]
- *                                        - 0xB8F61 - 0xB9000 [GPU Registers]
- *                                                            - 0xB8F61 - 0xB8F62 [Cursor X]
- *                                                            - 0xB8F63 - 0xB8F64 [Cursor Y]
- *                                                            - 0xB8F65           [Cursor Visibility]
+ *                                        - 0xB8000 - 0xB87D0 [Video Memory Region]
  * 0xC1800 - 0xFFFFF [FIRMWARE]      - 250KB
  */
 #define BOOT_LOADER_START   0x00000

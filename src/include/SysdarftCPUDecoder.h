@@ -111,6 +111,7 @@ protected:
 
 public:
     [[nodiscard]] uint64_t get_val() { return do_access_operand_based_on_table(); }
+    [[nodiscard]] uint64_t get_effective_addr() const { return OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryAddress; }
     void set_val(const uint64_t val) { store_value_to_operand_based_on_table(val); }
     [[nodiscard]] std::string get_literal() const { return OperandReferenceTable.literal; }
     explicit OperandType(DecoderDataAccess & Access_) : Access(Access_) { do_decode_operand(); }

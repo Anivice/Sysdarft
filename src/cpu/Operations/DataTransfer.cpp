@@ -205,3 +205,9 @@ void SysdarftCPUInstructionExecutor::movs(__uint128_t, WidthAndOperandsType & Wi
     SysdarftCPUMemoryAccess::write_memory(dest, buffer, count);
     delete[] buffer;
 }
+
+void SysdarftCPUInstructionExecutor::lea(__uint128_t, WidthAndOperandsType & WidthAndOperands)
+{
+    const uint64_t effective_addr = WidthAndOperands.second[1].get_effective_addr();
+    WidthAndOperands.second[0].set_val(effective_addr);
+}

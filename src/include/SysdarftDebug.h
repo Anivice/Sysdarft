@@ -30,10 +30,11 @@ namespace debug
     };
 
     // execute a command from system shell and return its information
-    cmd_status SYSDARFT_EXPORT_SYMBOL _exec_command(const std::string& cmd, const std::vector<std::string>& args);
+    cmd_status SYSDARFT_EXPORT_SYMBOL _exec_command(const std::string &cmd,
+        const std::vector<std::string> &args, const std::string &input);
     // system shell command executor, wrapper for `_exec_command`
     template <typename... Strings>
-    cmd_status exec_command(const std::string& cmd, Strings&&... args);
+    cmd_status exec_command(const std::string& cmd, const std::string &input, Strings&&... args);
 
     // returns current timesstamp
     std::string SYSDARFT_EXPORT_SYMBOL get_current_date_time();

@@ -28,6 +28,7 @@ SysdarftCPUInstructionExecutor::SysdarftCPUInstructionExecutor()
     make_instruction_execution_procedure(OPCODE_ENTER, &SysdarftCPUInstructionExecutor::enter);
     make_instruction_execution_procedure(OPCODE_LEAVE, &SysdarftCPUInstructionExecutor::leave);
     make_instruction_execution_procedure(OPCODE_MOVS, &SysdarftCPUInstructionExecutor::movs);
+    make_instruction_execution_procedure(OPCODE_LEA, &SysdarftCPUInstructionExecutor::lea);
 
     // Logic and Bitwise
     make_instruction_execution_procedure(OPCODE_AND, &SysdarftCPUInstructionExecutor::and_);
@@ -41,6 +42,10 @@ SysdarftCPUInstructionExecutor::SysdarftCPUInstructionExecutor()
     make_instruction_execution_procedure(OPCODE_RCL, &SysdarftCPUInstructionExecutor::rcl);
     make_instruction_execution_procedure(OPCODE_RCR, &SysdarftCPUInstructionExecutor::rcr);
 
+    make_instruction_execution_procedure(OPCODE_JMP, &SysdarftCPUInstructionExecutor::jmp);
+    make_instruction_execution_procedure(OPCODE_CALL, &SysdarftCPUInstructionExecutor::call);
+    make_instruction_execution_procedure(OPCODE_RET, &SysdarftCPUInstructionExecutor::ret);
+    make_instruction_execution_procedure(OPCODE_JE, &SysdarftCPUInstructionExecutor::je);
 
     // Debug Handler
     bindBreakpointHandler(this, &SysdarftCPUInstructionExecutor::default_breakpoint_handler);

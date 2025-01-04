@@ -5,7 +5,6 @@
 #include <thread>
 #include <cstdint>
 #include <cctype>
-#include <iomanip>
 #include <charconv>
 #include <optional>
 #include <system_error>
@@ -116,15 +115,14 @@ void process_base16(std::string & input)
 
 std::string execute_bc(const std::string& input)
 {
-    std::stringstream cmd;
-    cmd << "echo \"" << input << "\" | bc";
-    const auto result = debug::exec_command("bash", "-c", cmd.str().c_str());
-    auto cmd_str = cmd.str();
-    if (result.exit_status != 0) {
-        throw SysdarftCodeExpressionError(input + " failed, exit: " + std::to_string(result.exit_status) + ": " + result.fd_stderr);
+    const auto [fd_stdout, fd_stderr, exit_status] =
+        debug::exec_command("/usr/bin/bc", input);
+    if (exit_status != 0) {
+        throw SysdarftCodeExpressionError(input + " failed, exit: " +
+            std::to_string(exit_status) + ": " + fd_stderr);
     }
 
-    return result.fd_stdout;
+    return fd_stdout;
 }
 
 // Function to extract trailing digits and convert to uint32_t
@@ -274,7 +272,15 @@ void encode_memory(std::vector<uint8_t> & buffer, const parsed_target_t & input)
             }
 
             // Not a 64bit register
-            if (tmp != "%FER" && param != "%SP" && param != "%DP" && param != "%ESP") {
+            if (tmp != "%FER"
+                && param != "%SB"
+                && param != "%SP"
+                && param != "%CB"
+                && param != "%DB"
+                && param != "%DP"
+                && param != "%EB"
+                && param != "%EP")
+            {
                 throw SysdarftCodeExpressionError("Not a 64bit Register: " + param);
             }
 

@@ -42,6 +42,20 @@
 #define OPCODE_ENTER    (0x26)
 #define OPCODE_LEAVE    (0x27)
 #define OPCODE_MOVS     (0x28)
+#define OPCODE_LEA      (0x29)
+
+#define OPCODE_JMP      (0x30)
+#define OPCODE_CALL     (0x31)
+#define OPCODE_RET      (0x32)
+#define OPCODE_JE       (0x33)
+#define OPCODE_JNE      (0x34)
+#define OPCODE_JB       (0x35)
+#define OPCODE_JL       (0x36)
+#define OPCODE_JBE      (0x37)
+#define OPCODE_JLE      (0x38)
+#define OPCODE_INT      (0x39)
+#define OPCODE_INT3     (0x3A)
+#define OPCODE_IRET     (0x3B)
 
 // Initialize the instruction to opcode mapping
 const std::unordered_map<std::string, std::map<std::string, uint64_t>> instruction_map = {
@@ -260,8 +274,8 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
     },
 
     {"LEA", {
-                 {ENTRY_OPCODE, 0x29},
-                 {ENTRY_ARGUMENT_COUNT, 1},
+                 {ENTRY_OPCODE, OPCODE_LEA},
+                 {ENTRY_ARGUMENT_COUNT, 2},
                  {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
              }
     },
@@ -269,79 +283,72 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
     ////////////////////////////////////////////////////////////////////////////////////////////
 
     {"JMP", {
-         {ENTRY_OPCODE, 0x30},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_OPCODE, OPCODE_JMP},
+         {ENTRY_ARGUMENT_COUNT, 2},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"CALL", {
-         {ENTRY_OPCODE, 0x31},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_OPCODE, OPCODE_CALL},
+         {ENTRY_ARGUMENT_COUNT, 2},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"RET", {
-         {ENTRY_OPCODE, 0x32},
+         {ENTRY_OPCODE, OPCODE_RET},
          {ENTRY_ARGUMENT_COUNT, 0},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
-    {"LOOP", {
-         {ENTRY_OPCODE, 0x33},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
-     }
-    },
-
     {"JE", {
-         {ENTRY_OPCODE, 0x34},
+         {ENTRY_OPCODE, OPCODE_JE},
          {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"JNE", {
          {ENTRY_OPCODE, 0x35},
          {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"JB", {
          {ENTRY_OPCODE, 0x36},
          {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"JL", {
          {ENTRY_OPCODE, 0x37},
          {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"JBE", {
          {ENTRY_OPCODE, 0x38},
          {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"JLE", {
          {ENTRY_OPCODE, 0x39},
          {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"INT", {
          {ENTRY_OPCODE, 0x3A},
          {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 

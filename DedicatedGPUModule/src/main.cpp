@@ -3,6 +3,9 @@
 #include <stdexcept>
 #include <rfb/rfb.h>
 
+// supposedly a GPU module to replace curses and supports graphical interfaces,
+// though not ganna be implemented anytime soon since the CPU itself is still real-mode only
+
 // Constants
 constexpr int FRAMEBUFFER_WIDTH = 800;
 constexpr int FRAMEBUFFER_HEIGHT = 600;

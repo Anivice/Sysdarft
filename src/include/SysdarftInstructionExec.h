@@ -99,6 +99,7 @@ protected:
     add_instruction_exec(enter);
     add_instruction_exec(leave);
     add_instruction_exec(movs);
+    add_instruction_exec(lea);
 
     // Logic and Bitwise
     add_instruction_exec(and_);
@@ -112,6 +113,20 @@ protected:
     add_instruction_exec(rcl);
     add_instruction_exec(rcr);
 
+    // Control Flow
+    add_instruction_exec(jmp);
+    add_instruction_exec(call);
+    add_instruction_exec(ret);
+    add_instruction_exec(je);
+    add_instruction_exec(jne);
+    add_instruction_exec(jb);
+    add_instruction_exec(jl);
+    add_instruction_exec(jbe);
+    add_instruction_exec(jle);
+    add_instruction_exec(int_);
+    add_instruction_exec(int3);
+    add_instruction_exec(iret);
+    
     // initialization
     SysdarftCPUInstructionExecutor();
 

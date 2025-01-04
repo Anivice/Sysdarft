@@ -41,22 +41,12 @@ public:
         bindIsBreakHere(this, &Exec::h_is_break_here);
 
         std::vector<uint8_t> buffer;
-        encode_instruction(buffer, "mov .64bit <*1&64($(0), $(0), $(0))>, <$(114514)>");
-        encode_instruction(buffer, "mov .64bit <%FER1>, <$(0xFFF)>");
-        encode_instruction(buffer, "xchg .64bit <*1&64($(0), $(0), $(0))>, <%FER1>");
         encode_instruction(buffer, "mov .64bit <%SP>, <$(0xFFFF)>");
-        encode_instruction(buffer, "push .64bit <%FER1>");
-        encode_instruction(buffer, "pop .64bit <%FER2>");
-        encode_instruction(buffer, "pushall");
-        encode_instruction(buffer, "div .64bit <%FER1>");
-        encode_instruction(buffer, "popall");
-        encode_instruction(buffer, "enter .64bit <$(0xFF)>");
-        encode_instruction(buffer, "leave");
-        encode_instruction(buffer, "lea .64bit <%FER1>, <*16&64($(0x00), $(0x00), $(0x01))>");
-        encode_instruction(buffer, "mov .64bit <%DP>, <%FER1>");
-        encode_instruction(buffer, "mov .64bit <%EP>, <$(0xC1800)>");
-        encode_instruction(buffer, "mov .64bit <%FER0>, <$(0xFFF)>");
-        encode_instruction(buffer, "movs");
+        encode_instruction(buffer, "nop");
+        encode_instruction(buffer, "call <%CB>, <$(" + std::to_string(0xC1800 + 44) + ")>");
+        encode_instruction(buffer, "jmp <%CB>, <$(0xC1800)>");
+        encode_instruction(buffer, "mov .64bit <%FER0>, <$(0xC1800)>");
+        encode_instruction(buffer, "ret");
 
         uint64_t off = BIOS_START;
         for (const auto & code : buffer) {
@@ -71,5 +61,6 @@ public:
 
 int main()
 {
+    debug::verbose = true;
     Exec base;
 }

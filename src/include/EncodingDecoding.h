@@ -36,6 +36,13 @@ public:
         SysdarftBaseError("Cannot parse Target expression: " + message) { }
 };
 
+class SysdarftAssemblerError final : public SysdarftBaseError
+{
+public:
+    explicit SysdarftAssemblerError(const std::string & message) :
+        SysdarftBaseError("Assembler cannot parse the code expression: " + message) { }
+};
+
 class SysdarftInvalidArgument final : public SysdarftBaseError
 {
 public:
@@ -127,7 +134,7 @@ inline uint64_t code_buffer_pop64(std::vector<uint8_t> & buffer) {
 
 struct SYSDARFT_EXPORT_SYMBOL parsed_target_t
 {
-    enum { NOTaValidType, REGISTER, CONSTANT, MEMORY } TargetType { };
+    enum { NOTaValidType, REGISTER, CONSTANT, MEMORY, CODE_POSITION } TargetType { };
     std::string RegisterName { };
     std::string ConstantExpression { };
 
@@ -145,5 +152,15 @@ void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> &, const std
 void decode_target(std::vector<std::string> &, std::vector<uint8_t> &);
 void SYSDARFT_EXPORT_SYMBOL decode_instruction(std::vector < std::string > &,
     std::vector<uint8_t> &);
+
+void SYSDARFT_EXPORT_SYMBOL SysdarftCompile(std::vector < std::vector <uint8_t> > & code,
+    std::basic_iostream<char>& file, uint64_t org, std::map < std::string,
+        std::pair < uint64_t /* line position */, std::vector < uint64_t > >
+    > & defined_line_marker);
+
+std::string SYSDARFT_EXPORT_SYMBOL ProProcessor(std::basic_iostream<char>& file,
+        uint64_t & org,
+        std::map < std::string, std::pair < uint64_t /* line position */,
+            std::vector < uint64_t > > > & defined_line_marker);
 
 #endif // INSTRUCTIONS_H

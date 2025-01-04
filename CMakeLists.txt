@@ -178,6 +178,7 @@ add_library(SysdarftCPU OBJECT
         src/cpu/Operations/Misc.cpp
         src/cpu/Operations/DataTransfer.cpp
         src/cpu/Operations/LogicalAndBitwise.cpp
+        src/cpu/Operations/ControlFlow.cpp
         src/include/SysdarftIOHub.h
         src/include/SysdarftCPU.h
 )
@@ -190,6 +191,8 @@ add_library(SysdarftCoding OBJECT
         src/coding/DecodeTarget.cpp
         src/coding/EncodeInstruction.cpp
         src/coding/DecodeInstruction.cpp
+        src/coding/Assembler.cpp
+        src/coding/PreProcessor.cpp
 )
 target_include_directories(SysdarftCoding PUBLIC src/include)
 
@@ -220,6 +223,7 @@ endfunction()
 
 add_unit_test(test.error tests/test.error.cpp)
 add_unit_test(test.log tests/test.log.cpp)
+add_unit_test(test.execmd tests/test.execmd.cpp)
 add_unit_test(test.curses tests/test.curses.cpp)
 
 add_library(ExampleModule SHARED tests/example_module.cpp)
@@ -237,6 +241,8 @@ add_unit_test(test.executor tests/test.executor.cpp)
 add_unit_test(test.arithmetic tests/test.arithmetic.cpp)
 add_unit_test(test.lgAbit tests/test.lgAbit.cpp)
 add_unit_test(test.dataTsf tests/test.dataTsf.cpp)
+add_unit_test(test.assembler tests/test.assembler.cpp)
+add_unit_test(test.controlflow tests/test.controlflow.cpp)
 
 # Console Executable:
 add_executable(sysdarft-system src/SysdarftMain.cpp)
@@ -246,7 +252,7 @@ link_libraries(sysdarft)
 
 # Modules
 if ("${COMPILE_GUI_BACKEND}" STREQUAL "True")
-    add_subdirectory(gui_module)
+    add_subdirectory(DedicatedGPUModule)
 #    add_unit_test(test.backend tests/test.backend.cpp)
 #    add_dependencies(test.backend sysdarft_backend)
 endif ()

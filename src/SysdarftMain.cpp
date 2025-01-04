@@ -74,6 +74,9 @@ void print_help(const char *program_name)
         << "    -v, --version     Show version information\n"
         << "    -m, --module      Load a configuration file\n"
         << "    -V, --verbose     Enable verbose mode. Additional debug messages will be printed\n"
+        << "    -c, --compile     Add a file to compilation list\n"
+        << "    -o, --output      Output file\n"
+        << "    -f, --format      File formant for compilation. They can be bin, exe, or sys.\n"
         << std::endl;
 }
 
@@ -93,6 +96,9 @@ int main(int argc, char** argv)
         {"version", no_argument,       nullptr, 'v'},
         {"module",  required_argument, nullptr, 'm'},
         {"verbose", no_argument,       nullptr, 'V'},
+        {"compile", required_argument, nullptr, 'c'},
+        {"output", required_argument,  nullptr, 'o'},
+        {"format", required_argument,  nullptr, 'f'},
         {nullptr,   0,                 nullptr,  0 }
     };
 
@@ -129,9 +135,21 @@ int main(int argc, char** argv)
         // Handle --module option
         if (parsed_options.contains("module"))
         {
-            const auto module_path = parsed_options["module"];
-            for (const auto & path : module_path) {
+            for (const auto module_path = parsed_options["module"];
+                const auto & path : module_path)
+            {
                 loaded_modules.emplace_back(std::make_unique<SysdarftModule>(path));
+            }
+        }
+
+        if (parsed_options.contains("compile"))
+        {
+            const auto output_file = parsed_options["output"];
+            const auto format = parsed_options["format"];
+
+            for (const auto src_files = parsed_options["compile"];
+                const auto & src_file : src_files)
+            {
             }
         }
 
