@@ -33,7 +33,6 @@ public:
         store<FullyExtendedRegisterType, 13>(9);
         store<FullyExtendedRegisterType, 14>(10);
         store<FullyExtendedRegisterType, 15>(11);
-        store<FPURegisterType, 3>(3.14159265358979323846);
         store<StackPointerType>(0xFFFF);
     }
 };

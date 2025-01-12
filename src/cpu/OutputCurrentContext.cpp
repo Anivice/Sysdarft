@@ -223,48 +223,6 @@ void SysdarftCPUInstructionExecutor::show_context()
         log("FER15 = 0x" + to_hex_string(FER15) + "\n");
     }
 
-    // --- 6x FPU registers (XMM0..XMM5) are double
-    //     Show them as double with up to 10 digits after decimal
-    {
-        auto XMM0 = SysdarftRegister::load<FPURegisterType, 0>();
-        auto XMM1 = SysdarftRegister::load<FPURegisterType, 1>();
-        auto XMM2 = SysdarftRegister::load<FPURegisterType, 2>();
-        auto XMM3 = SysdarftRegister::load<FPURegisterType, 3>();
-        auto XMM4 = SysdarftRegister::load<FPURegisterType, 4>();
-        auto XMM5 = SysdarftRegister::load<FPURegisterType, 5>();
-
-        {
-            std::ostringstream oss;
-            oss << std::fixed << std::setprecision(10) << "XMM0 = " << XMM0;
-            log(oss.str(), "\n");
-        }
-        {
-            std::ostringstream oss;
-            oss << std::fixed << std::setprecision(10) << "XMM1 = " << XMM1;
-            log(oss.str(), "\n");
-        }
-        {
-            std::ostringstream oss;
-            oss << std::fixed << std::setprecision(10) << "XMM2 = " << XMM2;
-            log(oss.str(), "\n");
-        }
-        {
-            std::ostringstream oss;
-            oss << std::fixed << std::setprecision(10) << "XMM3 = " << XMM3;
-            log(oss.str(), "\n");
-        }
-        {
-            std::ostringstream oss;
-            oss << std::fixed << std::setprecision(10) << "XMM4 = " << XMM4;
-            log(oss.str(), "\n");
-        }
-        {
-            std::ostringstream oss;
-            oss << std::fixed << std::setprecision(10) << "XMM5 = " << XMM5;
-            log(oss.str(), "\n");
-        }
-    }
-
     // --- Flag Register (bitfield) ---
     {
         auto flags = SysdarftRegister::load<FlagRegisterType>();

@@ -180,7 +180,9 @@ add_library(SysdarftCPU OBJECT
         src/cpu/Operations/LogicalAndBitwise.cpp
         src/cpu/Operations/ControlFlow.cpp
         src/include/SysdarftIOHub.h
+        src/cpu/SysdarftCPUInterruption.cpp
         src/include/SysdarftCPU.h
+        src/cpu/Operations/IOH.cpp
 )
 target_include_directories(SysdarftCPU PUBLIC src/include src/cpu/include)
 set_target_properties(SysdarftCPU PROPERTIES LINKER_LANGUAGE CXX)
@@ -196,10 +198,19 @@ add_library(SysdarftCoding OBJECT
 )
 target_include_directories(SysdarftCoding PUBLIC src/include)
 
+# I/O Controller Hub
+add_library(SysdarftICH OBJECT
+        src/include/SysdarftIOHub.h
+        src/SysdarftIOHub.cpp
+        src/include/SysdarftHardDisk.h
+        src/ext_dev/SysdarftHardDisk.cpp
+)
+target_include_directories(SysdarftICH PUBLIC src/include)
+
 # Sysdarft Shared Library:
-add_library(sysdarft SHARED src/include/WorkerThread.h)
-target_include_directories(sysdarft PUBLIC src/include)
-target_link_libraries(sysdarft PUBLIC
+add_library(Sysdarft SHARED src/include/WorkerThread.h)
+target_include_directories(Sysdarft PUBLIC src/include)
+target_link_libraries(Sysdarft PUBLIC
         SysdarftDebug
         SysdarftMessageMap
         SysdarftModule
@@ -207,6 +218,7 @@ target_link_libraries(sysdarft PUBLIC
         SysdarftCursesUI
         SysdarftCoding
         SysdarftCPU
+        SysdarftICH
 )
 
 # Enable testing
@@ -215,7 +227,7 @@ enable_testing()
 # Function to add unit tests
 function(add_unit_test TARGET_NAME TEST_FILE)
     add_executable(${TARGET_NAME} ${TEST_FILE})
-    target_link_libraries(${TARGET_NAME} PUBLIC sysdarft)
+    target_link_libraries(${TARGET_NAME} PUBLIC Sysdarft)
     add_test(NAME "Unit Test: ${TARGET_NAME}"
         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/wrpExpect.sh 
             ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME})
@@ -243,16 +255,15 @@ add_unit_test(test.lgAbit tests/test.lgAbit.cpp)
 add_unit_test(test.dataTsf tests/test.dataTsf.cpp)
 add_unit_test(test.assembler tests/test.assembler.cpp)
 add_unit_test(test.controlflow tests/test.controlflow.cpp)
+add_unit_test(test.io tests/test.io.cpp)
+
+add_custom_target(
+        COPY_HDA_FILE ALL
+        COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/hda.img ${CMAKE_CURRENT_BINARY_DIR}/
+        DEPENDS tests/hda.img
+        COMMENT "Copy disk image sample with ASCII texts in it."
+)
 
 # Console Executable:
 add_executable(sysdarft-system src/SysdarftMain.cpp)
-target_link_libraries(sysdarft-system PUBLIC sysdarft)
-
-link_libraries(sysdarft)
-
-# Modules
-if ("${COMPILE_GUI_BACKEND}" STREQUAL "True")
-    add_subdirectory(DedicatedGPUModule)
-#    add_unit_test(test.backend tests/test.backend.cpp)
-#    add_dependencies(test.backend sysdarft_backend)
-endif ()
+target_link_libraries(sysdarft-system PUBLIC Sysdarft)

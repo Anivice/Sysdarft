@@ -2,7 +2,12 @@
 #include <string>
 #include <EncodingDecoding.h>
 
-const std::regex pre_processor_pattern(R"(\.(EQU|equ|ORG|org|LAB|lab)\s+<(.*)\|(.*)>)");
+// TODO: Operand 'ASCII'
+// TODO: Data .string (""), .8bit_data, .16bit_data, .32bit_data, .64bit_data,
+// TODO: Data reservation resvb [Reserve Bytes]
+// TODO: Segmented compilation
+
+const std::regex pre_processor_pattern(R"((\.(ORG|org|LAB|lab)\s+<(.*)>)|(\.(EQU|equ)\s+<(.*)\|(.*)>))");
 
 std::string ProProcessor(std::basic_iostream<char>& file,
         uint64_t & org,

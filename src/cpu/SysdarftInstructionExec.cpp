@@ -5,6 +5,7 @@ SysdarftCPUInstructionExecutor::SysdarftCPUInstructionExecutor()
 {
     // Misc
     make_instruction_execution_procedure(OPCODE_NOP, &SysdarftCPUInstructionExecutor::nop);
+    make_instruction_execution_procedure(OPCODE_HLT, &SysdarftCPUInstructionExecutor::hlt);
 
     // Arithmetic
     make_instruction_execution_procedure(OPCODE_ADD, &SysdarftCPUInstructionExecutor::add);
@@ -42,10 +43,20 @@ SysdarftCPUInstructionExecutor::SysdarftCPUInstructionExecutor()
     make_instruction_execution_procedure(OPCODE_RCL, &SysdarftCPUInstructionExecutor::rcl);
     make_instruction_execution_procedure(OPCODE_RCR, &SysdarftCPUInstructionExecutor::rcr);
 
+    // Controlflow
     make_instruction_execution_procedure(OPCODE_JMP, &SysdarftCPUInstructionExecutor::jmp);
     make_instruction_execution_procedure(OPCODE_CALL, &SysdarftCPUInstructionExecutor::call);
     make_instruction_execution_procedure(OPCODE_RET, &SysdarftCPUInstructionExecutor::ret);
     make_instruction_execution_procedure(OPCODE_JE, &SysdarftCPUInstructionExecutor::je);
+    make_instruction_execution_procedure(OPCODE_INT, &SysdarftCPUInstructionExecutor::int_);
+    make_instruction_execution_procedure(OPCODE_INT3, &SysdarftCPUInstructionExecutor::int3);
+    make_instruction_execution_procedure(OPCODE_IRET, &SysdarftCPUInstructionExecutor::iret);
+
+    // IOH
+    make_instruction_execution_procedure(OPCODE_IN, &SysdarftCPUInstructionExecutor::in);
+    make_instruction_execution_procedure(OPCODE_OUT, &SysdarftCPUInstructionExecutor::out);
+    make_instruction_execution_procedure(OPCODE_INS, &SysdarftCPUInstructionExecutor::ins);
+    make_instruction_execution_procedure(OPCODE_OUTS, &SysdarftCPUInstructionExecutor::outs);
 
     // Debug Handler
     bindBreakpointHandler(this, &SysdarftCPUInstructionExecutor::default_breakpoint_handler);
@@ -59,11 +70,12 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
 
     WidthAndOperandsType Arg = std::make_pair(width, operands);
 
-    // FIXME: Mask FPU and Signed output
     log("[CPU] ", literal, "\n");
 
-    if (is_break_here()) {
+    if (hd_int_flag || is_break_here())
+    {
         log("[CPU] Breakpoint reached!\n");
+        hd_int_flag = false;
         breakpoint_handler(timestamp, opcode, Arg);
     }
 

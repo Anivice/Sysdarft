@@ -323,7 +323,7 @@ debug::cmd_status debug::_exec_command(const std::string &cmd,
 void debug::_log(const __uint128_t& param)
 {
     if (param == 0) {
-        std::cout << "0";
+        std::cerr << "0";
         return;
     }
 
@@ -337,7 +337,7 @@ void debug::_log(const __uint128_t& param)
     }
 
     std::reverse(str.begin(), str.end());
-    std::cout << str;
+    std::cerr << str;
 }
 
 size_t max_line_length(const std::string& input)
@@ -417,9 +417,10 @@ std::string initialize_error_msg(const std::string& msg, const int _errno)
                     = [&](const std::string& address)
                     {
                         auto [fd_stdout, fd_stderr, exit_status]
-                            = debug::exec_command("addr2line", "",
+                            = debug::exec_command("/usr/bin/addr2line", "",
                                 "--demangle", "-f", "-p", "-a", "-e",
                                 executable_path, address);
+
                         if (exit_status != 0) {
                             err_msg << "\tObtaining backtrace information failed for "
                                     << executable_path << " with offset "

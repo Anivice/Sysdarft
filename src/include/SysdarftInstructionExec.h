@@ -3,10 +3,11 @@
 
 #include <any>
 #include <SysdarftCPUDecoder.h>
+#include <SysdarftIOHub.h>
 
 #define add_instruction_exec(name) void name(__uint128_t, WidthAndOperandsType &)
 
-class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInstructionExecutor : public SysdarftCPUInstructionDecoder
+class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInstructionExecutor : public SysdarftCPUInstructionDecoder, public SysdarftIOHub
 {
 private:
     uint64_t check_overflow(uint8_t BCDWidth, __uint128_t Value);
@@ -74,8 +75,12 @@ protected:
         };
     }
 
+    // External halt is handled at upper level
+    std::atomic<bool> SystemHalted = false;
+
     // Misc
     add_instruction_exec(nop);
+    add_instruction_exec(hlt);
 
     // Arithmetic
     add_instruction_exec(add);
@@ -126,7 +131,13 @@ protected:
     add_instruction_exec(int_);
     add_instruction_exec(int3);
     add_instruction_exec(iret);
-    
+
+    // io
+    add_instruction_exec(in);
+    add_instruction_exec(out);
+    add_instruction_exec(ins);
+    add_instruction_exec(outs);
+
     // initialization
     SysdarftCPUInstructionExecutor();
 

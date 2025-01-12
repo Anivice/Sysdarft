@@ -117,7 +117,63 @@ public:
     explicit OperandType(DecoderDataAccess & Access_) : Access(Access_) { do_decode_operand(); }
 };
 
-class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInstructionDecoder : public DecoderDataAccess
+class SysdarftInterruptionOutOfRange final : public SysdarftBaseError {
+public:
+    explicit SysdarftInterruptionOutOfRange(const std::string & msg) : SysdarftBaseError("Interruption out of range: " + msg) { }
+};
+
+class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInterruption : public DecoderDataAccess
+{
+private:
+    struct InterruptionPointer {
+        uint64_t InterruptionTargetCodeBase;
+        uint64_t InterruptionTargetInstructionPointer;
+    };
+
+    /*
+     * Interruption table:
+     * Hardware Reserved:
+     *  [0x00] FATAL ERROR (ErrorCode == %EXR0)
+     *  [0x01]
+     *  [0x02]
+     *  [0x03] DEBUG, BREAKPOINT RIGHT NEXT
+     *  [0x04]
+     *  [0x05]
+     *  [0x06]
+     *  [0x07]
+     *  [0x08]
+     *  [0x09]
+     *  [0x0A]
+     *  [0x0B]
+     *  [0x0C]
+     *  [0x0D]
+     *  [0x0E]
+     *  [0x0F]
+     *  [0x10] TELETYPE (EXR0 == LinearOffset, EXR1 == Character ASCII Code)
+     *  [0x11] SET CURSOR POSITION (EXR0 == LinearOffset)
+     *  [0x12] SET CURSOR VISIBILITY (EXR0 == Visibility)
+     *  [0x13..0x1A] Undefined
+     */
+
+    InterruptionPointer do_interruption_lookup(uint64_t code);
+    void do_preserve_cpu_state();
+    void do_jump_table(const InterruptionPointer & location);
+
+    // Hardware Interruptions
+    void do_interruption_fatal_0x00();
+    void do_interruption_debug_0x03();
+    void do_interruption_tty_0x10();
+    void do_interruption_set_cur_pos_0x11();
+    void do_interruption_set_cur_visib_0x12();
+
+protected:
+    std::atomic<bool> hd_int_flag = false;
+
+    void do_interruption(uint64_t code);
+    void do_iret();
+};
+
+class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInstructionDecoder : public SysdarftCPUInterruption
 {
 protected:
     struct ActiveInstructionType {

@@ -8,20 +8,17 @@
  * Lower 1 MB Firmware Data
  * 0x00000 - 0x9FFFF [BOOT CODE]     - 640KB
  * 0xA0000 - 0xC17FF [CONFIGURATION] - 134KB
- *                    - 0xA0000 - 0xA1000 [4KB Interruption Table: 512 Interrupts]
- *                    - 0xB8000 - 0xB9000 [4KB Video Memory]
- *                                        - 0xB8000 - 0xB87D0 [Video Memory Region]
+ *                    - 0xA0000 - 0xA0FFF [4KB Interruption Table: 256 Interrupts]
  * 0xC1800 - 0xFFFFF [FIRMWARE]      - 250KB
  */
-#define BOOT_LOADER_START   0x00000
-#define BOOT_LOADER_END     0x9FFFF
+#define BOOT_LOADER_START   (0x00000)
+#define BOOT_LOADER_END     (0x9FFFF)
 #define BOOT_LOADER_SIZE    (BOOT_LOADER_END - BOOT_LOADER_START + 1)
-#define INTERRUPTION_VECTOR 0xA0000
-#define INTERRUPTION_VEC_LN (INTERRUPTION_VECTOR + 512 * 8)
-#define VIDEO_MEMORY_START  0xB8000
-#define VIDEO_MEMORY_END    0xB9000
-#define BIOS_START          0xC1800
-#define BIOS_END            0xFFFFF
+#define INTERRUPTION_VECTOR (0xA0000)
+#define INTERRUPTION_VEC_ED (0xA0FFF)
+#define INTERRUPTION_VEC_LN (INTERRUPTION_VEC_ED - INTERRUPTION_VECTOR + 1)
+#define BIOS_START          (0xC1800)
+#define BIOS_END            (0xFFFFF)
 #define BIOS_SIZE           (BIOS_END - BIOS_START + 1)
 
 #define BLOCK_SIZE 4096

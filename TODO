@@ -1,7 +1,5 @@
-GUI Module Revise
-Instruction Execution
-CPU Interruption
-CPU I/O Hub
+Correct CPU Error Handling
+Correct Assembler Sanity Check
+Correct Assembler Preprocessors
 CPU Timing
-Sysdarft Assembler/Disassembler
 Sysdarft C Compiler (SDCC)

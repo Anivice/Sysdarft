@@ -68,15 +68,15 @@ struct pushall_data
     uint64_t EB;
     uint64_t EP;
     uint64_t CPS;
-    double XMM0;
-    double XMM1;
-    double XMM2;
-    double XMM3;
-    double XMM4;
-    double XMM5;
+    uint64_t SBS;
+    uint64_t SBSz;
+    uint64_t DBS;
+    uint64_t DBSz;
+    uint64_t CBS;
+    uint64_t CBSz;
 };
 
-void SysdarftCPUInstructionExecutor::pushall(__uint128_t, WidthAndOperandsType & WidthAndOperands)
+void SysdarftCPUInstructionExecutor::pushall(__uint128_t, WidthAndOperandsType &)
 {
     const pushall_data data = {
         .FER0 = SysdarftRegister::load<FullyExtendedRegisterType, 0>(),
@@ -103,18 +103,18 @@ void SysdarftCPUInstructionExecutor::pushall(__uint128_t, WidthAndOperandsType &
         .EB = SysdarftRegister::load<ExtendedBaseType>(),
         .EP = SysdarftRegister::load<ExtendedPointerType>(),
         .CPS = SysdarftRegister::load<CurrentProcedureStackPreservationSpaceType>(),
-        .XMM0 = SysdarftRegister::load<FPURegisterType, 0>(),
-        .XMM1 = SysdarftRegister::load<FPURegisterType, 1>(),
-        .XMM2 = SysdarftRegister::load<FPURegisterType, 2>(),
-        .XMM3 = SysdarftRegister::load<FPURegisterType, 3>(),
-        .XMM4 = SysdarftRegister::load<FPURegisterType, 4>(),
-        .XMM5 = SysdarftRegister::load<FPURegisterType, 5>(),
+        .SBS = SysdarftRegister::load<StackBaseSelector>(),
+        .SBSz = SysdarftRegister::load<StackBaseSelectorSize>(),
+        .DBS = SysdarftRegister::load<DataBaseSelector>(),
+        .DBSz = SysdarftRegister::load<DataBaseSelectorSize>(),
+        .CBS = SysdarftRegister::load<CodeBaseSelector>(),
+        .CBSz = SysdarftRegister::load<CodeBaseSelectorSize>(),
     };
 
     push_stack(data);
 }
 
-void SysdarftCPUInstructionExecutor::popall(__uint128_t, WidthAndOperandsType & WidthAndOperands)
+void SysdarftCPUInstructionExecutor::popall(__uint128_t, WidthAndOperandsType &)
 {
     auto [FER0,
         FER1,
@@ -140,12 +140,12 @@ void SysdarftCPUInstructionExecutor::popall(__uint128_t, WidthAndOperandsType & 
         EB,
         EP,
         CPS,
-        XMM0,
-        XMM1,
-        XMM2,
-        XMM3,
-        XMM4,
-        XMM5] = pop_stack<pushall_data>();
+        SBS,
+        SBSz,
+        DBS,
+        DBSz,
+        CBS,
+        CBSz] = pop_stack<pushall_data>();
 
     SysdarftRegister::store<FullyExtendedRegisterType, 0>(FER0);
     SysdarftRegister::store<FullyExtendedRegisterType, 1>(FER1);
@@ -171,12 +171,12 @@ void SysdarftCPUInstructionExecutor::popall(__uint128_t, WidthAndOperandsType & 
     SysdarftRegister::store<ExtendedBaseType>(EB);
     SysdarftRegister::store<ExtendedPointerType>(EP);
     SysdarftRegister::store<CurrentProcedureStackPreservationSpaceType>(CPS);
-    SysdarftRegister::store<FPURegisterType, 0>(XMM0);
-    SysdarftRegister::store<FPURegisterType, 1>(XMM1);
-    SysdarftRegister::store<FPURegisterType, 2>(XMM2);
-    SysdarftRegister::store<FPURegisterType, 3>(XMM3);
-    SysdarftRegister::store<FPURegisterType, 4>(XMM4);
-    SysdarftRegister::store<FPURegisterType, 5>(XMM5);
+    SysdarftRegister::store<StackBaseSelector>(SBS);
+    SysdarftRegister::store<StackBaseSelectorSize>(SBSz);
+    SysdarftRegister::store<DataBaseSelector>(DBS);
+    SysdarftRegister::store<DataBaseSelectorSize>(DBSz);
+    SysdarftRegister::store<CodeBaseSelector>(CBS);
+    SysdarftRegister::store<CodeBaseSelectorSize>(CBSz);
 }
 
 void SysdarftCPUInstructionExecutor::enter(__uint128_t, WidthAndOperandsType & WidthAndOperands)
@@ -187,7 +187,7 @@ void SysdarftCPUInstructionExecutor::enter(__uint128_t, WidthAndOperandsType & W
     SysdarftRegister::store<StackPointerType>(SP - operand1);
 }
 
-void SysdarftCPUInstructionExecutor::leave(__uint128_t, WidthAndOperandsType & WidthAndOperands)
+void SysdarftCPUInstructionExecutor::leave(__uint128_t, WidthAndOperandsType &)
 {
     const auto SP = SysdarftRegister::load<StackPointerType>();
     const auto CPS = SysdarftRegister::load<CurrentProcedureStackPreservationSpaceType>();
@@ -195,7 +195,7 @@ void SysdarftCPUInstructionExecutor::leave(__uint128_t, WidthAndOperandsType & W
     SysdarftRegister::store<CurrentProcedureStackPreservationSpaceType>(0);
 }
 
-void SysdarftCPUInstructionExecutor::movs(__uint128_t, WidthAndOperandsType & WidthAndOperands)
+void SysdarftCPUInstructionExecutor::movs(__uint128_t, WidthAndOperandsType &)
 {
     const uint64_t dest = SysdarftRegister::load<DataPointerType>() + SysdarftRegister::load<DataBaseType>();
     const uint64_t src = SysdarftRegister::load<ExtendedPointerType>() + SysdarftRegister::load<ExtendedBaseType>();

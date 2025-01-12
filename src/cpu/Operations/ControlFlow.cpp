@@ -22,7 +22,7 @@ void SysdarftCPUInstructionExecutor::call(__uint128_t, WidthAndOperandsType & Wi
     SysdarftRegister::store<InstructionPointerType>(ip);
 }
 
-void SysdarftCPUInstructionExecutor::ret(__uint128_t, WidthAndOperandsType & WidthAndOperands)
+void SysdarftCPUInstructionExecutor::ret(__uint128_t, WidthAndOperandsType &)
 {
     const auto ip = pop_stack<uint64_t>();
     const auto cb = pop_stack<uint64_t>();
@@ -94,4 +94,20 @@ void SysdarftCPUInstructionExecutor::jle(__uint128_t, WidthAndOperandsType & Wid
         SysdarftRegister::store<CodeBaseType>(addr_base);
         SysdarftRegister::store<InstructionPointerType>(ip);
     }
+}
+
+void SysdarftCPUInstructionExecutor::int_(__uint128_t, WidthAndOperandsType & WidthAndOperands)
+{
+    const uint64_t code = WidthAndOperands.second[0].get_val();
+    SysdarftCPUInterruption::do_interruption(code);
+}
+
+void SysdarftCPUInstructionExecutor::int3(__uint128_t, WidthAndOperandsType &)
+{
+    SysdarftCPUInterruption::do_interruption(0x03);
+}
+
+void SysdarftCPUInstructionExecutor::iret(__uint128_t, WidthAndOperandsType &)
+{
+    SysdarftCPUInterruption::do_iret();
 }

@@ -91,7 +91,7 @@ namespace debug
     };
 
     template <>
-    struct is_string<std::string> : std::true_type
+    struct is_string<std::basic_string<char>> : std::true_type
     {
     };
 

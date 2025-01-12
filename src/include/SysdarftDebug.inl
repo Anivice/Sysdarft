@@ -18,44 +18,44 @@ std::enable_if_t < debug::is_container_v<Container>
 , void >
 debug::print_container(const Container &container)
 {
-    std::cout << "[";
+    std::cerr << "[";
     for (auto it = std::begin(container); it != std::end(container); ++it)
     {
-        std::cout << *it;
+        std::cerr << *it;
         if (std::next(it) != std::end(container)) {
-            std::cout << ", ";
+            std::cerr << ", ";
         }
     }
-    std::cout << "]";
+    std::cerr << "]";
 }
 
 template <typename Map>
 std::enable_if_t < debug::is_map_v<Map> || debug::is_unordered_map_v<Map>, void >
 debug::print_container(const Map &map)
 {
-    std::cout << "{";
+    std::cerr << "{";
     for (auto it = std::begin(map); it != std::end(map); ++it)
     {
-        std::cout << it->first << ": " << it->second;
+        std::cerr << it->first << ": " << it->second;
         if (std::next(it) != std::end(map)) {
-            std::cout << ", ";
+            std::cerr << ", ";
         }
     }
-    std::cout << "}";
+    std::cerr << "}";
 }
 
 template <typename ParamType> void debug::_log(const ParamType &param)
 {
     if constexpr (debug::is_string_v<ParamType>) {
         // Handle std::string and const char*
-        std::cout << param;
+        std::cerr << param;
     } else if constexpr (debug::is_container_v<ParamType>) {
         // Handle containers
         debug::print_container(param);
     }
     else {
         // Handle other types
-        std::cout << param;
+        std::cerr << param;
     }
 }
 

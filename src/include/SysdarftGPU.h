@@ -1,4 +1,0 @@
-#ifndef SYSDARFTGPU_H
-#define SYSDARFTGPU_H
-
-#endif //SYSDARFTGPU_H
