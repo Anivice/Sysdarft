@@ -1,13 +1,5 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-self event alert using signals
-=======
-Sysdarft Assembler/Disassembler
->>>>>>> SysdarftRemake/rebase
-=======
 Correct CPU Error Handling
 Correct Assembler Sanity Check
 Correct Assembler Preprocessors
 CPU Timing
 Sysdarft C Compiler (SDCC)
->>>>>>> SysdarftRemake/ugly

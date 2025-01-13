@@ -1,19 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-<<<<<<< HEAD
-  <component name="BackendCodeEditorMiscSettings">
-    <option name="/Default/RiderDebugger/RiderRestoreDecompile/RestoreDecompileSetting/@EntryValue" value="false" type="bool" />
-    <option name="/Default/Housekeeping/GlobalSettingsUpgraded/IsUpgraded/@EntryValue" value="true" type="bool" />
-    <option name="/Default/Housekeeping/FeatureSuggestion/FeatureSuggestionManager/DisabledSuggesters/=SwitchToGoToActionSuggester/@EntryIndexedValue" value="true" type="bool" />
-    <option name="/Default/Housekeeping/OptionsDialog/SelectedPageId/@EntryValue" value="CppFormatterOtherPage" type="string" />
-    <option name="/Default/Environment/Hierarchy/GeneratedFilesCacheKey/Timestamp/@EntryValue" value="3" type="long" />
-  </component>
-  <component name="Black">
-    <option name="sdkName" value="Python 3.12 (Sysdarft)" />
-=======
   <component name="Black">
     <option name="sdkName" value="Python 3.13 (PyVEnv_)" />
->>>>>>> SysdarftRemake/rebase
   </component>
   <component name="CMakePythonSetting">
     <option name="pythonIntegrationState" value="YES" />
@@ -21,20 +9,11 @@
   <component name="CMakeWorkspace" PROJECT_DIR="$PROJECT_DIR$" />
   <component name="CidrRootsConfiguration">
     <excludeRoots>
-<<<<<<< HEAD
-<<<<<<< HEAD
-      <file path="$PROJECT_DIR$/PythonVEnv" />
-      <file path="$PROJECT_DIR$/build" />
-=======
-      <file path="$PROJECT_DIR$/gui_module/cmake-build-debug" />
->>>>>>> SysdarftRemake/rebase
-=======
       <file path="$PROJECT_DIR$/DedicatedGPUModule/cmake-build-debug" />
       <file path="$PROJECT_DIR$/build" />
       <file path="$PROJECT_DIR$/build-thread" />
       <file path="$PROJECT_DIR$/cmake-build-debug" />
       <file path="$PROJECT_DIR$/cmake-build-debug-coverage" />
->>>>>>> SysdarftRemake/ugly
     </excludeRoots>
   </component>
 </project>
