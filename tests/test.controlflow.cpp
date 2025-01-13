@@ -48,7 +48,7 @@ public:
         defined_line_marker.emplace("_start", std::pair < uint64_t, std::vector < uint64_t > > (0, { }));
         defined_line_marker.emplace("_loop", std::pair < uint64_t, std::vector < uint64_t > > (0, { }));
         std::stringstream ascii_code;
-        ascii_code << "jmp <%CB>, _start                \n";
+        ascii_code << "jmp <%CB>, <_start>                \n";
         ascii_code << "putc:                            \n";
         ascii_code << "  pushall                        \n";
         ascii_code << "  push .16bit <%EXR0>            \n";
@@ -60,9 +60,9 @@ public:
         ascii_code << "_start:                          \n";
         ascii_code << "  mov .64bit <%SP>, <$(0xFFF)>   \n";
         ascii_code << "  mov .16bit <%EXR0>, <$(0x53)>  \n";
-        ascii_code << "  call <%CB>, putc               \n";
+        ascii_code << "  call <%CB>, <putc>               \n";
         ascii_code << "_loop:                           \n";
-        ascii_code << "  jmp <%CB>, _loop               \n";
+        ascii_code << "  jmp <%CB>, <_loop>               \n";
         SysdarftCompile(code, ascii_code, 0xC1800, defined_line_marker);
 
         uint64_t off = BIOS_START;
@@ -80,16 +80,7 @@ public:
 
 int main()
 {
-    SysdarftCursesUI curses_ui;
-    g_ui_initialize_install(curses_ui, initialize);
-    g_ui_cleanup_install(curses_ui, cleanup);
-    g_ui_set_cur_vsb_install(curses_ui, set_cursor_visibility);
-    g_ui_teletype_install(curses_ui, teletype);
-    g_ui_set_cursor_install(curses_ui, set_cursor);
-
-    g_ui_initialize();
     debug::verbose = true;
     Exec base;
     sleep(1);
-    g_ui_cleanup();
 }

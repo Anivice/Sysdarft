@@ -20,7 +20,7 @@ int main()
     std::signal(SIGWINCH, resize_handler);
 
     ui.initialize();
-    ui.teletype(0, 1, "Hello, World!");
+    ui.teletype('S');
     sleep(1);
     ui.cleanup();
 }

@@ -11,10 +11,10 @@ int main()
     std::stringstream ascii_code;
     ascii_code << "nop                  \n";
     ascii_code << "_start:              \n";
-    ascii_code << "     nop                  \n";
-    ascii_code << "     jmp <%CB>, _end      \n";
-    ascii_code << "_end:                \n";
-    ascii_code << "     call <%CB>, _start   \n";
+    ascii_code << "     nop                     \n";
+    ascii_code << "     jmp <%CB>, <_end>       \n";
+    ascii_code << "_end:                        \n";
+    ascii_code << "     call <%CB>, <_start>    \n";
     SysdarftCompile(code, ascii_code, 0, defined_line_marker);
 
     std::vector < uint8_t > assembled_code;

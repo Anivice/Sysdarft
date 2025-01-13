@@ -1,10 +1,11 @@
 #ifndef SYSDARFTCPUINSTRUCTIONDECODER_H
 #define SYSDARFTCPUINSTRUCTIONDECODER_H
 
-#include <SysdarftDebug.h>
-#include <SysdarftRegister.h>
-#include <SysdarftMemory.h>
 #include <EncodingDecoding.h>
+#include <SysdarftCursesUI.h>
+#include <SysdarftDebug.h>
+#include <SysdarftMemory.h>
+#include <SysdarftRegister.h>
 
 class IllegalInstruction final : public SysdarftBaseError {
 public:
@@ -19,7 +20,11 @@ public:
 
 class OperandType;
 
-class DecoderDataAccess : public SysdarftRegister, public SysdarftCPUMemoryAccess {
+class DecoderDataAccess
+    : public SysdarftRegister,
+      public SysdarftCPUMemoryAccess,
+      public SysdarftCursesUI
+{
 protected:
     template < typename DataType >
     DataType pop_code_and_inc_ip()
@@ -154,10 +159,22 @@ private:
      *  [0x0D]
      *  [0x0E]
      *  [0x0F]
-     *  [0x10] TELETYPE (EXR0 == LinearOffset, EXR1 == Character ASCII Code)
+     *  [0x10] TELETYPE (EXR0 == Character ASCII Code)
      *  [0x11] SET CURSOR POSITION (EXR0 == LinearOffset)
      *  [0x12] SET CURSOR VISIBILITY (EXR0 == Visibility)
-     *  [0x13..0x1A] Undefined
+     *  [0x13] NEW LINE
+     *  [0x14] GET INPUT, INPUT == EXR0
+     *  [0x15] GET CURSOR POSITION POSITION == EXR0
+     *  [0x16]
+     *  [0x17]
+     *  [0x18]
+     *  [0x19]
+     *  [0x1A]
+     *  [0x1B]
+     *  [0x1C]
+     *  [0x1D]
+     *  [0x1E]
+     *  [0x1F]
      */
 
     InterruptionPointer do_interruption_lookup(uint64_t code);
@@ -170,6 +187,9 @@ private:
     void do_interruption_tty_0x10();
     void do_interruption_set_cur_pos_0x11();
     void do_interruption_set_cur_visib_0x12();
+    void do_interruption_newline_0x13();
+    void do_interruption_getinput_0x14();
+    void do_interruption_cur_pos_0x15();
 
 protected:
     std::atomic<bool> hd_int_flag = false;

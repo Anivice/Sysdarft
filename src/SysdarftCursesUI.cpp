@@ -1,4 +1,5 @@
 // SysdarftCursesUI.cpp
+#include <cstring>
 #include <SysdarftCursesUI.h>
 
 SysdarftCursesUI::SysdarftCursesUI()
@@ -55,39 +56,54 @@ void SysdarftCursesUI::set_cursor_visibility(const bool visible)
     curs_set(visible ? 1 : 0);
 }
 
-void SysdarftCursesUI::teletype(const int x, const int y, const std::string &text)
+void SysdarftCursesUI::teletype(const char text)
 {
     if (!is_inited) {
         std::cout << text;
         return;
     }
 
-    const int start_x = std::clamp(x, 0, V_WIDTH - 1);
-    const int start_y = std::clamp(y, 0, V_HEIGHT - 1);
+    int current_x = cursor_x;
+    int current_y = cursor_y;
 
-    int current_x = start_x;
-    int current_y = start_y;
-
-    for (const char ch : text)
-    {
-        // Wrap to next line if end of line is reached
-        if (current_x >= V_WIDTH) {
-            current_x = 0;
-            current_y++;
-            if (current_y >= V_HEIGHT) {
-                break; // Stop if beyond virtual screen height
-            }
-        }
-        // Store character in video memory
-        video_memory[current_y][current_x] = ch;
-        current_x++;
-    }
+    // Store character in video memory
+    video_memory[current_y][current_x] = text;
+    current_x++;
 
     // Update cursor position after printing
-    if (current_x >= V_WIDTH) current_x = V_WIDTH - 1;
-    if (current_y >= V_HEIGHT) current_y = V_HEIGHT - 1;
-    set_cursor(current_x, current_y);
+    if (current_x >= V_WIDTH) {
+        newline();
+    } else {
+        set_cursor(current_x, current_y);
+    }
+
     render_screen();
+}
+
+void SysdarftCursesUI::newline()
+{
+    if (!is_inited) {
+        std::cout << std::endl;
+        return;
+    }
+
+    if (cursor_y == V_HEIGHT - 1)
+    {
+        for (uint64_t i = 0; i < V_HEIGHT - 1; i++) {
+            std::memcpy(video_memory[i], video_memory[i + 1], V_WIDTH);
+        }
+
+        std::memset(video_memory[V_HEIGHT - 1], ' ', V_WIDTH);
+        cursor_x = 0;
+        set_cursor(cursor_x, cursor_y);
+        render_screen();
+    }
+    else
+    {
+        cursor_x = 0;
+        cursor_y++;
+        set_cursor(cursor_x, cursor_y);
+    }
 }
 
 void SysdarftCursesUI::handle_resize()

@@ -18,12 +18,15 @@ public:
     void cleanup();
     void set_cursor(int x, int y);
     void set_cursor_visibility(bool visible);
-    void teletype(int x, int y, const std::string &text);
+    void teletype(char text);
+    void newline();
     void handle_resize();
 
-private:
+protected:
     int cursor_x;
     int cursor_y;
+
+private:
     int offset_x;
     int offset_y;
     char video_memory[V_HEIGHT][V_WIDTH]{};

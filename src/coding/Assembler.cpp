@@ -22,31 +22,37 @@ void replace_all(
     }
 }
 
-const std::regex ascii_value_pattern(R"(\'(.)\')");
+const std::regex ascii_value_pattern(R"('([^']*)')");
 void process_ascii_value(std::string& input)
 {
-    // ... 'A'  ; some instruction, replace 'A' to decimal
-    // Create iterators to traverse all matches
-    const auto matches_begin = std::sregex_iterator(input.begin(), input.end(), ascii_value_pattern);
-    const auto matches_end = std::sregex_iterator();
-    std::vector < std::string > result;
+    std::vector<std::pair<std::string, std::string>> replacements;
 
-    // Iterate over all matches and process them
-    for (std::sregex_iterator i = matches_begin; i != matches_end; ++i)
+    // Create iterators to traverse all matches without modifying input during iteration.
+    for (auto it = std::sregex_iterator(input.begin(), input.end(), ascii_value_pattern);
+         it != std::sregex_iterator(); ++it)
     {
-        auto match = i->str();
-        result.emplace_back(remove_space(match));
-    }
+        const std::smatch& match = *it;
 
-    for (const auto & ascii : result)
-    {
-        std::string processed = ascii;
-        replace_all(processed, "'", "");
-        if (processed.size() != 1) {
-            throw SysdarftCompileError("Error encountered while parsing the ASCII expression: " + ascii);
+        // Extract the entire quoted substring and the inner content separately.
+        std::string full_match = match.str();      // e.g. "'A'"
+        std::string inner_content = match.str(1);  // e.g. "A"
+
+        // Validate the inner content.
+        if (inner_content.size() != 1) {
+            throw std::runtime_error("Error encountered while parsing the ASCII expression: " + full_match);
         }
 
-        replace_all(input, ascii, std::to_string(static_cast<int>(processed.at(0))));
+        // Convert the single character to its decimal ASCII value.
+        std::string decimal_value = std::to_string(static_cast<int>(inner_content.at(0)));
+
+        // Save the replacement pair: { substring to replace, replacement string }
+        replacements.emplace_back(full_match, decimal_value);
+    }
+
+    // Perform all replacements on the original string.
+    // This separate loop ensures we modify the input after collecting all matches.
+    for (const auto& rep : replacements) {
+        replace_all(input, rep.first, rep.second);
     }
 }
 
@@ -104,18 +110,6 @@ void SysdarftCompile(
     defined_line_marker_t & defined_line_marker)
 {
     std::string line;
-    auto inject_instruction_with_empty_address = [&](std::string & instruction, const std::string & marker)->bool
-    {
-        if (const auto pos = instruction.find(marker); pos != std::string::npos)
-        {
-            // way beyond address limit
-            replace_all(instruction, marker, "<$(0xFFFFFFFFFFFFFFFF)>");
-            return true;
-        }
-
-        return false;
-    };
-
     while (std::getline(file, line))
     {
         // discard empty lines
@@ -150,18 +144,23 @@ void SysdarftCompile(
             replace_all(line, "@@", std::to_string(org));
         }
 
-        if (std::regex_match(line, ascii_value_pattern)) {
+        if (std::smatch match;
+            std::regex_search(line, match, ascii_value_pattern))
+        {
             process_ascii_value(line);
         }
 
         for (const auto & line_marker : defined_line_marker)
         {
-            if (line.find(line_marker.first) != std::string::npos)
+            std::smatch matches;
+            if (std::regex marker(R"((.*)(<\s*)" + line_marker.first + R"(\s*>)(.*))");
+                std::regex_search(line, matches, marker))
             {
-                if (inject_instruction_with_empty_address(line, line_marker.first)) {
-                    defined_line_marker[line_marker.first].second.emplace_back(code.size()); // This address usage appeared here
+                if (matches.size() != 4) {
+                    throw SysdarftAssemblerError("Error encountered while parsing line marker: " + line);
                 }
-
+                replace_all(line, matches[2], "<$(0xFFFFFFFFFFFFFFFF)>");
+                defined_line_marker[line_marker.first].second.emplace_back(code.size()); // This address usage appeared here
                 break;
             }
         }
