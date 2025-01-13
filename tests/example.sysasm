@@ -9,8 +9,8 @@ jmp <%CB>, _start
 reads:
    pushall       
    out .64bit <$(HDD_SEC_START)>, <$(0)>    ; sector read starts from 0
-   out .64bit <$(HDD_SEC_COUNT)>, <$(1)>    ; read 1 sector
-   mov .64bit <%FER0>, <$(512)>             ; ins operation input 512 byte data, meaning one sector
+   out .64bit <$(HDD_SEC_COUNT)>, <$(4)>    ; read 1 sector
+   mov .64bit <%FER0>, <$(2048)>             ; ins operation input 512 byte data, meaning one sector
    ins .64bit <$(HDD_IO)>    
    popall
    ret
@@ -24,8 +24,8 @@ puts:
        int <$(0x10)>    
        add .64bit <%DP>, <$(1)>                                                            
        add .16bit <%EXR0>, <$(1)>                                                          
-       cmp .8bit <*1&8(%DP, $(0), $(0))>, <$(0)>                                           
-       jne <%CB>, _loop 
+       cmp .16bit <%EXR0>, <$(2000)>
+       jne <%CB>, _loop
    popall        
    ret
 

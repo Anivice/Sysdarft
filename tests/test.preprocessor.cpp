@@ -19,7 +19,7 @@ public:
             write_memory(off++, (char*)&c, 1);
         }
 
-        for (int i = 0; i < 4096; i++) {
+        for (int i = 0; i < 20000; i++) {
             execute(0);
         }
     }
