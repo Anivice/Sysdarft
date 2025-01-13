@@ -159,6 +159,6 @@ void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> &, const std
 void SYSDARFT_EXPORT_SYMBOL decode_instruction(std::vector < std::string > &, std::vector<uint8_t> &);
 void SYSDARFT_EXPORT_SYMBOL SysdarftCompile(std::vector < std::vector <uint8_t> > & code,
     std::basic_iostream<char>& file, uint64_t org, defined_line_marker_t & defined_line_marker);
-void SYSDARFT_EXPORT_SYMBOL CodeProcessing(std::vector <uint8_t> & code, std::basic_iostream<char>& file);
+void SYSDARFT_EXPORT_SYMBOL CodeProcessing(std::vector <uint8_t> & code, std::basic_istream<char>& file);
 
 #endif // INSTRUCTIONS_H

@@ -1,0 +1,37 @@
+.equ 'HDD_SEC_START', '0x137'
+.equ 'HDD_SEC_COUNT', '0x138'
+.equ 'HDD_IO', '0x139'  
+.lab _start, reads, puts
+.org 0xC1800
+
+jmp <%CB>, _start
+
+reads:
+   pushall       
+   out .64bit <$(HDD_SEC_START)>, <$(0)>    ; sector read starts from 0
+   out .64bit <$(HDD_SEC_COUNT)>, <$(1)>    ; read 1 sector
+   mov .64bit <%FER0>, <$(512)>             ; ins operation input 512 byte data, meaning one sector
+   ins .64bit <$(HDD_IO)>    
+   popall
+   ret
+
+puts: 
+   pushall       
+   mov .16bit <%EXR0>, <$(0)>
+   xor .64bit <%DP>, <%DP>   
+   _loop:        
+       mov .8bit <%R2>, <*1&8(%DP, $(0), $(0))>                                            
+       int <$(0x10)>    
+       add .64bit <%DP>, <$(1)>                                                            
+       add .16bit <%EXR0>, <$(1)>                                                          
+       cmp .8bit <*1&8(%DP, $(0), $(0))>, <$(0)>                                           
+       jne <%CB>, _loop 
+   popall        
+   ret
+
+_start:          
+   mov .64bit <%sp>, <$(0xFFF)>                                                            
+   mov .64bit <%sb>, <$(0xFFFF)>                                                           
+   call <%cb>, reads    
+   call <%cb>, puts     
+   jmp <%CB>, <$(@)>

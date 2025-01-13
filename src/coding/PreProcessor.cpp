@@ -8,10 +8,10 @@ public:
     explicit SysdarftPreProcessorError(const std::string& msg) : SysdarftBaseError("Error encountered in preprocessor: " + msg) { }
 };
 
-const std::regex org_pattern(R"(\.org\s+((?:0x[0-9A-Fa-f]+)|(?:\d+))\s+)", std::regex_constants::icase); // .org 0x123
-const std::regex lab_pattern(R"(\.lab\s+([A-Za-z._][A-Za-z0-9._]*(?:\s*,\s*[A-Za-z._][A-Za-z0-9._]*)*)\s+)",
+const std::regex org_pattern(R"(\s*\.org\s+((?:0x[0-9A-Fa-f]+)|(?:\d+))\s*)", std::regex_constants::icase); // .org 0x123
+const std::regex lab_pattern(R"(\s*\.lab\s+([A-Za-z._][A-Za-z0-9._]*(?:\s*,\s*[A-Za-z._][A-Za-z0-9._]*)*)\s*)",
     std::regex_constants::icase);
-const std::regex equ_pattern(R"(\.equ\s+'([^']*)'\s*,\s*'([^']*)'\s+)", std::regex_constants::icase);
+const std::regex equ_pattern(R"(\s*\.equ\s+'([^']*)'\s*,\s*'([^']*)'\s*)", std::regex_constants::icase);
 
 std::vector<std::string> splitString(const std::string& input, const char delimiter = ',')
 {
@@ -144,6 +144,13 @@ void CodeProcessing(
     std::string line;
     while (getline(file, line))
     {
+        auto tmp = line;
+        replace_all(tmp, " ", "");
+        if (tmp.empty()) {
+            file.erase(file.begin());
+            continue;
+        }
+
         // remove comments
         line = truncateAfterSemicolonOrHash(line);
         // remove '\t'
@@ -208,7 +215,7 @@ void CodeProcessing(
     }
 }
 
-void CodeProcessing(std::vector <uint8_t> & code, std::basic_iostream<char>& file)
+void CodeProcessing(std::vector <uint8_t> & code, std::basic_istream<char>& file)
 {
     std::vector < std::string > lines;
     std::string line;

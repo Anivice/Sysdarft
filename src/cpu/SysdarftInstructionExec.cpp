@@ -75,7 +75,9 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
 
     WidthAndOperandsType Arg = std::make_pair(width, operands);
 
-    log("[CPU] ", literal, "\n");
+    if (debug::verbose) {
+        log("[CPU] ", literal, "\n");
+    }
 
     if (hd_int_flag || is_break_here())
     {

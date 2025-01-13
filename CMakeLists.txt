@@ -261,7 +261,8 @@ add_unit_test(test.preprocessor tests/test.preprocessor.cpp)
 add_custom_target(
         COPY_HDA_FILE ALL
         COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/hda.img ${CMAKE_CURRENT_BINARY_DIR}/
-        DEPENDS tests/hda.img
+        COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/example.sysasm ${CMAKE_CURRENT_BINARY_DIR}/
+        DEPENDS tests/hda.img tests/example.sysasm
         COMMENT "Copy disk image sample with ASCII texts in it."
 )
 
