@@ -63,11 +63,6 @@ public:
     SysdarftCPUFatal() : SysdarftBaseError("CPU is met with a unrecoverable fatal error") { }
 };
 
-class SysdarftBadInterruption final : public SysdarftBaseError {
-public:
-    explicit SysdarftBadInterruption(const std::string & msg) : SysdarftBaseError("Bad interruption: " + msg) { }
-};
-
 // Hardware Interruptions
 void SysdarftCPUInterruption::do_interruption_fatal_0x00()
 {

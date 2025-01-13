@@ -12,6 +12,11 @@ public:
         SysdarftBaseError("Illegal instruction: " + msg) { }
 };
 
+class SysdarftBadInterruption final : public SysdarftBaseError {
+public:
+    explicit SysdarftBadInterruption(const std::string & msg) : SysdarftBaseError("Bad interruption: " + msg) { }
+};
+
 class OperandType;
 
 class DecoderDataAccess : public SysdarftRegister, public SysdarftCPUMemoryAccess {
@@ -137,7 +142,7 @@ private:
      *  [0x01] DIV/0
      *  [0x02] IO ERROR
      *  [0x03] DEBUG, BREAKPOINT RIGHT NEXT
-     *  [0x04]
+     *  [0x04] BAD INTERRUPTION CALL
      *  [0x05]
      *  [0x06]
      *  [0x07]

@@ -1,37 +1,39 @@
 .equ 'HDD_SEC_START', '0x137'
 .equ 'HDD_SEC_COUNT', '0x138'
-.equ 'HDD_IO', '0x139'  
-.lab _start, reads, puts
+.equ 'HDD_IO', '0x139'
+.lab _start, reads, puts, _stack_frame
 .org 0xC1800
 
 jmp <%CB>, _start
 
 reads:
-   pushall       
+   pushall
    out .64bit <$(HDD_SEC_START)>, <$(0)>    ; sector read starts from 0
-   out .64bit <$(HDD_SEC_COUNT)>, <$(4)>    ; read 1 sector
-   mov .64bit <%FER0>, <$(2048)>             ; ins operation input 512 byte data, meaning one sector
-   ins .64bit <$(HDD_IO)>    
+   out .64bit <$(HDD_SEC_COUNT)>, <$(4)>    ; read 4 sector
+   mov .64bit <%FER0>, <$(2048)>            ; ins operation input 2048 bytes of data
+   ins .64bit <$(HDD_IO)>                   ; ins from HDD_IO port
    popall
    ret
 
-puts: 
-   pushall       
-   mov .16bit <%EXR0>, <$(0)>
-   xor .64bit <%DP>, <%DP>   
-   _loop:        
-       mov .8bit <%R2>, <*1&8(%DP, $(0), $(0))>                                            
-       int <$(0x10)>    
-       add .64bit <%DP>, <$(1)>                                                            
-       add .16bit <%EXR0>, <$(1)>                                                          
-       cmp .16bit <%EXR0>, <$(2000)>
-       jne <%CB>, _loop
-   popall        
+puts:
+   pushall
+   mov .16bit <%EXR0>, <$(0)>                   ; display the character at 0
+   xor .64bit <%DP>, <%DP>                      ; set dp = 0
+   _loop:
+       mov .8bit <%R2>, <*1&8(%DP, $(0), $(0))> ; move db:dp to R2
+       int <$(0x10)>                            ; print R2
+       add .64bit <%DP>, <$(1)>                 ; inc dp
+       add .16bit <%EXR0>, <$(1)>               ; inc exr0
+       cmp .16bit <%EXR0>, <$(2000)>            ; see if exr0 reached 2000
+       jne <%CB>, _loop                         ; if not, continue
+   popall
    ret
 
-_start:          
-   mov .64bit <%sp>, <$(0xFFF)>                                                            
-   mov .64bit <%sb>, <$(0xFFFF)>                                                           
-   call <%cb>, reads    
-   call <%cb>, puts     
-   jmp <%CB>, <$(@)>
+_start:
+   mov .64bit <%sp>, <$(0xFFF)>                 ; setup stack frame size
+   mov .64bit <%sb>, _stack_frame               ; setup stack frame location
+   call <%cb>, reads                            ; read disk
+   call <%cb>, puts                             ; print disk content
+   jmp <%CB>, <$(@)>                            ; halt, so cpu won't wonder off
+
+_stack_frame:

@@ -92,6 +92,8 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
         log("[CPU] Instruction `", literal, "` not implemented.\n");
     } catch (SysdarftDeviceIOError&) {
         do_interruption(0x02);
+    } catch (SysdarftBadInterruption &){
+        do_interruption(0x04);
     } catch (std::exception& err) {
         std::string err_str = err.what();
         log("[CPU] Unexpected error:", err.what(), "\n");
