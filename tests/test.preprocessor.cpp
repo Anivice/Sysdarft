@@ -36,6 +36,6 @@ int main()
 
     g_ui_initialize();
     Exec base;
-    getch();
+    sleep(1);
     g_ui_cleanup();
 }
