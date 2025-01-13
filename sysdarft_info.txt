@@ -1,0 +1,5 @@
+Sysdarft is a hypothetical architecture that offers simplified instructions
+with potency for creating functional programs and even operating systems.
+By eliminating the need to maintain compatibility with historical designs,
+Sysdarft aims to be straightforward, avoiding complex details while maintaining
+consistency and functionality.
