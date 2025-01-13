@@ -54,7 +54,7 @@ public:
         ascii_code << "  mov .64bit <%FER0>, <$(512)>                    \n";
         ascii_code << "  ins .64bit <$(0x138)>                          \n";
         ascii_code << "_loop:                                           \n";
-        ascii_code << "  jmp <%CB>, _loop                               \n";
+        ascii_code << "  jmp <%CB>, <_loop>                               \n";
         SysdarftCompile(code, ascii_code, 0xC1800, defined_line_marker);
 
         uint64_t off = BIOS_START;

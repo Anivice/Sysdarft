@@ -61,8 +61,6 @@ int main()
     encode_instruction(buffer, "mov .8bit <%R0>, <$(0x8F)>");
     encode_instruction(buffer, "rcl .8bit <%R0>, <$(1)>");
     encode_instruction(buffer, "rcr .8bit <%R0>, <$(1)>");
-    encode_instruction(buffer, "fadd <%XMM2>, <$(3.141592653589793)>");
-    encode_instruction(buffer, "fdiv <$(3.141592653589793)>");
     encode_instruction(buffer, "mov .64bit <%SB>, <$(0xFF)>");
     encode_instruction(buffer, "mov .64bit <%SP>, <$(0xFF)>");
     encode_instruction(buffer, "mov .64bit <%CB>, <$(0xFF)>");
