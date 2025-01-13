@@ -4,10 +4,11 @@
 #include <fstream>
 #include <SysdarftIOHub.h>
 
-#define HDD_DEVICE_SIZE     (0x137)
-#define HDD_CMD_REQUEST_RD  (0x138)
-#define HDD_CMD_REQUEST_WR  (0x139)
-#define HDD_REQUEST_PARAM   (0x13A)
+#define HDD_REG_SIZE        (0x136)
+#define HDD_REG_START_SEC   (0x137)
+#define HDD_REG_SEC_COUNT   (0x138)
+#define HDD_CMD_REQUEST_RD  (0x139)
+#define HDD_CMD_REQUEST_WR  (0x13A)
 
 class SYSDARFT_EXPORT_SYMBOL SysdarftHardDisk final : public SysdarftExternalDeviceBaseClass
 {

@@ -87,7 +87,7 @@ void SysdarftCPUInterruption::do_interruption_tty_0x10()
         throw SysdarftBadInterruption("Teletype linear address out of range");
     }
     const auto ch = static_cast<char>(SysdarftRegister::load<ExtendedRegisterType, 1>());
-    const auto x = linear / V_WIDTH, y = linear % V_WIDTH;
+    const auto y = linear / V_WIDTH, x = linear % V_WIDTH;
 
     std::string msg;
     msg += ch;

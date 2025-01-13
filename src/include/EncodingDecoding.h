@@ -147,20 +147,18 @@ struct SYSDARFT_EXPORT_SYMBOL parsed_target_t
     } memory { };
 };
 
+typedef std::map < std::string, std::pair < uint64_t /* line position */, std::vector < uint64_t > > > defined_line_marker_t;
+
+void process_base16(std::string & input);
+std::string execute_bc(const std::string& input);
+void replace_all( std::string & input, const std::string & target, const std::string & replacement);
 parsed_target_t encode_target(std::vector<uint8_t> &, const std::string&);
-void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> &, const std::string &);
 void decode_target(std::vector<std::string> &, std::vector<uint8_t> &);
-void SYSDARFT_EXPORT_SYMBOL decode_instruction(std::vector < std::string > &,
-    std::vector<uint8_t> &);
 
+void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> &, const std::string &);
+void SYSDARFT_EXPORT_SYMBOL decode_instruction(std::vector < std::string > &, std::vector<uint8_t> &);
 void SYSDARFT_EXPORT_SYMBOL SysdarftCompile(std::vector < std::vector <uint8_t> > & code,
-    std::basic_iostream<char>& file, uint64_t org, std::map < std::string,
-        std::pair < uint64_t /* line position */, std::vector < uint64_t > >
-    > & defined_line_marker);
-
-std::string SYSDARFT_EXPORT_SYMBOL ProProcessor(std::basic_iostream<char>& file,
-        uint64_t & org,
-        std::map < std::string, std::pair < uint64_t /* line position */,
-            std::vector < uint64_t > > > & defined_line_marker);
+    std::basic_iostream<char>& file, uint64_t org, defined_line_marker_t & defined_line_marker);
+void SYSDARFT_EXPORT_SYMBOL CodeProcessing(std::vector <uint8_t> & code, std::basic_iostream<char>& file);
 
 #endif // INSTRUCTIONS_H

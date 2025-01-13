@@ -28,19 +28,21 @@ SysdarftHardDisk::SysdarftHardDisk(const std::string &file_name)
         throw SysdarftDiskError("Cannot open file " + file_name);
     }
 
-    device_buffer.emplace(HDD_CMD_REQUEST_RD, ControllerDataStream());
-    device_buffer.emplace(HDD_CMD_REQUEST_WR, ControllerDataStream());
-    device_buffer.emplace(HDD_DEVICE_SIZE,    ControllerDataStream());
-    device_buffer.emplace(HDD_REQUEST_PARAM,  ControllerDataStream());
+    device_buffer.emplace(HDD_REG_SIZE, ControllerDataStream());
+    device_buffer.emplace(HDD_REG_START_SEC, ControllerDataStream());
+    device_buffer.emplace(HDD_REG_SEC_COUNT,    ControllerDataStream());
+    device_buffer.emplace(HDD_CMD_REQUEST_RD,  ControllerDataStream());
+    device_buffer.emplace(HDD_CMD_REQUEST_WR,  ControllerDataStream());
 }
 
 bool SysdarftHardDisk::request_read(const uint64_t port)
 {
     const uint64_t size = getFileSize(_sysdarftHardDiskFile);
 
-    if (port == HDD_DEVICE_SIZE)
+    if (port == HDD_REG_SIZE)
     {
         device_buffer.at(port).push(size);
+        return true;
     }
     else if (port == HDD_CMD_REQUEST_RD)
     {
@@ -84,9 +86,13 @@ bool SysdarftHardDisk::request_read(const uint64_t port)
 bool SysdarftHardDisk::request_write(const uint64_t port)
 {
     const uint64_t size = getFileSize(_sysdarftHardDiskFile);
-    if (port == HDD_REQUEST_PARAM)
+    if (port == HDD_REG_START_SEC)
     {
         start_sector = device_buffer.at(port).pop<uint64_t>();
+        return true;
+    }
+    else if (port == HDD_REG_SEC_COUNT)
+    {
         sector_count = device_buffer.at(port).pop<uint64_t>();
         return true;
     }

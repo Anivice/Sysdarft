@@ -27,6 +27,7 @@ private:
     int offset_x;
     int offset_y;
     char video_memory[V_HEIGHT][V_WIDTH]{};
+    bool is_inited = false;
 
     void recalc_offsets();
     void render_screen();

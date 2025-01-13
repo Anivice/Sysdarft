@@ -48,6 +48,11 @@ SysdarftCPUInstructionExecutor::SysdarftCPUInstructionExecutor()
     make_instruction_execution_procedure(OPCODE_CALL, &SysdarftCPUInstructionExecutor::call);
     make_instruction_execution_procedure(OPCODE_RET, &SysdarftCPUInstructionExecutor::ret);
     make_instruction_execution_procedure(OPCODE_JE, &SysdarftCPUInstructionExecutor::je);
+    make_instruction_execution_procedure(OPCODE_JNE, &SysdarftCPUInstructionExecutor::jne);
+    make_instruction_execution_procedure(OPCODE_JB, &SysdarftCPUInstructionExecutor::jb);
+    make_instruction_execution_procedure(OPCODE_JL, &SysdarftCPUInstructionExecutor::jl);
+    make_instruction_execution_procedure(OPCODE_JBE, &SysdarftCPUInstructionExecutor::jbe);
+    make_instruction_execution_procedure(OPCODE_JLE, &SysdarftCPUInstructionExecutor::jle);
     make_instruction_execution_procedure(OPCODE_INT, &SysdarftCPUInstructionExecutor::int_);
     make_instruction_execution_procedure(OPCODE_INT3, &SysdarftCPUInstructionExecutor::int3);
     make_instruction_execution_procedure(OPCODE_IRET, &SysdarftCPUInstructionExecutor::iret);
@@ -83,5 +88,11 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
         (this->*ExecutorMap.at(opcode))(timestamp, Arg);
     } catch (std::out_of_range&) {
         log("[CPU] Instruction `", literal, "` not implemented.\n");
+    } catch (SysdarftDeviceIOError&) {
+        do_interruption(0x02);
+    } catch (std::exception& err) {
+        std::string err_str = err.what();
+        log("[CPU] Unexpected error:", err.what(), "\n");
+        do_interruption(0x00);
     }
 }

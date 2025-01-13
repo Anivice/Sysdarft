@@ -256,6 +256,7 @@ add_unit_test(test.dataTsf tests/test.dataTsf.cpp)
 add_unit_test(test.assembler tests/test.assembler.cpp)
 add_unit_test(test.controlflow tests/test.controlflow.cpp)
 add_unit_test(test.io tests/test.io.cpp)
+add_unit_test(test.preprocessor tests/test.preprocessor.cpp)
 
 add_custom_target(
         COPY_HDA_FILE ALL

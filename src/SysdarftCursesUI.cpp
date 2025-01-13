@@ -24,15 +24,21 @@ void SysdarftCursesUI::initialize()
     clear();
     curs_set(1);
     render_screen();      // Render initial screen
+    is_inited = true;
 }
 
 void SysdarftCursesUI::cleanup()
 {
     endwin();
+    is_inited = false;
 }
 
 void SysdarftCursesUI::set_cursor(const int x, const int y)
 {
+    if (!is_inited) {
+        return;
+    }
+
     // Clamp within virtual screen bounds [0,79]x[0,24]
     cursor_x = std::clamp(x, 0, V_WIDTH  - 1);
     cursor_y = std::clamp(y, 0, V_HEIGHT - 1);
@@ -42,11 +48,20 @@ void SysdarftCursesUI::set_cursor(const int x, const int y)
 
 void SysdarftCursesUI::set_cursor_visibility(const bool visible)
 {
+    if (!is_inited) {
+        return;
+    }
+
     curs_set(visible ? 1 : 0);
 }
 
 void SysdarftCursesUI::teletype(const int x, const int y, const std::string &text)
 {
+    if (!is_inited) {
+        std::cout << text;
+        return;
+    }
+
     const int start_x = std::clamp(x, 0, V_WIDTH - 1);
     const int start_y = std::clamp(y, 0, V_HEIGHT - 1);
 
@@ -77,6 +92,10 @@ void SysdarftCursesUI::teletype(const int x, const int y, const std::string &tex
 
 void SysdarftCursesUI::handle_resize()
 {
+    if (!is_inited) {
+        return;
+    }
+
     recalc_offsets();
     render_screen();
     move(offset_y + cursor_y, offset_x + cursor_x);

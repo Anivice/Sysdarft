@@ -109,7 +109,7 @@ void SysdarftCPUInstructionExecutor::idiv(__uint128_t, WidthAndOperandsType & Wi
     const int64_t base = *(int64_t*)(&TargetRegister0);
 
     if (factor == 0) {
-        // TODO: soft int for 0 divisor
+        do_interruption(0x01);
         return;
     }
 
@@ -165,7 +165,7 @@ void SysdarftCPUInstructionExecutor::div(__uint128_t, WidthAndOperandsType & Wid
     const uint64_t base = TargetRegister0;
 
     if (factor == 0) {
-        // TODO: soft int for 0 divisor
+        do_interruption(0x01);
         return;
     }
 

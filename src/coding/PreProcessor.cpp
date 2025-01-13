@@ -1,95 +1,220 @@
 #include <regex>
 #include <string>
+#include <iomanip>
 #include <EncodingDecoding.h>
 
-// TODO: Operand 'ASCII'
-// TODO: Data .string (""), .8bit_data, .16bit_data, .32bit_data, .64bit_data,
-// TODO: Data reservation resvb [Reserve Bytes]
-// TODO: Segmented compilation
+class SysdarftPreProcessorError final : public SysdarftBaseError {
+public:
+    explicit SysdarftPreProcessorError(const std::string& msg) : SysdarftBaseError("Error encountered in preprocessor: " + msg) { }
+};
 
-const std::regex pre_processor_pattern(R"((\.(ORG|org|LAB|lab)\s+<(.*)>)|(\.(EQU|equ)\s+<(.*)\|(.*)>))");
+const std::regex org_pattern(R"(\.org\s+((?:0x[0-9A-Fa-f]+)|(?:\d+))\s+)", std::regex_constants::icase); // .org 0x123
+const std::regex lab_pattern(R"(\.lab\s+([A-Za-z._][A-Za-z0-9._]*(?:\s*,\s*[A-Za-z._][A-Za-z0-9._]*)*)\s+)",
+    std::regex_constants::icase);
+const std::regex equ_pattern(R"(\.equ\s+'([^']*)'\s*,\s*'([^']*)'\s+)", std::regex_constants::icase);
 
-std::string ProProcessor(std::basic_iostream<char>& file,
-        uint64_t & org,
-        std::map < std::string, std::pair < uint64_t /* line position */,
-            std::vector < uint64_t > > > & defined_line_marker)
+std::vector<std::string> splitString(const std::string& input, const char delimiter = ',')
 {
-    auto replace_all = [](std::string & input,
-        const std::string & target,
-        const std::string & replacement)
-    {
-        if (target.empty()) return; // Avoid infinite loop if target is empty
+    std::vector<std::string> result;
+    std::stringstream ss(input);
+    std::string item;
 
-        size_t pos = 0;
-        while ((pos = input.find(target, pos)) != std::string::npos) {
-            input.replace(pos, target.length(), replacement);
-            pos += replacement.length(); // Move past the replacement to avoid infinite loop
+    while (std::getline(ss, item, delimiter)) {
+        result.push_back(item);
+    }
+
+    return result;
+}
+
+std::string convertEscapeSequences(const std::string& input)
+{
+    std::string output;
+    output.reserve(input.size());
+
+    for (size_t i = 0; i < input.size(); ++i)
+    {
+        if (input[i] == '\\' && i + 1 < input.size())
+        {
+            // Check the character following the backslash
+            switch (const char nextChar = input[i + 1]) {
+            case 'n':
+                output.push_back('\n');
+                break;
+            case 't':
+                output.push_back('\t');
+                break;
+            case '\\':
+                output.push_back('\\');
+                break;
+            case '"':
+                output.push_back('\"');
+                break;
+                // Add additional escape sequence cases as needed
+            default:
+                // If unknown escape, keep the backslash and next char as is
+                    output.push_back('\\');
+                output.push_back(nextChar);
+                break;
+            }
+            i++;  // Skip the next character because we've processed it
+        } else {
+            output.push_back(input[i]);
         }
+    }
+
+    return output;
+}
+
+std::string truncateAfterSemicolonOrHash(const std::string& input)
+{
+    // Find the first occurrence of either ';' or '#'
+    // If found, return substring from beginning to that position
+    if (const size_t pos = input.find_first_of(";#");
+        pos != std::string::npos)
+    {
+        return input.substr(0, pos);
+    }
+    // If neither found, return the original string
+    return input;
+}
+
+void process_org(const std::string& input, uint64_t & org)
+{
+    // .org [NUM]
+    if (std::smatch matches; std::regex_search(input, matches, org_pattern))
+    {
+        auto num_literal = matches[1].str();
+        process_base16(num_literal);
+        org = std::strtoll(num_literal.c_str(), nullptr, 10);
+    }
+}
+
+void process_lab(const std::string& input, defined_line_marker_t & defined_line_marker)
+{
+    // .lab marker1, [marker2, ...]
+    if (std::smatch matches; std::regex_search(input, matches, lab_pattern))
+    {
+        auto marker_literal = matches[1].str();
+        replace_all(marker_literal, " ", "");
+        for (const auto line_markers = splitString(marker_literal);
+            const auto & line_marker : line_markers)
+        {
+            defined_line_marker.emplace(line_marker,
+                std::pair < uint64_t, std::vector < uint64_t > > (0, { }));
+        }
+    }
+}
+
+void process_equ(const std::string& input, std::map < std::string, std::string > & equ_replacement)
+{
+    // .equ 'Extended Regular Expression', 'Replacement'
+    // this is marked, process is done when the whole block is processed before compile
+    if (std::smatch matches; std::regex_search(input, matches, equ_pattern)) {
+        auto operand1 = matches[1].str();
+        auto operand2 = matches[2].str();
+        equ_replacement.emplace(operand1, operand2);
+    }
+}
+
+void sed_equ(std::string& input, std::map < std::string, std::string > & equ_replacement)
+{
+    for (const auto & [key, value] : equ_replacement) {
+        replace_all(input, key, value);
+    }
+}
+
+void CodeProcessing(
+    std::vector < uint8_t > & compiled_code,
+    std::vector < std::string > & file)
+{
+    uint64_t org;
+    defined_line_marker_t defined_line_marker;
+    std::map < std::string, std::string > equ_replacement;
+
+    auto getline = [](std::vector < std::string > & file_, std::string & line)->bool
+    {
+        if (file_.empty()) {
+            return false;
+        }
+
+        line = file_.front();
+        return true;
     };
 
-    std::map < std::string, std::string > equ_table;
     std::string line;
-    std::stringstream code;
-
-    while (std::getline(file, line))
+    while (getline(file, line))
     {
-        if (std::smatch matches;
-            std::regex_match(line, matches, pre_processor_pattern))
-        {
-            if (matches[1] == "EQU" || matches[1] == "equ")
-            {
-                if (matches.size() != 4) {
-                    throw SysdarftAssemblerError("Syntax error in EQU definition: " + line);
-                }
+        // remove comments
+        line = truncateAfterSemicolonOrHash(line);
+        // remove '\t'
+        replace_all(line, "\t", "    ");
 
-                auto entry = matches[2].str();
-                auto value = matches[3].str();
-                replace_all(entry, " ", "");
-                replace_all(value, " ", "");
-
-                equ_table[matches[2]] = matches[3];
-            }
-            else if (matches[1] == "ORG" || matches[1] == "org")
-            {
-                if (matches.size() != 3) {
-                    throw SysdarftAssemblerError("Syntax error in ORG definition: " + line);
-                }
-
-                org = std::stoull(matches[2]);
-            }
-            else if (matches[1] == "LAB" || matches[1] == "lab")
-            {
-                if (matches.size() != 3) {
-                    throw SysdarftAssemblerError("Syntax error in LAB definition: " + line);
-                }
-
-                defined_line_marker.emplace(matches[2], std::pair < uint64_t, std::vector < uint64_t > > (0, { }));
-            }
-            else {
-                throw SysdarftAssemblerError("Unknown preprocessing sign: " + line);
-            }
+        // search for each preprocessor pattern
+        if (std::regex_match(line, org_pattern)) {
+            process_org(line, org);
+        } else if (std::regex_match(line, lab_pattern)) {
+            process_lab(line, defined_line_marker);
+        } else if (std::regex_match(line, equ_pattern)) {
+            process_equ(line, equ_replacement);
+        } else {
+            break;
         }
-        else
-        {
-            code << line + "\n";
-        }
+
+        file.erase(file.begin());
     }
 
-    auto content = code.str();
+    std::vector < std::vector <uint8_t> > code_for_this_block;
+    code_for_this_block.emplace_back(compiled_code);
+    std::stringstream code_block;
 
-    for (const auto &[fst, snd] : equ_table)
+    while (getline(file, line))
     {
-        std::stringstream args;
-        args << "s/" << fst << "/" << snd << "/";
-
-        auto [fd_stdout, fd_stderr, exit_status] =
-            debug::exec_command("/usr/bin/sed", content, args.str(), "-E");
-        if (exit_status != 0) {
-            throw SysdarftAssemblerError("Syntax error in EQU definition: " + fd_stderr);
+        // remove comments
+        line = truncateAfterSemicolonOrHash(line);
+        // remove '\t'
+        replace_all(line, "\t", "    ");
+        // search for each preprocessor pattern
+        if (std::regex_match(line, org_pattern)             ||
+            std::regex_match(line, lab_pattern)             ||
+            std::regex_match(line, equ_pattern))
+        {
+            throw SysdarftPreProcessorError("PreProcessing indicator found after declaration space!");
         }
 
-        content = fd_stdout;
+        // not a preprocessor
+        sed_equ(line, equ_replacement);
+        replace_all(line, ":", ":\n");
+        code_block << line << std::endl;
+        file.erase(file.begin());
     }
 
-    return content;
+    auto str = code_block.str();
+    SysdarftCompile(code_for_this_block, code_block, org, defined_line_marker);
+
+    // no additional processing from line marker should be performed after this block
+    for (auto marker : defined_line_marker) {
+        marker.second.second.clear();
+    }
+
+    if (code_for_this_block.size() > 1)
+    {
+        code_for_this_block.erase(code_for_this_block.begin());
+        for (const auto & cl : code_for_this_block)
+        {
+            for (const auto & c : cl) {
+                compiled_code.emplace_back(c);
+            }
+        }
+    }
+}
+
+void CodeProcessing(std::vector <uint8_t> & code, std::basic_iostream<char>& file)
+{
+    std::vector < std::string > lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.emplace_back(line);
+    }
+
+    CodeProcessing(code, lines);
 }

@@ -312,42 +312,42 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
 
     {"JE", {
          {ENTRY_OPCODE, OPCODE_JE},
-         {ENTRY_ARGUMENT_COUNT, 1},
+         {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"JNE", {
          {ENTRY_OPCODE, OPCODE_JNE},
-         {ENTRY_ARGUMENT_COUNT, 1},
+         {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"JB", {
          {ENTRY_OPCODE, OPCODE_JB},
-         {ENTRY_ARGUMENT_COUNT, 1},
+         {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"JL", {
          {ENTRY_OPCODE, OPCODE_JL},
-         {ENTRY_ARGUMENT_COUNT, 1},
+         {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"JBE", {
          {ENTRY_OPCODE, OPCODE_JBE},
-         {ENTRY_ARGUMENT_COUNT, 1},
+         {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"JLE", {
          {ENTRY_OPCODE, OPCODE_JLE},
-         {ENTRY_ARGUMENT_COUNT, 1},
+         {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },

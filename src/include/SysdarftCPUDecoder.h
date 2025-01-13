@@ -134,8 +134,8 @@ private:
      * Interruption table:
      * Hardware Reserved:
      *  [0x00] FATAL ERROR (ErrorCode == %EXR0)
-     *  [0x01]
-     *  [0x02]
+     *  [0x01] DIV/0
+     *  [0x02] IO ERROR
      *  [0x03] DEBUG, BREAKPOINT RIGHT NEXT
      *  [0x04]
      *  [0x05]

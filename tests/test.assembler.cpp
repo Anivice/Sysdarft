@@ -8,13 +8,13 @@ int main()
     std::map < std::string, std::pair < uint64_t /* line position */, std::vector < uint64_t > > > defined_line_marker;
     defined_line_marker.emplace("_start", std::pair < uint64_t, std::vector < uint64_t > > (0, { }));
     defined_line_marker.emplace("_end", std::pair < uint64_t, std::vector < uint64_t > > (0, { }));
-    std::stringstream ascii_code, preprocessor;
+    std::stringstream ascii_code;
     ascii_code << "nop                  \n";
     ascii_code << "_start:              \n";
-    ascii_code << "nop                  \n";
-    ascii_code << "jmp <%CB>, _end      \n";
+    ascii_code << "     nop                  \n";
+    ascii_code << "     jmp <%CB>, _end      \n";
     ascii_code << "_end:                \n";
-    ascii_code << "call <%CB>, _start   \n";
+    ascii_code << "     call <%CB>, _start   \n";
     SysdarftCompile(code, ascii_code, 0, defined_line_marker);
 
     std::vector < uint8_t > assembled_code;
@@ -40,9 +40,4 @@ int main()
     for (const auto& line : lines) {
         std::cout << line << "\n";
     }
-
-    preprocessor << ".equ <CODE|1245>\n";
-    preprocessor << "add <%FER0>, <$( CODE )>";
-    uint64_t start_address = 0;
-    auto processed = ProProcessor(preprocessor, start_address, defined_line_marker);
 }
