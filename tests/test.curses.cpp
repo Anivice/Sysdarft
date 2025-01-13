@@ -1,37 +1,26 @@
+#include <csignal>
 #include <SysdarftCursesUI.h>
-#include <atomic>
 
-std::atomic<bool> has_q = false;
+// Global pointer to the UI instance (for signal handler access)
+SysdarftCursesUI* g_ui_instance = nullptr;
 
-class dummy_ {
-public:
-    void input_processor(int input) {
-        if (input == 'q' || input == 'Q') {
-            has_q = true;
-        }
+// Signal handler for window resize
+void resize_handler(int sig) {
+    if (g_ui_instance) {
+        g_ui_instance->handle_resize();
     }
-} dummy;
+}
 
-int main(int argc, char ** argv)
+int main()
 {
-    SysdarftCursesUI curses;
-    g_input_processor_install(dummy, input_processor);
+    SysdarftCursesUI ui;
+    g_ui_instance = &ui;
 
-    auto worker = [&]() {
-        curses.initialize();
-        if (argc >= 2) {
-            while (!has_q) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-        } else {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-        curses.cleanup();
-    };
+    // Register the SIGWINCH handler
+    std::signal(SIGWINCH, resize_handler);
 
-    for (int i = 0; i < 10; i++) {
-        worker();
-    }
-
-    return EXIT_SUCCESS;
+    ui.initialize();
+    ui.teletype('S');
+    sleep(1);
+    ui.cleanup();
 }

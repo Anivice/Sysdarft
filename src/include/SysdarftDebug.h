@@ -30,10 +30,11 @@ namespace debug
     };
 
     // execute a command from system shell and return its information
-    cmd_status SYSDARFT_EXPORT_SYMBOL _exec_command(const std::string& cmd, const std::vector<std::string>& args);
+    cmd_status SYSDARFT_EXPORT_SYMBOL _exec_command(const std::string &cmd,
+        const std::vector<std::string> &args, const std::string &input);
     // system shell command executor, wrapper for `_exec_command`
     template <typename... Strings>
-    cmd_status exec_command(const std::string& cmd, Strings&&... args);
+    cmd_status exec_command(const std::string& cmd, const std::string &input, Strings&&... args);
 
     // returns current timesstamp
     std::string SYSDARFT_EXPORT_SYMBOL get_current_date_time();
@@ -90,7 +91,7 @@ namespace debug
     };
 
     template <>
-    struct is_string<std::string> : std::true_type
+    struct is_string<std::basic_string<char>> : std::true_type
     {
     };
 
@@ -137,10 +138,10 @@ namespace debug
     }
 }
 
-#ifndef __DEBUG__
+#if !defined(__DEBUG__) || defined(__CLEAN_OUTPUT__)
 #define log(...) ::debug::_log(__VA_ARGS__);
 #else
-#define log(...) ::debug::_log(__FILE__, ":", __LINE__, ":", __FUNCTION__, ": ", __VA_ARGS__);
+#define log(...) ::debug::_log(__FILE__, ":", __LINE__, ":", __PRETTY_FUNCTION__, ": ", __VA_ARGS__);
 #endif
 
 /**
@@ -157,10 +158,8 @@ public:
      * automatically invoked by derivatives.
      *
      * @param msg error message
-     * @param if_perform_code_backtrace is backtrace will be performed
      */
-    explicit SysdarftBaseError(
-        const std::string& msg, bool if_perform_code_backtrace = true);
+    explicit SysdarftBaseError(const std::string& msg);
 };
 
 #include "SysdarftDebug.inl"

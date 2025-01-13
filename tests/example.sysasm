@@ -1,0 +1,65 @@
+.equ 'HDD_SEC_START', '0x137'
+.equ 'HDD_SEC_COUNT', '0x138'
+.equ 'HDD_IO', '0x139'
+.lab _start, reads, puts, _stack_frame, _int3, _skip_newl, gets, _loop2, _end
+.org 0xC1800
+
+jmp <%CB>, < _start >
+
+reads:
+    pushall
+    out .64bit <$(HDD_SEC_START)>, <$(0)>           ; sector read starts from 0
+    out .64bit <$(HDD_SEC_COUNT)>, <$(4)>           ; read 4 sector
+    mov .64bit <%FER0>, <$(2048)>                   ; ins operation input 2048 bytes of data
+    ins .64bit <$(HDD_IO)>                          ; ins from HDD_IO port
+    popall
+    ret
+
+puts:
+    pushall
+    xor .64bit <%DP>, <%DP>                         ; set dp = 0
+    xor .64bit <%FER1>, <%FER1>                     ; clear counter
+    _loop:
+        xor .8bit <%R1>, <%R1>
+        mov .8bit <%R0>, <*1&8(%DP, $(0), $(0))>    ; move db:dp to R0
+        cmp .8bit <%R0>, <$(' ')>
+        jne <%CB>, <_skip_newl>
+
+        int <$(0x13)>
+        _skip_newl:
+
+        int <$(0x10)>                               ; print R2
+        add .64bit <%DP>, <$(1)>                    ; inc dp
+        add .64bit <%FER1>, <$(1)>                  ; inc FER1
+        cmp .64bit <%FER1>, <$(2048)>               ; see if the data at it end
+        jne <%CB>, <_loop>                          ; if not, continue
+    popall
+    ret
+
+;gets:
+;    pushall
+;    _loop2:
+;        int <$(0x14)>               ; getc
+;        cmp .8bit <%R0>, <$('q')>   ;
+;        je <%cb>, <_end>;
+;
+;        int <$(0x10)>;
+;
+;        jmp <%cb>, <_loop2>;
+;    _end:;
+;    popall;
+;    ret;
+
+_start:
+    mov .64bit <%sp>, <$(0xFFF)>                            ; setup stack frame size
+    mov .64bit <%sb>, <_stack_frame>                        ; setup stack frame location
+    mov .64bit <*1&64($(0xA0000), $(56), $(0))>, <_int3>    ; set breakpoint handler
+    call <%cb>, <reads>                                     ; read disk
+    call <%cb>, <puts>                                      ; print disk content
+;    call <%cb>, <gets>
+    jmp <%CB>, <$(@)>                                       ; halt, so cpu won't wonder off
+
+_int3:
+    iret
+
+_stack_frame:

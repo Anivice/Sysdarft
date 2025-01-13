@@ -42,6 +42,27 @@
 #define OPCODE_ENTER    (0x26)
 #define OPCODE_LEAVE    (0x27)
 #define OPCODE_MOVS     (0x28)
+#define OPCODE_LEA      (0x29)
+
+#define OPCODE_JMP      (0x30)
+#define OPCODE_CALL     (0x31)
+#define OPCODE_RET      (0x32)
+#define OPCODE_JE       (0x33)
+#define OPCODE_JNE      (0x34)
+#define OPCODE_JB       (0x35)
+#define OPCODE_JL       (0x36)
+#define OPCODE_JBE      (0x37)
+#define OPCODE_JLE      (0x38)
+#define OPCODE_INT      (0x39)
+#define OPCODE_INT3     (0x3A)
+#define OPCODE_IRET     (0x3B)
+
+#define OPCODE_HLT      (0x40)
+
+#define OPCODE_IN       (0x50)
+#define OPCODE_OUT      (0x51)
+#define OPCODE_INS      (0x52)
+#define OPCODE_OUTS     (0x53)
 
 // Initialize the instruction to opcode mapping
 const std::unordered_map<std::string, std::map<std::string, uint64_t>> instruction_map = {
@@ -259,94 +280,94 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
              }
     },
 
+    {"LEA", {
+                 {ENTRY_OPCODE, OPCODE_LEA},
+                 {ENTRY_ARGUMENT_COUNT, 2},
+                 {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+             }
+    },
+
     ////////////////////////////////////////////////////////////////////////////////////////////
 
     {"JMP", {
-         {ENTRY_OPCODE, 0x30},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_OPCODE, OPCODE_JMP},
+         {ENTRY_ARGUMENT_COUNT, 2},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"CALL", {
-         {ENTRY_OPCODE, 0x31},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_OPCODE, OPCODE_CALL},
+         {ENTRY_ARGUMENT_COUNT, 2},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"RET", {
-         {ENTRY_OPCODE, 0x32},
+         {ENTRY_OPCODE, OPCODE_RET},
          {ENTRY_ARGUMENT_COUNT, 0},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
-    {"LOOP", {
-         {ENTRY_OPCODE, 0x33},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
-     }
-    },
-
     {"JE", {
-         {ENTRY_OPCODE, 0x34},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_OPCODE, OPCODE_JE},
+         {ENTRY_ARGUMENT_COUNT, 2},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"JNE", {
-         {ENTRY_OPCODE, 0x35},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_OPCODE, OPCODE_JNE},
+         {ENTRY_ARGUMENT_COUNT, 2},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"JB", {
-         {ENTRY_OPCODE, 0x36},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_OPCODE, OPCODE_JB},
+         {ENTRY_ARGUMENT_COUNT, 2},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"JL", {
-         {ENTRY_OPCODE, 0x37},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_OPCODE, OPCODE_JL},
+         {ENTRY_ARGUMENT_COUNT, 2},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"JBE", {
-         {ENTRY_OPCODE, 0x38},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_OPCODE, OPCODE_JBE},
+         {ENTRY_ARGUMENT_COUNT, 2},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"JLE", {
-         {ENTRY_OPCODE, 0x39},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_OPCODE, OPCODE_JLE},
+         {ENTRY_ARGUMENT_COUNT, 2},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"INT", {
-         {ENTRY_OPCODE, 0x3A},
+         {ENTRY_OPCODE, OPCODE_INT},
          {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"INT3", {
-         {ENTRY_OPCODE, 0x3B},
+         {ENTRY_OPCODE, OPCODE_INT3},
          {ENTRY_ARGUMENT_COUNT, 0},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
     {"IRET", {
-         {ENTRY_OPCODE, 0x3C},
+         {ENTRY_OPCODE, OPCODE_IRET},
          {ENTRY_ARGUMENT_COUNT, 0},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
@@ -354,97 +375,39 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
 
     ////////////////////////////////////////////////////////////////////////////////////////////
 
-    {"FADD", {
-         {ENTRY_OPCODE, 0x40},
-         {ENTRY_ARGUMENT_COUNT, 2},
+    { "HLT", {
+         {ENTRY_OPCODE, OPCODE_HLT },
+         {ENTRY_ARGUMENT_COUNT, 0},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
     },
 
-    {"FSUB", {
-         {ENTRY_OPCODE, 0x41},
-         {ENTRY_ARGUMENT_COUNT, 2},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
-     }
+    ////////////////////////////////////////////////////////////////////////////////////////////
+
+    { "IN", {
+           {ENTRY_OPCODE, OPCODE_IN },
+           {ENTRY_ARGUMENT_COUNT, 2},
+           {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+       }
     },
 
-    {"FMUL", {
-         {ENTRY_OPCODE, 0x42},
+    { "OUT", {
+           {ENTRY_OPCODE, OPCODE_OUT },
+           {ENTRY_ARGUMENT_COUNT, 2},
+           {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+       }
+    },
+
+    { "INS", {
+         {ENTRY_OPCODE, OPCODE_INS },
          {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
-     }
-    },
-
-    {"FDIV", {
-         {ENTRY_OPCODE, 0x43},
-         {ENTRY_ARGUMENT_COUNT, 1},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
-     }
-    },
-
-    {"FLDI", {
-         {ENTRY_OPCODE, 0x44},
-         {ENTRY_ARGUMENT_COUNT, 2},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
-     }
-    },
-
-    {"FLDFT", {
-         {ENTRY_OPCODE, 0x45},
-         {ENTRY_ARGUMENT_COUNT, 2},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
-     }
-    },
-
-    {"FXCHG", {
-         {ENTRY_OPCODE, 0x46},
-         {ENTRY_ARGUMENT_COUNT, 2},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
-     }
-    },
-
-    ////////////////////////////////////////////////////////////////////////////////////////////
-
-    {"HLT", {
-         {ENTRY_OPCODE, 0x50},
-         {ENTRY_ARGUMENT_COUNT, 0},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
-     }
-    },
-
-    {"RDTSCP", {
-         {ENTRY_OPCODE, 0x51},
-         {ENTRY_ARGUMENT_COUNT, 0},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
-     }
-    },
-
-    {"SYSCALL", {
-         {ENTRY_OPCODE, 0x52},
-         {ENTRY_ARGUMENT_COUNT, 0},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
-     }
-    },
-
-    {"SYSRET", {
-         {ENTRY_OPCODE, 0x53},
-         {ENTRY_ARGUMENT_COUNT, 0},
-         {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
-     }
-    },
-
-    ////////////////////////////////////////////////////////////////////////////////////////////
-
-    {"INS", {
-         {ENTRY_OPCODE, 0x60},
-         {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },
 
-    {"OUTS", {
-         {ENTRY_OPCODE, 0x61},
-         {ENTRY_ARGUMENT_COUNT, 2},
+    { "OUTS", {
+         {ENTRY_OPCODE, OPCODE_OUTS },
+         {ENTRY_ARGUMENT_COUNT, 1},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },

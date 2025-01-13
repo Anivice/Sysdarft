@@ -50,4 +50,10 @@ PythonVEnv/*
 *.exe
 *.out
 *.app
+<<<<<<< HEAD
 >>>>>>> SysdarftRemake/rebase
+=======
+
+*cmake*/
+*build*/
+>>>>>>> SysdarftRemake/ugly

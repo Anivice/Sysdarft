@@ -8,7 +8,7 @@
 #include <vector>
 #include <chrono>
 #include <SysdarftDebug.h>
-#include <MessageMap.h>
+#include <SysdarftMessageMap.h>
 
 class WorkerThread {
 private:

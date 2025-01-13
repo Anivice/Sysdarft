@@ -24,12 +24,16 @@ void f1(const int a)
     }
 }
 
-int main()
+int main(int argc, char **)
 {
-    debug::verbose = true;
+    if (argc > 1) {
+        debug::verbose = true;
+    }
+
     try {
         f1(12);
     } catch (SysdarftBaseError& e) {
+        std::cout << e.what() << std::endl;
         return EXIT_SUCCESS;
     }
 

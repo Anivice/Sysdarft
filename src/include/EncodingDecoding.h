@@ -2,27 +2,25 @@
 #define INSTRUCTIONS_H
 
 // Width
-#define _8bit_prefix  0x08
-#define _16bit_prefix 0x16
-#define _32bit_prefix 0x32
-#define _64bit_prefix 0x64
-#define FLOATING_POINT_PREFIX 0xFC
+#define _8bit_prefix  (0x08)
+#define _16bit_prefix (0x16)
+#define _32bit_prefix (0x32)
+#define _64bit_prefix (0x64)
+#define _float_ptr_prefix (0xFC)
 
 // Prefix
-#define REGISTER_PREFIX 0x01
-#define CONSTANT_PREFIX 0x02
-#define MEMORY_PREFIX   0x03
+#define REGISTER_PREFIX (0x01)
+#define CONSTANT_PREFIX (0x02)
+#define MEMORY_PREFIX   (0x03)
 
-// Specific Registers
-#define R_StackPointer                     0xA0
-#define R_StackConfiguration               0xA1
-#define R_CodeConfiguration                0xA2
-#define R_DataPointer                      0xA3
-#define R_DataConfiguration                0xA4
-#define R_ExtendedSegmentPointer           0xA5
-#define R_ExtendedSegmentConfiguration     0xA6
-#define R_SegmentationAccessTable          0xA7
-#define R_ControlRegister0                 0xA8
+// Special Registers
+#define R_StackBase                     (0xA0)
+#define R_StackPointer                  (0xA1)
+#define R_CodeBase                      (0xA2)
+#define R_DataBase                      (0xA3)
+#define R_DataPointer                   (0xA4)
+#define R_ExtendedBase                  (0xA5)
+#define R_ExtendedPointer               (0xA6)
 
 #include <string>
 #include <algorithm>
@@ -36,6 +34,13 @@ class SysdarftCodeExpressionError final : public SysdarftBaseError
 public:
     explicit SysdarftCodeExpressionError(const std::string & message) :
         SysdarftBaseError("Cannot parse Target expression: " + message) { }
+};
+
+class SysdarftAssemblerError final : public SysdarftBaseError
+{
+public:
+    explicit SysdarftAssemblerError(const std::string & message) :
+        SysdarftBaseError("Assembler cannot parse the code expression: " + message) { }
 };
 
 class SysdarftInvalidArgument final : public SysdarftBaseError
@@ -129,9 +134,9 @@ inline uint64_t code_buffer_pop64(std::vector<uint8_t> & buffer) {
 
 struct SYSDARFT_EXPORT_SYMBOL parsed_target_t
 {
-    enum { NOTaValidType, REGISTER, CONSTANT, MEMORY } TargetType;
-    std::string RegisterName;
-    std::string ConstantExpression;
+    enum { NOTaValidType, REGISTER, CONSTANT, MEMORY, CODE_POSITION } TargetType { };
+    std::string RegisterName { };
+    std::string ConstantExpression { };
 
     struct {
         std::string MemoryAccessRatio;
@@ -139,13 +144,21 @@ struct SYSDARFT_EXPORT_SYMBOL parsed_target_t
         std::string MemoryOffset1;
         std::string MemoryOffset2;
         std::string MemoryWidth;
-    } memory;
+    } memory { };
 };
 
+typedef std::map < std::string, std::pair < uint64_t /* line position */, std::vector < uint64_t > > > defined_line_marker_t;
+
+void process_base16(std::string & input);
+std::string execute_bc(const std::string& input);
+void replace_all( std::string & input, const std::string & target, const std::string & replacement);
 parsed_target_t encode_target(std::vector<uint8_t> &, const std::string&);
-void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> &, const std::string &);
 void decode_target(std::vector<std::string> &, std::vector<uint8_t> &);
-void SYSDARFT_EXPORT_SYMBOL decode_instruction(std::vector < std::string > &,
-    std::vector<uint8_t> &);
+
+void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> &, const std::string &);
+void SYSDARFT_EXPORT_SYMBOL decode_instruction(std::vector < std::string > &, std::vector<uint8_t> &);
+void SYSDARFT_EXPORT_SYMBOL SysdarftCompile(std::vector < std::vector <uint8_t> > & code,
+    std::basic_iostream<char>& file, uint64_t org, defined_line_marker_t & defined_line_marker);
+void SYSDARFT_EXPORT_SYMBOL CodeProcessing(std::vector <uint8_t> & code, std::basic_istream<char>& file);
 
 #endif // INSTRUCTIONS_H

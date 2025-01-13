@@ -70,18 +70,23 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 >>>>>>> SysdarftRemake/rebase
 
+# WARNING:  Standard C++14 library can cause thread sanitizers to report data race in certain areas,
+#           which is considered a false positive, but will cause the unit test to fail. In C++23 this
+#           issue simply does not exist
+
 # Universal compiler and linker flags
 set(compiler_options
         # Warnings and diagnostics
-        -Wall                                # Enable common warnings
-        -Wextra                              # Enable extra warnings
-        -Wpedantic                           # Strict compliance with the standard
-        -Wunused                             # Warn about unused variables, functions, etc.
-        -Wuninitialized                      # Warn if variables are used uninitialized
-        -fdiagnostics-show-option            # Show which option triggered the warning
-        -fdiagnostics-color=always           # Enable colored diagnostics for better readability
+        -Wall                                   # Enable common warnings
+        -Wextra                                 # Enable extra warnings
+        -Wpedantic                              # Strict compliance with the standard
+        -Wunused                                # Warn about unused variables, functions, etc.
+        -Wuninitialized                         # Warn if variables are used uninitialized
+        -fdiagnostics-show-option               # Show which option triggered the warning
+        -fdiagnostics-color=always              # Enable colored diagnostics for better readability
 
         # Debugging and stack protection
+<<<<<<< HEAD
         -g3                                  # Maximum debug information, including macro expansions
 <<<<<<< HEAD
         -O0                                  # No optimization, easier for debugging
@@ -90,15 +95,19 @@ set(compiler_options
         -D_FORTIFY_SOURCE=2                  # Buffer overflow detection on safer libc functions (e.g., memcpy)
         -gdwarf-4
 =======
+=======
+        -g3                                     # Maximum debug information, including macro expansions
+>>>>>>> SysdarftRemake/ugly
         -O0
-        -fstack-usage                        # Generate stack usage info for each function
-        -fstack-protector-all                # Protect all functions with a stack canary to prevent stack overflow attacks
-        # -D_FORTIFY_SOURCE=2                  # Buffer overflow detection on safer libc functions (e.g., memcpy).
+        -fstack-usage                           # Generate stack usage info for each function
+        -fstack-protector-all                   # Protect all functions with a stack canary to prevent stack overflow attacks
+        # -D_FORTIFY_SOURCE=2                   # Buffer overflow detection on safer libc functions (e.g., memcpy).
         # You need to enable optimization for _FORTIFY_SOURCE to work!
-        -gdwarf-4                            # Generate DWARF version 4 debug information
+        -gdwarf-4                               # Generate DWARF version 4 debug information
 
         -fno-eliminate-unused-debug-types
         -fno-omit-frame-pointer
+<<<<<<< HEAD
 >>>>>>> SysdarftRemake/rebase
 
         # Sanitize memory and thread issues
@@ -118,6 +127,9 @@ set(compiler_options
         # Code coverage options
         -fprofile-arcs                       # Enable code coverage instrumentation
         -ftest-coverage                      # Generate coverage test data
+=======
+        -std=c++23
+>>>>>>> SysdarftRemake/ugly
         -lasan -lubsan -fPIC --pie
 >>>>>>> SysdarftRemake/rebase
 )
@@ -295,20 +307,47 @@ execute_process(COMMAND ${CMAKE_SOURCE_DIR}/scripts/generate_readme.bash "${CMAK
         -fno-eliminate-unused-debug-types
         -fno-omit-frame-pointer
 
-        # AddressSanitizer and UndefinedBehaviorSanitizer linking
-        -fsanitize=address                      # Link the AddressSanitizer runtime for memory integrity
-        -fsanitize=undefined                    # Link the UndefinedBehaviorSanitizer for detecting undefined behavior
-        # Uncomment if debugging threading issues:
-        # -fsanitize=thread                       # Link the ThreadSanitizer runtime for thread safety
-
         # Stack protection
         -fstack-protector-all                   # Link with stack protection for all functions
-
-        # Code coverage options
-        -fprofile-arcs                          # Enable code coverage instrumentation
-        -ftest-coverage                         # Generate coverage test data
+        -std=c++23
         -lasan -lubsan -fPIC --pie --whole-file
 )
+
+if ("${COMPILE_WITH_MEMORY_SANITIZERS}" STREQUAL "True")
+    message(STATUS "Sanitizers for memory enabled")
+    list(APPEND compiler_options
+            -fsanitize=address                  # Detect illegal memory access such as buffer overflows and use-after-free
+            -fsanitize=undefined                # Detect undefined behavior like integer overflows and null dereferencing
+            # Code coverage options
+            -fprofile-arcs                      # Enable code coverage instrumentation
+            -ftest-coverage                     # Generate coverage test data
+    )
+
+    list(APPEND linker_options
+            -fsanitize=address                  # Link the AddressSanitizer runtime for memory integrity
+            -fsanitize=undefined                # Link the UndefinedBehaviorSanitizer for detecting undefined behavior
+            # Code coverage options
+            -fprofile-arcs                      # Enable code coverage instrumentation
+            -ftest-coverage                     # Generate coverage test data
+    )
+endif ()
+
+if ("${COMPILE_WITH_THREAD_SANITIZERS}" STREQUAL "True")
+    message(STATUS "Sanitizers for thread enabled")
+    list(APPEND compiler_options
+        -fsanitize=undefined                    # Detect undefined behavior like integer overflows and null dereferencing
+        -fsanitize=thread                       # Ensure thread safety by detecting data races
+    )
+    list(APPEND linker_options
+        -fsanitize=undefined                    # Link the UndefinedBehaviorSanitizer for detecting undefined behavior
+        -fsanitize=thread                       # Link the ThreadSanitizer runtime for thread safety
+    )
+endif ()
+
+# Sanity check
+if (("${COMPILE_WITH_MEMORY_SANITIZERS}" STREQUAL "True") AND ("${COMPILE_WITH_THREAD_SANITIZERS}" STREQUAL "True"))
+    message(FATAL_ERROR "Memory sanitizers and thread sanitizers are mutually exclusive!")
+endif ()
 
 add_compile_options(${compiler_options})
 add_link_options(${linker_options})
@@ -325,17 +364,23 @@ add_compile_definitions(
         SYSDARFT_VERSION="0.0.1"
         SYSDARFT_INFORMATION="${SYSDARFT_INFO_CONTENT_ESCAPED}"
         __DEBUG__
+        __CLEAN_OUTPUT__
 )
 
 # Define include directories globally (can be refined per target)
 include_directories(src/include)
 
 # Debug:
-add_library(SysdarftDebug OBJECT src/SysdarftDebug.cpp)
+add_library(SysdarftDebug OBJECT
+        src/SysdarftDebug.cpp
+        src/include/SysdarftDebug.h
+        src/include/SysdarftDebug.inl
+        src/ProprocessingFlagChecker.cpp
+)
 target_include_directories(SysdarftDebug PUBLIC src/include)
 
 # Message Map:
-add_library(SysdarftMessageMap OBJECT src/MessageMap.cpp)
+add_library(SysdarftMessageMap OBJECT src/SysdarftMessageMap.cpp)
 target_include_directories(SysdarftMessageMap PUBLIC src/include)
 
 # Modular:
@@ -351,43 +396,29 @@ add_library(SysdarftCursesUI OBJECT src/SysdarftCursesUI.cpp)
 target_include_directories(SysdarftCursesUI PUBLIC src/include)
 target_link_libraries(SysdarftCursesUI PUBLIC ${CURSES_LIBRARIES})
 
-## CPU
-#add_library(sysdarft_processor OBJECT
-#        src/include/EncodingDecoding.h
-#        src/include/InstructionSet.h
-#        src/sysdarft_processor/include/register_def.h
-#        src/sysdarft_processor/io/disk_hub.cpp
-#        src/sysdarft_processor/io/io_hub.cpp
-#        src/sysdarft_processor/io/external_device_hub.cpp
-#        src/sysdarft_processor/cpu/memory_io.cpp
-#        src/sysdarft_processor/include/io.h
-#        src/sysdarft_processor/include/gpu.h
-#        src/sysdarft_processor/include/int.h
-#        src/sysdarft_processor/include/instance.h
-#        src/sysdarft_processor/interruptions/interruptions.cpp
-#        src/sysdarft_processor/cpu/instruction_executor.cpp
-#        src/sysdarft_processor/cpu/protected_mode_target_access.cpp
-#        src/sysdarft_processor/cpu/register.cpp
-#        src/sysdarft_processor/cpu/real_mode_target_access.cpp
-#        src/sysdarft_processor/cpu/operation_triggerer.cpp
-#        src/sysdarft_processor/integrated_devices/integrated_gpu.cpp
-#        src/sysdarft_processor/instantiation/prc_inst_n_init.cpp
-#        src/sysdarft_processor/include/cpu.inl
-#        src/sysdarft_processor/cpu/initialization.cpp
-#        src/sysdarft_processor/cpu/operations/arithmetic.cpp
-#        src/sysdarft_processor/cpu/operations/control_flow.cpp
-#        src/sysdarft_processor/cpu/operations/data_transfer.cpp
-#        src/sysdarft_processor/cpu/operations/fpu.cpp
-#        src/sysdarft_processor/cpu/operations/io.cpp
-#        src/sysdarft_processor/cpu/operations/logical_and_bitwise.cpp
-#        src/sysdarft_processor/cpu/operations/miscellaneous.cpp
-#        src/sysdarft_processor/cpu/operations/os.cpp
-#        src/sysdarft_processor/cpu/decoder/decode.instruction.cpp
-#        src/sysdarft_processor/cpu/decoder/decode.target.cpp
-#        src/sysdarft_processor/cpu/output_debug_info.cpp
-#        src/sysdarft_processor/cpu/operations/of_check.cpp
-#)
-#target_include_directories(sysdarft_processor PUBLIC src/include src/sysdarft_processor/include)
+# CPU
+add_library(SysdarftCPU OBJECT
+        src/include/SysdarftRegister.h
+        src/include/SysdarftMemory.h
+        src/cpu/SysdarftMemory.cpp
+        src/include/SysdarftCPUDecoder.h
+        src/cpu/SysdarftCPUDecoder.cpp
+        src/include/SysdarftInstructionExec.h
+        src/cpu/SysdarftInstructionExec.cpp
+        src/cpu/OutputCurrentContext.cpp
+        src/cpu/Operations/Helper.cpp
+        src/cpu/Operations/Arithmetic.cpp
+        src/cpu/Operations/Misc.cpp
+        src/cpu/Operations/DataTransfer.cpp
+        src/cpu/Operations/LogicalAndBitwise.cpp
+        src/cpu/Operations/ControlFlow.cpp
+        src/include/SysdarftIOHub.h
+        src/cpu/SysdarftCPUInterruption.cpp
+        src/include/SysdarftCPU.h
+        src/cpu/Operations/IOH.cpp
+)
+target_include_directories(SysdarftCPU PUBLIC src/include src/cpu/include)
+set_target_properties(SysdarftCPU PROPERTIES LINKER_LANGUAGE CXX)
 
 # Encoder and decoder
 add_library(SysdarftCoding OBJECT
@@ -395,21 +426,32 @@ add_library(SysdarftCoding OBJECT
         src/coding/DecodeTarget.cpp
         src/coding/EncodeInstruction.cpp
         src/coding/DecodeInstruction.cpp
+        src/coding/Assembler.cpp
+        src/coding/PreProcessor.cpp
 )
 target_include_directories(SysdarftCoding PUBLIC src/include)
 
+# I/O Controller Hub
+add_library(SysdarftICH OBJECT
+        src/include/SysdarftIOHub.h
+        src/SysdarftIOHub.cpp
+        src/include/SysdarftHardDisk.h
+        src/ext_dev/SysdarftHardDisk.cpp
+)
+target_include_directories(SysdarftICH PUBLIC src/include)
+
 # Sysdarft Shared Library:
-add_library(sysdarft SHARED src/include/WorkerThread.h)
-target_include_directories(sysdarft PUBLIC src/include)
-target_link_libraries(sysdarft PUBLIC
+add_library(Sysdarft SHARED src/include/WorkerThread.h)
+target_include_directories(Sysdarft PUBLIC src/include)
+target_link_libraries(Sysdarft PUBLIC
         SysdarftDebug
         SysdarftMessageMap
         SysdarftModule
         SysdarftGlobalEvents
         SysdarftCursesUI
         SysdarftCoding
-#        sysdarft_processor
-#        sysdarft_encoder
+        SysdarftCPU
+        SysdarftICH
 )
 
 # Enable testing
@@ -418,12 +460,15 @@ enable_testing()
 # Function to add unit tests
 function(add_unit_test TARGET_NAME TEST_FILE)
     add_executable(${TARGET_NAME} ${TEST_FILE})
-    target_link_libraries(${TARGET_NAME} PUBLIC sysdarft)
-    add_test(NAME "unit_test_${TARGET_NAME}" COMMAND $<TARGET_FILE:${TARGET_NAME}>)
+    target_link_libraries(${TARGET_NAME} PUBLIC Sysdarft)
+    add_test(NAME "Unit Test: ${TARGET_NAME}"
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/wrpExpect.sh 
+            ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME})
 endfunction()
 
 add_unit_test(test.error tests/test.error.cpp)
 add_unit_test(test.log tests/test.log.cpp)
+add_unit_test(test.execmd tests/test.execmd.cpp)
 add_unit_test(test.curses tests/test.curses.cpp)
 
 add_library(ExampleModule SHARED tests/example_module.cpp)
@@ -432,8 +477,30 @@ add_dependencies(test.module ExampleModule)
 
 add_unit_test(test.message_map tests/test.message_map.cpp)
 add_unit_test(test.coding tests/test.coding.cpp)
+add_unit_test(test.register tests/test.register.cpp)
+add_unit_test(test.memory tests/test.memory.cpp)
+set_tests_properties("Unit Test: test.memory" PROPERTIES LABELS "ThreadSanitizerExclude")
+add_unit_test(test.operand tests/test.operand.cpp)
+add_unit_test(test.decode tests/test.decode.cpp)
+add_unit_test(test.executor tests/test.executor.cpp)
+add_unit_test(test.arithmetic tests/test.arithmetic.cpp)
+add_unit_test(test.lgAbit tests/test.lgAbit.cpp)
+add_unit_test(test.dataTsf tests/test.dataTsf.cpp)
+add_unit_test(test.assembler tests/test.assembler.cpp)
+add_unit_test(test.controlflow tests/test.controlflow.cpp)
+add_unit_test(test.io tests/test.io.cpp)
+add_unit_test(test.preprocessor tests/test.preprocessor.cpp)
+
+add_custom_target(
+        COPY_HDA_FILE ALL
+        COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/hda.img ${CMAKE_CURRENT_BINARY_DIR}/
+        COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/example.sysasm ${CMAKE_CURRENT_BINARY_DIR}/
+        DEPENDS tests/hda.img tests/example.sysasm
+        COMMENT "Copy disk image sample with ASCII texts in it."
+)
 
 # Console Executable:
+<<<<<<< HEAD
 #add_executable(sysdarft-system src/main.cpp)
 #target_link_libraries(sysdarft-system PUBLIC sysdarft)
 
@@ -442,3 +509,7 @@ add_unit_test(test.coding tests/test.coding.cpp)
 # Modules
 #add_subdirectory(gui_module)
 >>>>>>> SysdarftRemake/rebase
+=======
+add_executable(sysdarft-system src/SysdarftMain.cpp)
+target_link_libraries(sysdarft-system PUBLIC Sysdarft)
+>>>>>>> SysdarftRemake/ugly

@@ -3,10 +3,8 @@
 #include <vector>
 #include <regex>
 #include <thread>
-#include <cassert>
 #include <cstdint>
 #include <cctype>
-#include <iomanip>
 #include <charconv>
 #include <optional>
 #include <system_error>
@@ -14,10 +12,10 @@
 #include <SysdarftDebug.h>
 
 // Define regex patterns
-const std::regex register_pattern(R"(^%(R|EXR|HER)[0-7]|%(FER)([\d]+)|^%(SP|DP|ESP|CR0)|^%XMM[0-7]$)");
+const std::regex register_pattern(R"(^%(R|EXR|HER)[0-7]|%(FER)([\d]+)|^%(SB|SP|CB|DB|DP|EB|EP)|^%XMM[0-5]$)");
 const std::regex constant_pattern(R"(^\$\((.*)\)$)");
 const std::regex memory_pattern(R"(^\*(1|2|4|8|16)\&(8|16|32|64)\(([^,]+),([^,]+),([^,]+)\)$)");
-std::regex base16_pattern(R"(0x[0-9A-Fa-f]+)");
+const std::regex base16_pattern(R"(0x[0-9A-Fa-f]+)");
 
 bool is_valid_register(const std::string& input) {
     return std::regex_match(input, register_pattern);
@@ -115,17 +113,16 @@ void process_base16(std::string & input)
     }
 }
 
-std::string execute_bc(const std::string& input, const int scale = 0)
+std::string execute_bc(const std::string& input)
 {
-    std::stringstream cmd;
-    cmd << "bc <<< \"scale=" << scale << "; " << input << '"';
-    const auto result = debug::exec_command("sh", "-c", cmd.str().c_str());
-    auto cmd_str = cmd.str();
-    if (result.exit_status != 0) {
-        throw SysdarftCodeExpressionError(input + ": " + std::to_string(result.exit_status));
+    const auto [fd_stdout, fd_stderr, exit_status] =
+        debug::exec_command("/usr/bin/bc", input);
+    if (exit_status != 0) {
+        throw SysdarftCodeExpressionError(input + " failed, exit: " +
+            std::to_string(exit_status) + ": " + fd_stderr);
     }
 
-    return result.fd_stdout;
+    return fd_stdout;
 }
 
 // Function to extract trailing digits and convert to uint32_t
@@ -167,21 +164,57 @@ void encode_register(std::vector<uint8_t> & buffer, const parsed_target_t & inpu
     const auto register_index =  extractTrailingNumber(input.RegisterName).has_value() ?
         extractTrailingNumber(input.RegisterName).value() : 0;
     code_buffer_push8(buffer, REGISTER_PREFIX);
+
+    if (input.RegisterName == "%SB") {
+        code_buffer_push8(buffer, _64bit_prefix);
+        code_buffer_push8(buffer, R_StackBase);
+        return;
+    }
+
+    if (input.RegisterName == "%SP") {
+        code_buffer_push8(buffer, _64bit_prefix);
+        code_buffer_push8(buffer, R_StackPointer);
+        return;
+    }
+
+    if (input.RegisterName == "%CB") {
+        code_buffer_push8(buffer, _64bit_prefix);
+        code_buffer_push8(buffer, R_CodeBase);
+        return;
+    }
+
+    if (input.RegisterName == "%DB") {
+        code_buffer_push8(buffer, _64bit_prefix);
+        code_buffer_push8(buffer, R_DataBase);
+        return;
+    }
+
+    if (input.RegisterName == "%DP") {
+        code_buffer_push8(buffer, _64bit_prefix);
+        code_buffer_push8(buffer, R_DataPointer);
+        return;
+    }
+
+    if (input.RegisterName == "%EB") {
+        code_buffer_push8(buffer, _64bit_prefix);
+        code_buffer_push8(buffer, R_ExtendedBase);
+        return;
+    }
+
+    if (input.RegisterName == "%EP") {
+        code_buffer_push8(buffer, _64bit_prefix);
+        code_buffer_push8(buffer, R_ExtendedPointer);
+        return;
+    }
+
     switch (input.RegisterName[1])
     {
     case 'R' : /* 8bit Register */  code_buffer_push8(buffer,  _8bit_prefix); code_buffer_push8(buffer, register_index); return;
     case 'E' : /* 16bit Register */ code_buffer_push8(buffer, _16bit_prefix); code_buffer_push8(buffer, register_index); return;
     case 'H' : /* 32bit Register */ code_buffer_push8(buffer, _32bit_prefix); code_buffer_push8(buffer, register_index); return;
     case 'F' : /* 64bit Register */ code_buffer_push8(buffer, _64bit_prefix); code_buffer_push8(buffer, register_index); return;
-    case 'X' : /* floating-point Register */ code_buffer_push8(buffer, FLOATING_POINT_PREFIX); code_buffer_push8(buffer, register_index); return;
-    default:
-        if (input.RegisterName == "%SP")  { code_buffer_push8(buffer, _64bit_prefix); code_buffer_push8(buffer, R_StackPointer); }
-        else if (input.RegisterName == "%DP")  { code_buffer_push8(buffer, _64bit_prefix); code_buffer_push8(buffer, R_DataPointer); }
-        else if (input.RegisterName == "%ESP") { code_buffer_push8(buffer, _64bit_prefix); code_buffer_push8(buffer, R_ExtendedSegmentPointer); }
-        else if (input.RegisterName == "%CR0") { code_buffer_push8(buffer, _64bit_prefix); code_buffer_push8(buffer, R_ControlRegister0); }
-        else {
-            throw SysdarftCodeExpressionError("Unknown register " + input.RegisterName);
-        }
+    case 'X' : /* floating-point Register */ code_buffer_push8(buffer, _float_ptr_prefix); code_buffer_push8(buffer, register_index); return;
+    default: throw SysdarftCodeExpressionError("Unknown register " + input.RegisterName);
     }
 }
 
@@ -203,11 +236,17 @@ void encode_constant(std::vector<uint8_t> & buffer, const parsed_target_t & inpu
     process_base16(tmp);
 
     code_buffer_push8(buffer, CONSTANT_PREFIX);
-    code_buffer_push8(buffer, _64bit_prefix);
     const auto result_from_bc = execute_bc(tmp);
-    const __int128_t result = strtoull(result_from_bc.c_str(), nullptr, 10);
 
-    code_buffer_push<64>(buffer, &result);
+    if (result_from_bc.contains('.')) {
+        code_buffer_push8(buffer, _float_ptr_prefix);
+        const double result = strtod(result_from_bc.c_str(), nullptr);
+        code_buffer_push<64>(buffer, &result);
+    } else {
+        code_buffer_push8(buffer, _64bit_prefix);
+        const __int128_t result = strtoull(result_from_bc.c_str(), nullptr, 10);
+        code_buffer_push<64>(buffer, &result);
+    }
 }
 
 void encode_memory_width_prefix(std::vector<uint8_t> & buffer, const std::string & input)
@@ -233,7 +272,15 @@ void encode_memory(std::vector<uint8_t> & buffer, const parsed_target_t & input)
             }
 
             // Not a 64bit register
-            if (tmp != "%FER" && param != "%SP" && param != "%DP" && param != "%ESP") {
+            if (tmp != "%FER"
+                && param != "%SB"
+                && param != "%SP"
+                && param != "%CB"
+                && param != "%DB"
+                && param != "%DP"
+                && param != "%EB"
+                && param != "%EP")
+            {
                 throw SysdarftCodeExpressionError("Not a 64bit Register: " + param);
             }
 
