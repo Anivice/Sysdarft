@@ -15,9 +15,10 @@ public:
         SysdarftBaseError("Trying to create multiple CPU instances!") { }
 };
 
-class SYSDARFT_EXPORT_SYMBOL SysdarftCPU final : protected SysdarftCPUInstructionExecutor {
+class SYSDARFT_EXPORT_SYMBOL SysdarftCPU final : public SysdarftCPUInstructionExecutor {
 private:
     __uint128_t timestamp;
+    std::atomic < bool > do_abort_int = false;
 
 public:
     explicit SysdarftCPU(uint64_t memory,
@@ -26,7 +27,11 @@ public:
         const std::string & fda,
         const std::string & fdb);
 
+    void set_abort_next() { do_abort_int = true; }
+    void system_hlt() { SystemHalted = true; }
     void Boot();
+
+    SysdarftCPU & operator = (const SysdarftCPU &) = delete;
 };
 
 #endif //CPU_H

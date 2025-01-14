@@ -1,8 +1,12 @@
-#include <termios.h>
-#include <unistd.h>
-#include <SysdarftCPUDecoder.h>
 #include <GlobalEvents.h>
+#include <SysdarftCPUDecoder.h>
 #include <SysdarftCursesUI.h>
+#include <termios.h>
+#include <thread>
+#include <unistd.h>
+#include <fcntl.h>
+#include <cerrno>
+#include <cstring>
 
 int my_getch()
 {
@@ -22,6 +26,21 @@ int my_getch()
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 
     return ch;
+}
+
+SysdarftCPUInterruption::SysdarftCPUInterruption(const uint64_t memory) :
+    DecoderDataAccess(memory)
+{
+    // Get the current flags for stdin (file descriptor 0)
+    const int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    if (flags == -1) {
+        throw SysdarftCPUInitializeFailed();
+    }
+
+    // Set the O_NONBLOCK flag
+    if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) == -1) {
+        throw SysdarftCPUInitializeFailed();
+    }
 }
 
 void SysdarftCPUInterruption::do_interruption(const uint64_t code)
@@ -109,6 +128,13 @@ void SysdarftCPUInterruption::do_interruption_debug_0x03()
     do_jump_table(location);
 }
 
+void SysdarftCPUInterruption::do_abort_0x05()
+{
+    const auto location = do_interruption_lookup(0x05);
+    do_preserve_cpu_state();
+    do_jump_table(location);
+}
+
 void SysdarftCPUInterruption::do_interruption_tty_0x10()
 {
     const auto ch = static_cast<char>(SysdarftRegister::load<ExtendedRegisterType, 0>());
@@ -138,8 +164,19 @@ void SysdarftCPUInterruption::do_interruption_newline_0x13()
 
 void SysdarftCPUInterruption::do_interruption_getinput_0x14()
 {
-    const auto ch = static_cast<uint16_t>(my_getch());
-    SysdarftRegister::store<ExtendedRegisterType, 0>(ch);
+    char ch;
+    while (!SystemHalted) // abort if external halt is triggered
+    {
+        if (const ssize_t n = read(STDIN_FILENO, &ch, 1); n > 0)
+        {
+            SysdarftRegister::store<ExtendedRegisterType, 0>(ch);
+            return;
+        } else if (n == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
+            throw SysdarftCPUFatal();
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
 }
 
 void SysdarftCPUInterruption::do_interruption_cur_pos_0x15()

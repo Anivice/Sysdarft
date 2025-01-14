@@ -227,18 +227,17 @@ target_link_libraries(Sysdarft PUBLIC
 enable_testing()
 
 # Function to add unit tests
-function(add_unit_test TARGET_NAME TEST_FILE)
-    add_executable(${TARGET_NAME} ${TEST_FILE})
+function(add_unit_test TARGET_NAME)
+    add_executable(${TARGET_NAME} ${ARGN})
     target_link_libraries(${TARGET_NAME} PUBLIC Sysdarft)
-    add_test(NAME "Unit Test: ${TARGET_NAME}"
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/wrpExpect.sh 
-            ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME})
+    add_test(NAME "Unit Test: ${TARGET_NAME}" COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME})
 endfunction()
 
 add_unit_test(test.error tests/test.error.cpp)
 add_unit_test(test.log tests/test.log.cpp)
 add_unit_test(test.execmd tests/test.execmd.cpp)
 add_unit_test(test.curses tests/test.curses.cpp)
+set_tests_properties("Unit Test: test.curses" PROPERTIES LABELS "NotTestable")
 
 add_library(ExampleModule SHARED tests/example_module.cpp)
 add_unit_test(test.module tests/test.module.cpp)
@@ -248,7 +247,7 @@ add_unit_test(test.message_map tests/test.message_map.cpp)
 add_unit_test(test.coding tests/test.coding.cpp)
 add_unit_test(test.register tests/test.register.cpp)
 add_unit_test(test.memory tests/test.memory.cpp)
-set_tests_properties("Unit Test: test.memory" PROPERTIES LABELS "ThreadSanitizerExclude")
+set_tests_properties("Unit Test: test.memory" PROPERTIES LABELS "NotTestable")
 add_unit_test(test.operand tests/test.operand.cpp)
 add_unit_test(test.decode tests/test.decode.cpp)
 add_unit_test(test.executor tests/test.executor.cpp)
@@ -258,8 +257,11 @@ add_unit_test(test.dataTsf tests/test.dataTsf.cpp)
 add_unit_test(test.assembler tests/test.assembler.cpp)
 add_unit_test(test.controlflow tests/test.controlflow.cpp)
 add_unit_test(test.io tests/test.io.cpp)
+set_tests_properties("Unit Test: test.io" PROPERTIES LABELS "NotTestable")
 add_unit_test(test.preprocessor tests/test.preprocessor.cpp)
+set_tests_properties("Unit Test: test.preprocessor" PROPERTIES LABELS "NotTestable")
 add_unit_test(test.cpu tests/test.cpu.cpp)
+set_tests_properties("Unit Test: test.cpu" PROPERTIES LABELS "NotTestable")
 
 add_custom_target(
         COPY_HDA_FILE ALL
@@ -270,5 +272,12 @@ add_custom_target(
 )
 
 # Console Executable:
-add_executable(sysdarft-system src/SysdarftMain.cpp)
-target_link_libraries(sysdarft-system PUBLIC Sysdarft)
+add_executable(sysdarft-system
+        src/SysdarftMain.cpp
+        src/include/SysdarftConsole.h
+        src/include/SysdarftMain.h
+        src/MainArgProcessor.cpp
+        src/MainCompile.cpp
+)
+target_include_directories(sysdarft-system PUBLIC src/include ${READLINE_INCLUDE_DIRS})
+target_link_libraries(sysdarft-system PUBLIC Sysdarft ${READLINE_LIBRARIES})

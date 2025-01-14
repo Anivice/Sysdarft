@@ -32,9 +32,20 @@ SysdarftCPU::SysdarftCPU(const uint64_t memory,
 
 void SysdarftCPU::Boot()
 {
+    SystemHalted = false;
+    do_abort_int = false;
+    hd_int_flag = false;
+
     SysdarftCursesUI::initialize();
 
-    while (!SystemHalted) {
+    while (!SystemHalted)
+    {
+        // capture and control area
+        if (do_abort_int) {
+            do_abort_int = false;
+            do_abort_0x05();
+        }
+
         SysdarftCPUInstructionExecutor::execute(timestamp++);
     }
 

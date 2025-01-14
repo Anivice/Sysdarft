@@ -1,7 +1,7 @@
 .equ 'HDD_SEC_START', '0x137'
 .equ 'HDD_SEC_COUNT', '0x138'
 .equ 'HDD_IO', '0x139'
-.lab _start, reads, puts, _stack_frame, _int3, _skip_newl, gets, _loop2, _end
+.lab _start, reads, puts, _stack_frame, _int3, _skip_newl, gets, _loop2, _end, _int_kb_abort
 .org 0xC1800
 
 jmp <%CB>, < _start >
@@ -36,30 +36,34 @@ puts:
     popall
     ret
 
-;gets:
-;    pushall
-;    _loop2:
-;        int <$(0x14)>               ; getc
-;        cmp .8bit <%R0>, <$('q')>   ;
-;        je <%cb>, <_end>;
+;gets:;
+;    pushall;
+;    _loop2:;
+;       int <$(0x14)>                                ; getc;
+;       cmp .8bit <%R0>, <$('q')>   ;
+;       je <%cb>, <_end>;
 ;
-;        int <$(0x10)>;
+;       int <$(0x10)>;
 ;
-;        jmp <%cb>, <_loop2>;
-;    _end:;
-;    popall;
-;    ret;
+;       jmp <%cb>, <_loop2>;
+;   _end:;
+;   popall;
+;   ret;
 
 _start:
     mov .64bit <%sp>, <$(0xFFF)>                            ; setup stack frame size
     mov .64bit <%sb>, <_stack_frame>                        ; setup stack frame location
-    mov .64bit <*1&64($(0xA0000), $(56), $(0))>, <_int3>    ; set breakpoint handler
+    mov .64bit <*1&64($(0xA0000), $(16 * 3), $(8))>, <_int3>
+    mov .64bit <*1&64($(0xA0000), $(16 * 5), $(8))>, <_int_kb_abort>
     call <%cb>, <reads>                                     ; read disk
     call <%cb>, <puts>                                      ; print disk content
-;    call <%cb>, <gets>
+    ; call <%cb>, <gets>
     hlt
 
 _int3:
+    iret
+
+_int_kb_abort:
     iret
 
 _stack_frame:

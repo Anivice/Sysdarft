@@ -23,4 +23,10 @@ int main()
     ui.teletype('S');
     sleep(1);
     ui.cleanup();
+
+    sleep(1);
+
+    ui.start_again();
+    sleep(1);
+    ui.cleanup();
 }

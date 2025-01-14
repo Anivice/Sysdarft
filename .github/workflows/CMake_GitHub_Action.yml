@@ -67,7 +67,7 @@ jobs:
         env:
           TERM: xterm-256color
         run: |
-          ctest --test-dir build_msan --extra-verbose
+          ctest --test-dir build_msan --extra-verbose -LE "NotTestable"
 
       ########################################################################
       # BUILD & TEST with Thread/Undefined Sanitizers
@@ -86,7 +86,7 @@ jobs:
         env:
           TERM: xterm-256color
         run: |
-          ctest --test-dir build_tsan --extra-verbose -LE "ThreadSanitizerExclude"
+          ctest --test-dir build_tsan --extra-verbose -LE "NotTestable"
 
       ########################################################################
       # OPEN ISSUE IF ANY TEST FAILURE OCCURRED

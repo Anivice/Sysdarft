@@ -1,109 +1,4 @@
-#include <getopt.h>
-#include <iostream>
-#include <map>
-#include <stdexcept>
-#include <string>
-#include <vector>
-#include <fstream>
-#include <iomanip>
-#include <filesystem>
-#include <cstring>
-#include <memory>
-#include <SysdarftDebug.h>
-#include <SysdarftModule.h>
-#include <EncodingDecoding.h>
-
-struct option_complicated
-{
-    const char *name;
-    int has_arg;
-    int *flag;
-    int val;
-    const char * arg_explain;
-};
-
-static option_complicated long_options[] = {
-    {"help",    no_argument,       nullptr, 'h',    "Show this help message"},
-    {"version", no_argument,       nullptr, 'v',    "Output version information"},
-    {"module",  required_argument, nullptr, 'm',    "Load a module\n"
-                                                                                                "This option can be used multiple times\n"
-                                                                                                "to load multiple modules"},
-    {"verbose", no_argument,       nullptr, 'V',    "Enable verbose mode" },
-    {"compile", required_argument, nullptr, 'c',    "Compile a file\n"
-                                                                                                "This option can be used multiple times\n"
-                                                                                                "to compile multiple files into one single binary"},
-    {"output",  required_argument,  nullptr, 'o',   "Output file for compilation"},
-    {"format",  required_argument,  nullptr, 'f',   "Compile format. It can be bin, exe, or sys"},
-    {"disassem",required_argument,  nullptr, 'd',   "Disassemble a file"},
-    {"origin",  required_argument,  nullptr, 'g',   "Redefine origin for disassembler\n"
-                                                                                                "When left unset, origin is 0."},
-    {"bios",    required_argument,  nullptr, 'b',   "Specify a BIOS firmware binary"},
-    {"hdd",     required_argument,  nullptr, 'L',   "Specify a Hard Disk"},
-    {"fda",     required_argument,  nullptr, 'A',   "Specify floppy disk A"},
-    {"fdb",     required_argument,  nullptr, 'B',   "Specify floppy disk B"},
-    {"boot",    no_argument,        nullptr, 'S',   "Boot the system"},
-    {nullptr,   0,                  nullptr,  0,    nullptr }
-};
-
-// Each option name maps to a list of string values.
-using ParsedOptions = std::map<std::string, std::vector<std::string>>;
-
-// The return type includes:
-//   1) A map from option-name -> vector of values
-//   2) A vector of positional arguments (non-option arguments).
-using ParsedArgs = std::pair<ParsedOptions, std::vector<std::string>>;
-
-ParsedArgs get_args(const int argc, char** argv, option long_options[])
-{
-    // Build the short options string from the long_options array
-    std::string short_opts;
-    for (int idx = 0; long_options[idx].name != nullptr; ++idx) {
-        if (long_options[idx].val != 0) {
-            short_opts.push_back(static_cast<char>(long_options[idx].val));
-            if (long_options[idx].has_arg == required_argument) {
-                short_opts.push_back(':');
-            } else if (long_options[idx].has_arg == optional_argument) {
-                short_opts.append("::");
-            }
-        }
-    }
-
-    ParsedOptions parsed_options;
-    std::vector<std::string> positional_args;
-
-    // Parse
-    while (true)
-    {
-        int opt_index = 0;
-        const int option = getopt_long(argc, argv, short_opts.c_str(), long_options, &opt_index);
-        if (option == -1) {
-            break; // No more options
-        }
-
-        if (option == '?') {
-            // Unknown or invalid option
-            throw std::invalid_argument("Unknown or invalid option encountered.");
-        } else {
-            // Find which long option was matched
-            for (int idx = 0; long_options[idx].name != nullptr; ++idx) {
-                if (long_options[idx].val == option) {
-                    const std::string opt_name(long_options[idx].name);
-                    // If this option appears multiple times,
-                    // push_back each new value instead of overwriting.
-                    parsed_options[opt_name].push_back(optarg ? optarg : "");
-                    break;
-                }
-            }
-        }
-    }
-
-    // Collect non-option (positional) arguments
-    for (int i = optind; i < argc; ++i) {
-        positional_args.emplace_back(argv[i]);
-    }
-
-    return {parsed_options, positional_args};
-}
+#include <SysdarftMain.h>
 
 void print_help(const char *program_name)
 {
@@ -166,90 +61,6 @@ void print_version()
         << SYSDARFT_INFORMATION << std::endl;
 }
 
-void compile_to_binary(const std::vector< std::string > & source_files, const std::string & binary_filename)
-{
-    try {
-        std::vector < std::vector < uint8_t > > binary_cct;
-        for (const std::string & source_file : source_files)
-        {
-            std::fstream file(source_file, std::ios::in | std::ios::out);
-            if (!file.is_open()) {
-                throw SysdarftAssemblerError("Could not open file " + source_file);
-            }
-
-            std::vector < uint8_t > binary;
-            CodeProcessing(binary, file);
-
-            file.close();
-            binary_cct.emplace_back(binary);
-        }
-
-        std::ofstream file(binary_filename, std::ios::out | std::ios::binary);
-        if (!file.is_open()) {
-            throw SysdarftAssemblerError("Could not open file " + binary_filename);
-        }
-
-        for (const auto & cct : binary_cct) {
-            file.write(reinterpret_cast<const char*>(cct.data()), cct.size());
-        }
-
-        file.close();
-    } catch (const std::exception & e) {
-        throw SysdarftAssemblerError(e.what());
-    }
-}
-
-class SysdarftDisassemblerError final : public SysdarftBaseError
-{
-public:
-    explicit SysdarftDisassemblerError(const std::string & message) :
-        SysdarftBaseError("Disassembler failed to process data: " + message) { }
-};
-
-void disassemble(const std::string & binary_filename, const uint64_t org)
-{
-    std::ifstream file(binary_filename, std::ios::in | std::ios::binary);
-    std::vector < uint8_t > assembled_code;
-    auto file_size = std::filesystem::file_size(binary_filename);
-
-    // read
-    if (!file.is_open()) {
-        throw SysdarftDisassemblerError("Could not open file " + binary_filename);
-    }
-
-    assembled_code.resize(file_size);
-    file.read((char*)(assembled_code.data()), file_size);
-    if (static_cast<uint64_t>(file.gcount()) != file_size) {
-        throw SysdarftDisassemblerError("Short read on file " + binary_filename);
-    }
-
-    file.close();
-
-    const auto space = assembled_code.size();
-    std::vector < std::string > lines;
-    while (!assembled_code.empty())
-    {
-        std::stringstream off;
-        std::vector < std::string > line;
-        off << std::hex << std::setfill('0') << std::setw(16) << std::uppercase
-            << space - assembled_code.size() + org;
-
-        decode_instruction(line, assembled_code);
-
-        if (!line.empty()) {
-            off << ": " << line[0];
-        } else {
-            off << ": " << "(bad)";
-        }
-
-        lines.push_back(off.str());
-    }
-
-    for (const auto& line : lines) {
-        std::cout << line << "\n";
-    }
-}
-
 void complicated_to_gnu(option * dest, const option_complicated * src)
 {
     uint64_t offset = 0;
@@ -265,13 +76,65 @@ void complicated_to_gnu(option * dest, const option_complicated * src)
     dest[offset] = {nullptr, 0, nullptr, 0 };
 }
 
+volatile std::atomic < SysdarftCPU * > g_cpu_instance = nullptr;
+
 void boot_sysdarft(
+    const uint64_t memory_size,
     const std::string & bios,
     const std::string & hdd,
     const std::string & fda,
     const std::string & fdb)
 {
+    std::ifstream file(bios, std::ios::in | std::ios::binary);
+    std::vector<uint8_t> bios_code;
+    const auto file_size = std::filesystem::file_size(bios);
 
+    // read
+    if (!file.is_open()) {
+        throw SysdarftDisassemblerError("Could not open file " + bios);
+    }
+
+    bios_code.resize(file_size);
+    file.read((char*)(bios_code.data()), file_size);
+    if (static_cast<uint64_t>(file.gcount()) != file_size) {
+        throw SysdarftDisassemblerError("Short read on file " + bios);
+    }
+
+    file.close();
+
+    SysdarftCPU CPUInstance(memory_size, bios_code, hdd, fda, fdb);
+    g_cpu_instance = &CPUInstance;
+
+    try {
+        CPUInstance.Boot();
+    } catch (...) {
+        g_cpu_instance = nullptr;
+        throw;
+    }
+
+    g_cpu_instance = nullptr;
+}
+
+// Signal handler for window resize
+void resize_handler(int)
+{
+    if (g_cpu_instance) {
+        g_cpu_instance.load()->handle_resize();
+    }
+}
+
+void int_hamdler(int)
+{
+    if (g_cpu_instance) {
+        g_cpu_instance.load()->set_abort_next();
+    }
+}
+
+void stop_handler(int)
+{
+    if (g_cpu_instance) {
+        g_cpu_instance.load()->system_hlt();
+    }
 }
 
 int main(int argc, char** argv)
@@ -417,11 +280,33 @@ int main(int argc, char** argv)
             }
 
             const std::string bios_path = parsed_options["bios"][0];
-            std::string hdd;
-            std::string fda;
-            std::string fdb;
 
-            boot_sysdarft(bios_path, hdd, fda, fdb);
+            uint64_t memory_size = 32 * 1024 * 1024;
+            if (parsed_options.contains("memory")) {
+                memory_size = std::strtoll(parsed_options["memory"].at(0).c_str(), nullptr, 10);
+            }
+
+            std::string hdd;
+            if (parsed_options.contains("hdd")) {
+                hdd = parsed_options["hdd"].at(0);
+            }
+
+            std::string fda;
+            if (parsed_options.contains("fda")) {
+                fda = parsed_options["fda"].at(0);
+            }
+
+            std::string fdb;
+            if (parsed_options.contains("fdb")) {
+                fdb = parsed_options["fdb"].at(0);
+            }
+
+            std::signal(SIGINT, int_hamdler);
+            std::signal(SIGWINCH, resize_handler);
+            std::signal(SIGTSTP, stop_handler);
+
+            // boot system
+            boot_sysdarft(memory_size, bios_path, hdd, fda, fdb);
             return EXIT_SUCCESS;
         }
 

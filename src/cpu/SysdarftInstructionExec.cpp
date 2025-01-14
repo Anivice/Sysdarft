@@ -6,8 +6,8 @@ SysdarftCPUInstructionExecutor::SysdarftCPUInstructionExecutor(const uint64_t me
     // Misc
     make_instruction_execution_procedure(OPCODE_NOP, &SysdarftCPUInstructionExecutor::nop);
     make_instruction_execution_procedure(OPCODE_HLT, &SysdarftCPUInstructionExecutor::hlt);
-    make_instruction_execution_procedure(OPCODE_HLT, &SysdarftCPUInstructionExecutor::igni);
-    make_instruction_execution_procedure(OPCODE_HLT, &SysdarftCPUInstructionExecutor::alwi);
+    make_instruction_execution_procedure(OPCODE_IGNI, &SysdarftCPUInstructionExecutor::igni);
+    make_instruction_execution_procedure(OPCODE_ALWI, &SysdarftCPUInstructionExecutor::alwi);
 
     // Arithmetic
     make_instruction_execution_procedure(OPCODE_ADD, &SysdarftCPUInstructionExecutor::add);

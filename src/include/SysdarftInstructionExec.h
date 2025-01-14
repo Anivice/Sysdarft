@@ -75,9 +75,6 @@ protected:
         };
     }
 
-    // External halt is handled at upper level
-    std::atomic<bool> SystemHalted = false;
-
 private:
     // Misc
     add_instruction_exec(nop);

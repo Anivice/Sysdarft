@@ -12,12 +12,15 @@
 #define INT_IO_ERROR    (0x02)
 #define INT_DEBUG       (0x03)
 #define INT_BAD_INTR    (0x04)
+#define INT_ABORT       (0x05)
+
 #define INT_TELETYPE    (0x10)
 #define INT_SET_CUR_POS (0x11)
 #define INT_SET_CUR_VSB (0x12)
 #define INT_NEWLINE     (0x13)
 #define INT_GET_INPUT   (0x14)
 #define INT_GET_CUR_POS (0x15)
+#define INT_GET_HD_INFO (0x16)
 
 class IllegalInstruction final : public SysdarftBaseError {
 public:
@@ -33,6 +36,11 @@ public:
 class SysdarftCPUFatal final : public SysdarftBaseError {
 public:
     SysdarftCPUFatal() : SysdarftBaseError("CPU is met with a unrecoverable fatal error") { }
+};
+
+class SysdarftCPUInitializeFailed final : public SysdarftBaseError {
+public:
+    SysdarftCPUInitializeFailed() : SysdarftBaseError("Setup is met with a unrecoverable fatal error") { }
 };
 
 class OperandType;
@@ -153,7 +161,10 @@ public:
 
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInterruption : public DecoderDataAccess
 {
-private:
+protected:
+    // External halt is handled at upper level
+    std::atomic<bool> SystemHalted = false;
+
     struct InterruptionPointer {
         uint64_t InterruptionTargetCodeBase;
         uint64_t InterruptionTargetInstructionPointer;
@@ -167,7 +178,7 @@ private:
      *  [0x02] IO ERROR
      *  [0x03] DEBUG, BREAKPOINT RIGHT NEXT
      *  [0x04] BAD INTERRUPTION CALL
-     *  [0x05]
+     *  [0x05] ABORT
      *  [0x06]
      *  [0x07]
      *  [0x08]
@@ -203,6 +214,7 @@ private:
     // Hardware Interruptions
     void do_interruption_fatal_0x00();
     void do_interruption_debug_0x03();
+    void do_abort_0x05();
     void do_interruption_tty_0x10();
     void do_interruption_set_cur_pos_0x11();
     void do_interruption_set_cur_visib_0x12();
@@ -211,13 +223,12 @@ private:
     void do_interruption_cur_pos_0x15();
     void do_get_system_hardware_info_0x16();
 
-protected:
     std::atomic<bool> hd_int_flag = false;
 
     void do_interruption(uint64_t code);
     void do_iret();
 
-    explicit SysdarftCPUInterruption(const uint64_t memory) : DecoderDataAccess(memory) { }
+    explicit SysdarftCPUInterruption(const uint64_t memory);
 };
 
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInstructionDecoder : public SysdarftCPUInterruption

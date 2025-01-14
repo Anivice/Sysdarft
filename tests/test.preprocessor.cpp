@@ -21,7 +21,7 @@ public:
             write_memory(off++, (char*)&c, 1);
         }
 
-        for (int i = 0; i < 80000; i++) {
+        while (!SystemHalted) {
             execute(0);
         }
     }

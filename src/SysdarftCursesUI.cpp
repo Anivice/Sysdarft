@@ -16,6 +16,11 @@ SysdarftCursesUI::SysdarftCursesUI()
 
 void SysdarftCursesUI::initialize()
 {
+    if (is_inited) {
+        return;
+    }
+    is_inited = true;
+
     initscr();            // Start curses mode
     cbreak();             // Disable line buffering
     noecho();             // Don't echo typed characters
@@ -25,7 +30,24 @@ void SysdarftCursesUI::initialize()
     clear();
     curs_set(1);
     render_screen();      // Render initial screen
+    vsb = 1;
+}
+
+void SysdarftCursesUI::start_again()
+{
+    if (is_inited) {
+        return;
+    }
     is_inited = true;
+
+    initscr();
+    cbreak();
+    noecho();
+    keypad(stdscr, TRUE);
+    recalc_offsets();
+    clear();
+    curs_set(1);         // Ensure cursor visibility is reset
+    render_screen();
 }
 
 void SysdarftCursesUI::cleanup()
@@ -36,24 +58,22 @@ void SysdarftCursesUI::cleanup()
 
 void SysdarftCursesUI::set_cursor(const int x, const int y)
 {
+    // Clamp within virtual screen bounds [0,79]x[0,24]
+    cursor_x = std::clamp(x, 0, V_WIDTH  - 1);
+    cursor_y = std::clamp(y, 0, V_HEIGHT - 1);
+
+    // if curses mode is disabled, skip
     if (!is_inited) {
         return;
     }
 
-    // Clamp within virtual screen bounds [0,79]x[0,24]
-    cursor_x = std::clamp(x, 0, V_WIDTH  - 1);
-    cursor_y = std::clamp(y, 0, V_HEIGHT - 1);
     move(offset_y + cursor_y, offset_x + cursor_x);
     refresh();
 }
 
 void SysdarftCursesUI::set_cursor_visibility(const bool visible)
 {
-    if (!is_inited) {
-        return;
-    }
-
-    curs_set(visible ? 1 : 0);
+    vsb = visible;
 }
 
 void SysdarftCursesUI::teletype(const char text)
@@ -82,11 +102,6 @@ void SysdarftCursesUI::teletype(const char text)
 
 void SysdarftCursesUI::newline()
 {
-    if (!is_inited) {
-        std::cout << std::endl;
-        return;
-    }
-
     if (cursor_y == V_HEIGHT - 1)
     {
         for (uint64_t i = 0; i < V_HEIGHT - 1; i++) {
@@ -140,6 +155,13 @@ void SysdarftCursesUI::recalc_offsets()
 
 void SysdarftCursesUI::render_screen()
 {
+    // skip screen rendering when curses is disabled
+    if (!is_inited) {
+        return;
+    }
+
+    set_cursor_visibility(false);
+
     clear();
     // Render video_memory to the screen using current offsets
     for (int y = 0; y < V_HEIGHT; ++y) {
@@ -150,5 +172,6 @@ void SysdarftCursesUI::render_screen()
     // Position the cursor in the re-rendered screen
     move(offset_y + cursor_y, offset_x + cursor_x);
     refresh();
-}
 
+    set_cursor_visibility(vsb);
+}

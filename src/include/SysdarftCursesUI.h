@@ -21,6 +21,7 @@ public:
     void teletype(char text);
     void newline();
     void handle_resize();
+    void start_again();
 
 protected:
     int cursor_x;
@@ -31,6 +32,7 @@ private:
     int offset_y;
     char video_memory[V_HEIGHT][V_WIDTH]{};
     bool is_inited = false;
+    int vsb;
 
     void recalc_offsets();
     void render_screen();
