@@ -57,7 +57,7 @@ _start:
     call <%cb>, <reads>                                     ; read disk
     call <%cb>, <puts>                                      ; print disk content
 ;    call <%cb>, <gets>
-    jmp <%CB>, <$(@)>                                       ; halt, so cpu won't wonder off
+    hlt
 
 _int3:
     iret

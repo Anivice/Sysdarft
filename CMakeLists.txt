@@ -183,6 +183,7 @@ add_library(SysdarftCPU OBJECT
         src/cpu/SysdarftCPUInterruption.cpp
         src/include/SysdarftCPU.h
         src/cpu/Operations/IOH.cpp
+        src/cpu/SysdarftCPU.cpp
 )
 target_include_directories(SysdarftCPU PUBLIC src/include src/cpu/include)
 set_target_properties(SysdarftCPU PROPERTIES LINKER_LANGUAGE CXX)
@@ -204,6 +205,7 @@ add_library(SysdarftICH OBJECT
         src/SysdarftIOHub.cpp
         src/include/SysdarftDisks.h
         src/ext_dev/SysdarftHardDisk.cpp
+        src/include/SysdarftDisks.inl
 )
 target_include_directories(SysdarftICH PUBLIC src/include)
 
@@ -257,6 +259,7 @@ add_unit_test(test.assembler tests/test.assembler.cpp)
 add_unit_test(test.controlflow tests/test.controlflow.cpp)
 add_unit_test(test.io tests/test.io.cpp)
 add_unit_test(test.preprocessor tests/test.preprocessor.cpp)
+add_unit_test(test.cpu tests/test.cpu.cpp)
 
 add_custom_target(
         COPY_HDA_FILE ALL

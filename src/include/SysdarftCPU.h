@@ -16,9 +16,17 @@ public:
 };
 
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPU final : protected SysdarftCPUInstructionExecutor {
+private:
+    __uint128_t timestamp;
+
 public:
-    explicit SysdarftCPU(const uint64_t memory, std::vector < uint8_t > bios) :
-        SysdarftCPUInstructionExecutor(memory) { }
+    explicit SysdarftCPU(uint64_t memory,
+        const std::vector < uint8_t > & bios,
+        const std::string & hdd,
+        const std::string & fda,
+        const std::string & fdb);
+
+    void Boot();
 };
 
 #endif //CPU_H
