@@ -1,0 +1,3 @@
+[submodule "SysdarftOS"]
+	path = SysdarftOS
+	url = https://github.com/Anivice/SysdarftOS.git

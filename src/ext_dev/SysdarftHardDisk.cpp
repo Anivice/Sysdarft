@@ -55,7 +55,7 @@ bool SysdarftHardDisk::request_read(const uint64_t port)
         const uint64_t start_off = start_sector * 512;
         const uint64_t length = sector_count * 512;
 
-        if (length == 0) {
+        if (length == 0 || start_off + length > size) {
             return false;
         }
 
@@ -106,7 +106,7 @@ bool SysdarftHardDisk::request_write(const uint64_t port)
 
         const uint64_t start_off = start_sector * 512;
         const uint64_t length = sector_count * 512;
-        if (length == 0) {
+        if (length == 0 || start_off + length > size) {
             return false;
         }
 
