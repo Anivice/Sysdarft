@@ -130,9 +130,12 @@ string(REPLACE "\n" "\\n" SYSDARFT_INFO_CONTENT_ESCAPED "${SYSDARFT_INFO_CONTENT
 add_compile_definitions(
         SYSDARFT_VERSION="0.0.1"
         SYSDARFT_INFORMATION="${SYSDARFT_INFO_CONTENT_ESCAPED}"
-        __DEBUG__
         __CLEAN_OUTPUT__
 )
+
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    add_compile_definitions(__DEBUG__)
+endif ()
 
 # Define include directories globally (can be refined per target)
 include_directories(src/include)

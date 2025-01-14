@@ -264,7 +264,7 @@ void SysdarftCPUInstructionExecutor::show_context()
     // SHOW DB:DP (128 bytes)
     ////////////////////////////////////////////////////////////////////////////////
     log("==============================================================================\n");
-    log("[DB:DP]:\n")
+    log("[DB:DP]:\n");
     auto data_off = SysdarftRegister::load<DataBaseType>() + SysdarftRegister::load<DataPointerType>();
     auto data_len = std::min(TotalMemory - data_off, 128ul);
     std::vector<uint8_t> data_buffer;
@@ -279,7 +279,7 @@ void SysdarftCPUInstructionExecutor::show_context()
     // SHOW EB:EP (128 bytes)
     ////////////////////////////////////////////////////////////////////////////////
     log("==============================================================================\n");
-    log("[EB:EP]:\n")
+    log("[EB:EP]:\n");
     auto ext_off = SysdarftRegister::load<ExtendedBaseType>() + SysdarftRegister::load<ExtendedPointerType>();
     auto ext_len = std::min(TotalMemory - ext_off, 128ul);
     std::vector<uint8_t> ext_buffer;
@@ -294,7 +294,7 @@ void SysdarftCPUInstructionExecutor::show_context()
     // SHOW SB:SP (128 bytes)
     ////////////////////////////////////////////////////////////////////////////////
     log("==============================================================================\n");
-    log("[SB:SP]:\n")
+    log("[SB:SP]:\n");
     auto stack_off = SysdarftRegister::load<StackBaseType>() + SysdarftRegister::load<StackPointerType>();
     auto stack_len = std::min(TotalMemory - stack_off, 128ul);
     std::vector<uint8_t> stack_buffer;
@@ -309,7 +309,7 @@ void SysdarftCPUInstructionExecutor::show_context()
     // SHOW NEXT 8 INSTRUCTIONS
     ////////////////////////////////////////////////////////////////////////////////
     log("==============================================================================\n");
-    log("Following instructions:\n")
+    log("Following instructions:\n");
     std::vector<std::string> next_8_instructions;
     const uint64_t offset =
           SysdarftRegister::load<CodeBaseType>()

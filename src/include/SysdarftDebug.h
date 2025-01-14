@@ -138,10 +138,12 @@ namespace debug
     }
 }
 
-#if !defined(__DEBUG__) || defined(__CLEAN_OUTPUT__)
-#define log(...) ::debug::_log(__VA_ARGS__);
+#if defined(__DEBUG__) && defined(__CLEAN_OUTPUT__)
+#define log(...) ::debug::_log(__VA_ARGS__)
+#elif defined(__DEBUG__) && !defined(__CLEAN_OUTPUT__)
+#define log(...) ::debug::_log(__FILE__, ":", __LINE__, ":", __PRETTY_FUNCTION__, ": ", __VA_ARGS__)
 #else
-#define log(...) ::debug::_log(__FILE__, ":", __LINE__, ":", __PRETTY_FUNCTION__, ": ", __VA_ARGS__);
+#define log(...) __asm__("nop")
 #endif
 
 /**

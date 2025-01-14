@@ -471,7 +471,11 @@ std::string initialize_error_msg(const std::string& msg, const int _errno)
 
 SysdarftBaseError::SysdarftBaseError(
     const std::string& msg)
+#ifdef __DEBUG__
     : runtime_error(initialize_error_msg(msg, errno))
+#else
+    : runtime_error(msg + "errno: " + std::to_string(errno))
+#endif
     , cur_errno(errno)
 {
 }
