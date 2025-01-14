@@ -103,12 +103,127 @@ uint64_t code_size_now(const std::vector < std::vector <uint8_t> > & code)
     return size;
 }
 
+bool process_resvb(std::string& input, std::vector <uint8_t> & code)
+{
+    const std::regex resvb_pattern(R"(\s*\.resvb\s+<(.*)>\s*)", std::regex_constants::icase); // .org 0x123
+    if (std::smatch match;
+        std::regex_search(input, match, resvb_pattern))
+    {
+        auto expression = match[1].str();
+        process_base16(expression);
+        auto processed_expression = execute_bc(expression);
+        const auto count = std::strtoll(processed_expression.c_str(), nullptr, 10);
+        for (uint64_t i = 0; i < count; i++) {
+            code.push_back(0x00);
+        }
+        return true;
+    }
+
+    return false;
+}
+
+std::string unescapeString(const std::string& input)
+{
+    std::string result;
+    result.reserve(input.size());
+
+    for (size_t i = 0; i < input.size(); ++i)
+    {
+        if (input[i] == '\\' && i + 1 < input.size())
+        {
+            // Check the character following the backslash
+            char next = input[i + 1];
+            switch (next) {
+            case 'n': result += '\n'; break;  // Newline
+            case 't': result += '\t'; break;  // Tab
+            case 'r': result += '\r'; break;  // Carriage return
+            case '\\': result += '\\'; break; // Literal backslash
+            case '\'': result += '\''; break; // Single quote
+            case '\"': result += '\"'; break; // Double quote
+                // Add more escape sequences if needed
+            default:
+                // If not a recognized escape, keep the backslash and the character as-is
+                    result += '\\';
+                result += next;
+                break;
+            }
+            ++i;  // Skip the next character since it's part of the escape sequence
+        } else {
+            // Regular character, just append it
+            result += input[i];
+        }
+    }
+
+    return result;
+}
+
+bool process_string(std::string& input, std::vector <uint8_t> & code)
+{
+    const std::regex string_pattern(R"(\s*\.string\s+<\s*\"(.*)\"\s*>\s*)", std::regex_constants::icase);
+    if (std::smatch match;
+        std::regex_search(input, match, string_pattern))
+    {
+        // the captured group can be wrong, we have to rely on interation
+
+        // unescape
+        input = unescapeString(input);
+
+        // find out fist and last appearance of '"'
+        const auto first_of = input.find_first_of("\"");
+        const auto last_of = input.find_last_of("\"");
+
+        // sanity check
+        if (first_of == std::string::npos || last_of == std::string::npos || first_of >= last_of) {
+            throw SysdarftAssemblerError("Error encountered while parsing string: " + input);
+        }
+
+        // process
+        const ssize_t length = last_of - first_of - 1;
+        if (length < 0) {
+            throw SysdarftAssemblerError("Error encountered while parsing string: " + input);
+        }
+        for (const std::string unescaped_substring = input.substr(first_of + 1, length);
+            const auto & c : unescaped_substring)
+        {
+            code.push_back(c);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+struct data_expression_identifier
+{
+    uint64_t data_appearance;
+    uint64_t data_byte_count;
+    std::string data_string;
+};
+
+bool process_data(const std::string& input, std::vector < data_expression_identifier > & data_processors)
+{
+    const std::regex data_pattern(R"(\s*\.(8|16|32|64)bit_data\s+<(.*)>\s*)", std::regex_constants::icase);
+    if (std::smatch match; std::regex_search(input, match, data_pattern))
+    {
+        data_expression_identifier identifier { };
+        identifier.data_byte_count = std::strtol(match[1].str().c_str(), nullptr, 10) / 8;
+        identifier.data_string = match[2].str();
+        data_processors.push_back(identifier);
+        return true;
+    }
+
+    return false;
+}
+
 void SysdarftCompile(
     std::vector < std::vector <uint8_t> > & code,
     std::basic_iostream < char > & file,
     const uint64_t org,
     defined_line_marker_t & defined_line_marker)
 {
+    std::vector < data_expression_identifier > data_processors;
+    const std::regex line_mark_pattern(R"(\s*([A-Za-z_]\w*)(?=)\s*:\s*)");
     std::string line;
     while (std::getline(file, line))
     {
@@ -120,34 +235,49 @@ void SysdarftCompile(
         }
 
         std::vector <uint8_t> code_for_this_instruction;
-        if (line.find(':') != std::string::npos)
+        if (std::smatch match; std::regex_match(tmp, match, line_mark_pattern))
         {
             // found a line marker in this line
-            replace_all(line, " ", "");
-            replace_all(line, ":", "");
-            // calculate code position
-            uint64_t off = 0;
-            for (const auto & ins_code : code) {
-                off += ins_code.size();
-            }
+            auto marker = match[1].str();
 
             // register current offset
-            defined_line_marker[line].first = off + org;
+            defined_line_marker[marker].first = code_size_now(code) + org;
             continue;
         }
 
-        if (line.find('@') != std::string::npos) {
-            replace_all(line, "@", std::to_string(code_size_now(code) + org));
+        // preprocessor .string expression
+        if (process_string(line, code_for_this_instruction)) {
+            code.emplace_back(code_for_this_instruction);
+            continue; // preprocessor that does not need to be compiled
         }
 
+        // preprocessor @@ (org)
         if (line.find("@@") != std::string::npos) {
             replace_all(line, "@@", std::to_string(org));
         }
 
-        if (std::smatch match;
-            std::regex_search(line, match, ascii_value_pattern))
+        // preprocessor @ (current offset)
+        if (line.find('@') != std::string::npos) {
+            replace_all(line, "@", std::to_string(code_size_now(code) + org));
+        }
+
+        // preprocessor .resvb expression
+        if (process_resvb(line, code_for_this_instruction)) {
+            code.emplace_back(code_for_this_instruction);
+            continue; // preprocessor that does not need to be compiled
+        }
+
+        // preprocessor 'ASCII'
+        process_ascii_value(line);
+
+        // process data
+        if (process_data(line, data_processors))
         {
-            process_ascii_value(line);
+            code.emplace_back(std::vector <uint8_t>(data_processors.back().data_byte_count));
+            data_processors.back().data_appearance = code.size() - 1;
+            continue; // this preprocessor is the most complicated.
+            // it needs to handle @ and @@ and all line markers, turn them into actual offsets,
+            // then calculate the processed expression using bc
         }
 
         for (const auto & line_marker : defined_line_marker)
@@ -178,5 +308,35 @@ void SysdarftCompile(
         {
             replaceSequence(code[each_instruction], tmp_address_hex, replacement);
         }
+    }
+
+    // process data
+    for (const auto & [ data_appearance, data_byte_count, data_string ]: data_processors)
+    {
+        auto expression = data_string;
+        // handle all line markers, turn them into actual offsets,
+        for (const auto &[fst, snd] : defined_line_marker) {
+            replace_all(expression, fst,
+                std::to_string(snd.first));
+        }
+
+        // then calculate the processed expression using bc
+        process_base16(expression);
+        auto processed_expression = execute_bc(expression);
+
+        // actual number, signed
+        auto data = strtoll(processed_expression.c_str(), nullptr, 10);
+        uint64_t compliment = 0xFFFFFFFFFFFFFFFF;
+        compliment = compliment >> 64 - (data_byte_count * 8);
+        uint64_t raw_data = *(uint64_t*)&data;
+        raw_data = raw_data & compliment;
+
+        // emplace data
+        std::vector < uint8_t > data_sequence;
+        for (int i = 0; i < data_byte_count; i++) {
+            data_sequence.emplace_back(((uint8_t*)&raw_data)[i]);
+        }
+
+        code[data_appearance] = data_sequence;
     }
 }

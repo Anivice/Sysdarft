@@ -78,6 +78,7 @@ protected:
     // External halt is handled at upper level
     std::atomic<bool> SystemHalted = false;
 
+private:
     // Misc
     add_instruction_exec(nop);
     add_instruction_exec(hlt);
@@ -138,6 +139,7 @@ protected:
     add_instruction_exec(ins);
     add_instruction_exec(outs);
 
+protected:
     // initialization
     SysdarftCPUInstructionExecutor();
 

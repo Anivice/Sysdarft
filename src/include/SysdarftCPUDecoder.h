@@ -7,6 +7,18 @@
 #include <SysdarftMemory.h>
 #include <SysdarftRegister.h>
 
+#define INT_FATAL       (0x00)
+#define INT_DIV_0       (0x01)
+#define INT_IO_ERROR    (0x02)
+#define INT_DEBUG       (0x03)
+#define INT_BAD_INTR    (0x04)
+#define INT_TELETYPE    (0x10)
+#define INT_SET_CUR_POS (0x11)
+#define INT_SET_CUR_VSB (0x12)
+#define INT_NEWLINE     (0x13)
+#define INT_GET_INPUT   (0x14)
+#define INT_GET_CUR_POS (0x15)
+
 class IllegalInstruction final : public SysdarftBaseError {
 public:
     explicit IllegalInstruction(const std::string & msg) :
