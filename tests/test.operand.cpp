@@ -4,7 +4,7 @@
 class CodeBase : public DecoderDataAccess {
 public:
 
-    CodeBase()
+    CodeBase() : DecoderDataAccess(32 * 1024 * 1024)
     {
         std::vector<uint8_t> buffer;
         encode_instruction(buffer, "mov .64bit <*1&64($(0), $(0), $(0))>, <%FER6>");

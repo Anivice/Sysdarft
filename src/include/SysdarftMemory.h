@@ -35,9 +35,9 @@ class SYSDARFT_EXPORT_SYMBOL SysdarftCPUMemoryAccess
 protected:
     std::mutex MemoryAccessMutex;
     std::vector < std::array < uint8_t, BLOCK_SIZE > > Memory;
-    std::atomic<uint64_t> TotalMemory = 32 * 1024 * 1024; // 32MB Memory
+    std::atomic<uint64_t> TotalMemory = 0; // 32MB Memory
 
-    SysdarftCPUMemoryAccess();
+    explicit SysdarftCPUMemoryAccess(uint64_t totalMemory);
     void read_memory(uint64_t address, char * _dest, uint64_t size);
     void write_memory(uint64_t address, const char* _source, uint64_t size);
 

@@ -9,12 +9,6 @@ std::regex target_pattern(R"(<\s*(?:\*\s*(?:1|2|4|8|16)\&(8|16|32|64)\s*\([^,]+,
 std::regex instruction_pattern(R"(([A-Z-0-9]+))");
 std::regex operation_width(R"(.8BIT|.16BIT|.32BIT|.64BIT)");
 
-class InstructionExpressionError final : public SysdarftBaseError {
-public:
-    explicit InstructionExpressionError(const std::string& message) :
-        SysdarftBaseError("Instruction Expression Error: " + message) { }
-};
-
 std::vector<std::string> clean_line(const std::string & _input)
 {
     std::vector<std::string> ret;

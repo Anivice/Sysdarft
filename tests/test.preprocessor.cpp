@@ -4,11 +4,11 @@
 #include <InstructionSet.h>
 #include <SysdarftCursesUI.h>
 #include <SysdarftInstructionExec.h>
-#include <SysdarftHardDisk.h>
+#include <SysdarftDisks.h>
 
 class Exec final : public SysdarftCPUInstructionExecutor {
 public:
-    Exec()
+    Exec() : SysdarftCPUInstructionExecutor(32 * 1024 * 1024)
     {
         SysdarftCursesUI::initialize();
         device_list.emplace_back(std::make_unique<SysdarftHardDisk>("hda.img"));
@@ -21,7 +21,7 @@ public:
             write_memory(off++, (char*)&c, 1);
         }
 
-        for (int i = 0; i < 400000; i++) {
+        for (int i = 0; i < 80000; i++) {
             execute(0);
         }
     }
@@ -35,5 +35,4 @@ public:
 int main()
 {
     Exec base;
-    sleep(1);
 }

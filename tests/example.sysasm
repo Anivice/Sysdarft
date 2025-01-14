@@ -63,3 +63,4 @@ _int3:
     iret
 
 _stack_frame:
+.resvb < 16 - ( (@ - @@) % 16 ) >

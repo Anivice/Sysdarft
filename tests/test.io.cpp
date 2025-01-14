@@ -3,7 +3,7 @@
 #include <InstructionSet.h>
 #include <SysdarftCursesUI.h>
 #include <SysdarftInstructionExec.h>
-#include <SysdarftHardDisk.h>
+#include <SysdarftDisks.h>
 
 class Exec final : public SysdarftCPUInstructionExecutor {
 public:
@@ -38,7 +38,7 @@ public:
         log("\n\n\n");
     }
 
-    Exec()
+    Exec() : SysdarftCPUInstructionExecutor(32 * 1024 * 1024)
     {
         bindBreakpointHandler(this, &Exec::h_breakpoint_handler);
         bindIsBreakHere(this, &Exec::h_is_break_here);

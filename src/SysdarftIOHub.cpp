@@ -1,12 +1,6 @@
 #include <SysdarftIOHub.h>
 #include <SysdarftDebug.h>
 
-class SysdarftNoSuchDevice final : public SysdarftBaseError
-{
-public:
-    explicit SysdarftNoSuchDevice(const std::string& msg) : SysdarftBaseError("No such device: " + msg) { }
-};
-
 SysdarftExternalDeviceBaseClass & SysdarftIOHub::query_device_based_on_port(const uint64_t port)
 {
     for (const auto & deviceMap : device_list)

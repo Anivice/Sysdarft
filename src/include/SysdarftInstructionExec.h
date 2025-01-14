@@ -82,6 +82,8 @@ private:
     // Misc
     add_instruction_exec(nop);
     add_instruction_exec(hlt);
+    add_instruction_exec(igni);
+    add_instruction_exec(alwi);
 
     // Arithmetic
     add_instruction_exec(add);
@@ -141,7 +143,7 @@ private:
 
 protected:
     // initialization
-    SysdarftCPUInstructionExecutor();
+    explicit SysdarftCPUInstructionExecutor(uint64_t memory);
 
     // general code execution
     void execute(__uint128_t timestamp);

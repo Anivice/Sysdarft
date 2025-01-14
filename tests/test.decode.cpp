@@ -4,7 +4,7 @@
 class CodeBase : public SysdarftCPUInstructionDecoder {
 public:
 
-    CodeBase()
+    CodeBase() : SysdarftCPUInstructionDecoder(32 * 1024 * 1024)
     {
         std::vector<uint8_t> buffer;
         encode_instruction(buffer, "add .64bit <*2&64($(255), %FER14, $(4))>, <$(114514)>");

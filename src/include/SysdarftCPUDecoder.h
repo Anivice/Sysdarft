@@ -30,6 +30,11 @@ public:
     explicit SysdarftBadInterruption(const std::string & msg) : SysdarftBaseError("Bad interruption: " + msg) { }
 };
 
+class SysdarftCPUFatal final : public SysdarftBaseError {
+public:
+    SysdarftCPUFatal() : SysdarftBaseError("CPU is met with a unrecoverable fatal error") { }
+};
+
 class OperandType;
 
 class DecoderDataAccess
@@ -38,6 +43,8 @@ class DecoderDataAccess
       public SysdarftCursesUI
 {
 protected:
+    explicit DecoderDataAccess(const uint64_t memory) : SysdarftCPUMemoryAccess(memory) { }
+
     template < typename DataType >
     DataType pop_code_and_inc_ip()
     {
@@ -177,7 +184,7 @@ private:
      *  [0x13] NEW LINE
      *  [0x14] GET INPUT, INPUT == EXR0
      *  [0x15] GET CURSOR POSITION POSITION == EXR0
-     *  [0x16]
+     *  [0x16] GET SYSTEM HARDWARE INFO
      *  [0x17]
      *  [0x18]
      *  [0x19]
@@ -202,12 +209,15 @@ private:
     void do_interruption_newline_0x13();
     void do_interruption_getinput_0x14();
     void do_interruption_cur_pos_0x15();
+    void do_get_system_hardware_info_0x16();
 
 protected:
     std::atomic<bool> hd_int_flag = false;
 
     void do_interruption(uint64_t code);
     void do_iret();
+
+    explicit SysdarftCPUInterruption(const uint64_t memory) : DecoderDataAccess(memory) { }
 };
 
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInstructionDecoder : public SysdarftCPUInterruption
@@ -224,6 +234,8 @@ protected:
     };
 
     ActiveInstructionType pop_instruction_from_ip_and_increase_ip();
+
+    explicit SysdarftCPUInstructionDecoder(const uint64_t total_memory) : SysdarftCPUInterruption(total_memory) { }
 };
 
 #endif //SYSDARFTCPUINSTRUCTIONDECODER_H

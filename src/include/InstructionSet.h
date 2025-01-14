@@ -58,6 +58,8 @@
 #define OPCODE_IRET     (0x3B)
 
 #define OPCODE_HLT      (0x40)
+#define OPCODE_IGNI     (0x41)
+#define OPCODE_ALWI     (0x42)
 
 #define OPCODE_IN       (0x50)
 #define OPCODE_OUT      (0x51)
@@ -382,6 +384,20 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
      }
     },
 
+    { "IGNI", {
+           {ENTRY_OPCODE, OPCODE_IGNI },
+           {ENTRY_ARGUMENT_COUNT, 0},
+           {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
+      }
+    },
+
+    { "ALWI", {
+           {ENTRY_OPCODE, OPCODE_ALWI },
+           {ENTRY_ARGUMENT_COUNT, 0},
+           {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
+      }
+    },
+
     ////////////////////////////////////////////////////////////////////////////////////////////
 
     { "IN", {
@@ -411,6 +427,7 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
     },
+
 };
 
 #endif //INSTRUCTION_DEFINITION_H

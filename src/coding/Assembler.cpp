@@ -3,11 +3,6 @@
 #include <algorithm>
 #include <EncodingDecoding.h>
 
-class SysdarftCompileError final : public SysdarftBaseError {
-public:
-    explicit SysdarftCompileError(const std::string& msg) : SysdarftBaseError("Error during compilation: " + msg) { }
-};
-
 void replace_all(
     std::string & input,
     const std::string & target,

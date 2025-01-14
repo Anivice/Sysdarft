@@ -8,15 +8,17 @@
 #include <SysdarftInstructionExec.h>
 #include <WorkerThread.h>
 
-inline unsigned long long operator"" _Hz(const unsigned long long freq) {
-    return freq;
-}
-
 class MultipleCPUInstanceCreation final : public SysdarftBaseError
 {
 public:
     explicit MultipleCPUInstanceCreation() :
         SysdarftBaseError("Trying to create multiple CPU instances!") { }
+};
+
+class SYSDARFT_EXPORT_SYMBOL SysdarftCPU final : protected SysdarftCPUInstructionExecutor {
+public:
+    explicit SysdarftCPU(const uint64_t memory, std::vector < uint8_t > bios) :
+        SysdarftCPUInstructionExecutor(memory) { }
 };
 
 #endif //CPU_H

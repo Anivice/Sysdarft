@@ -12,7 +12,8 @@
 class Memory final : public SysdarftCPUMemoryAccess
 {
 public:
-    Memory() = default;
+    Memory() : SysdarftCPUMemoryAccess(32 * 1024 * 1024) { }
+
     const uint64_t TotalMemory = SysdarftCPUMemoryAccess::TotalMemory;
 
     // Random write helper

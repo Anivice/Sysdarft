@@ -56,6 +56,17 @@ public:
         SysdarftBaseError("Code buffer emptied before pop finished: " + msg) { }
 };
 
+class InstructionExpressionError final : public SysdarftBaseError {
+public:
+    explicit InstructionExpressionError(const std::string& message) :
+        SysdarftBaseError("Instruction Expression Error: " + message) { }
+};
+
+class SysdarftPreProcessorError final : public SysdarftBaseError {
+public:
+    explicit SysdarftPreProcessorError(const std::string& msg) : SysdarftBaseError("Error encountered in preprocessor: " + msg) { }
+};
+
 inline std::string & remove_space(std::string & str)
 {
     std::erase(str, ' ');
@@ -149,16 +160,17 @@ struct SYSDARFT_EXPORT_SYMBOL parsed_target_t
 
 typedef std::map < std::string, std::pair < uint64_t /* line position */, std::vector < uint64_t > > > defined_line_marker_t;
 
-void process_base16(std::string & input);
-std::string execute_bc(const std::string& input);
-void replace_all( std::string & input, const std::string & target, const std::string & replacement);
-parsed_target_t encode_target(std::vector<uint8_t> &, const std::string&);
-void decode_target(std::vector<std::string> &, std::vector<uint8_t> &);
+void SYSDARFT_EXPORT_SYMBOL process_base16(std::string &);
+void SYSDARFT_EXPORT_SYMBOL replace_all(std::string &, const std::string &, const std::string &);
+std::string execute_bc(const std::string &);
+parsed_target_t encode_target(std::vector < uint8_t > &, const std::string &);
+void decode_target(std::vector < std::string > &, std::vector < uint8_t > &);
 
-void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> &, const std::string &);
+void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector < uint8_t > &, const std::string &);
 void SYSDARFT_EXPORT_SYMBOL decode_instruction(std::vector < std::string > &, std::vector<uint8_t> &);
-void SYSDARFT_EXPORT_SYMBOL SysdarftCompile(std::vector < std::vector <uint8_t> > & code,
-    std::basic_iostream<char>& file, uint64_t org, defined_line_marker_t & defined_line_marker);
-void SYSDARFT_EXPORT_SYMBOL CodeProcessing(std::vector <uint8_t> & code, std::basic_istream<char>& file);
+void SYSDARFT_EXPORT_SYMBOL SysdarftCompile(std::vector < std::vector < uint8_t > > &,
+    std::basic_iostream < char > &,
+    uint64_t, defined_line_marker_t &);
+void SYSDARFT_EXPORT_SYMBOL CodeProcessing(std::vector < uint8_t > &, std::basic_istream < char > &);
 
 #endif // INSTRUCTIONS_H

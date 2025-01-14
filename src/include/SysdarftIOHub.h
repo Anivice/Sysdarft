@@ -7,6 +7,17 @@
 #include <memory>
 #include <SysdarftDebug.h>
 
+class SysdarftNoSuchDevice final : public SysdarftBaseError
+{
+public:
+    explicit SysdarftNoSuchDevice(const std::string& msg) : SysdarftBaseError("No such device: " + msg) { }
+};
+
+class SysdarftDeviceIOError : public SysdarftBaseError {
+public:
+    explicit SysdarftDeviceIOError(const std::string& msg) : SysdarftBaseError("Device I/O Error: " + msg) { }
+};
+
 class ControllerDataStream {
 public:
     std::vector < uint8_t > device_buffer;
@@ -44,11 +55,6 @@ public:
     std::map < uint64_t /* IO Port */, ControllerDataStream > device_buffer;
     virtual bool request_read(uint64_t /* IO Port */) { return false; }
     virtual bool request_write(uint64_t /* IO Port */) { return false; }
-};
-
-class SysdarftDeviceIOError final : public SysdarftBaseError {
-public:
-    explicit SysdarftDeviceIOError(const std::string& msg) : SysdarftBaseError("Device I/O Error: " + msg) { }
 };
 
 class SYSDARFT_EXPORT_SYMBOL SysdarftIOHub

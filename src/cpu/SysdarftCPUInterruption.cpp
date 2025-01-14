@@ -28,24 +28,34 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
 {
     if (code <= 0x1F)
     {
-        // hardware interruptions
+        // hardware interruptions, unmaskable
         switch (code) {
-        case 0x00: do_interruption_fatal_0x00(); return;
-        case 0x03: do_interruption_debug_0x03(); return;
-        case 0x10: do_interruption_tty_0x10(); return;
-        case 0x11: do_interruption_set_cur_pos_0x11(); return;
-        case 0x12: do_interruption_set_cur_visib_0x12(); return;
-        case 0x13: do_interruption_newline_0x13(); return;
-        case 0x14: do_interruption_getinput_0x14(); return;
-        case 0x15: do_interruption_cur_pos_0x15(); return;
-        default: log("Interruption ", code, " not implemented\n"); return;
+        case 0x00: do_interruption_fatal_0x00();            return;
+        case 0x03: do_interruption_debug_0x03();            return;
+        case 0x10: do_interruption_tty_0x10();              return;
+        case 0x11: do_interruption_set_cur_pos_0x11();      return;
+        case 0x12: do_interruption_set_cur_visib_0x12();    return;
+        case 0x13: do_interruption_newline_0x13();          return;
+        case 0x14: do_interruption_getinput_0x14();         return;
+        case 0x15: do_interruption_cur_pos_0x15();          return;
+        default: log("Hardware interruption ", code, " not implemented\n"); return;
         }
     }
 
-    // software interruptions
-    const auto location = do_interruption_lookup(code);
-    do_preserve_cpu_state();
-    do_jump_table(location);
+    if (auto fg = SysdarftRegister::load<FlagRegisterType>();
+        !fg.InterruptionMask)
+    {
+        // software interruptions, maskable
+        const auto location = do_interruption_lookup(code);
+        do_preserve_cpu_state();
+
+        // mask
+        fg.InterruptionMask = 1;
+        SysdarftRegister::store<FlagRegisterType>(fg);
+
+        // setup jump table
+        do_jump_table(location);
+    }
 }
 
 SysdarftCPUInterruption::InterruptionPointer SysdarftCPUInterruption::do_interruption_lookup(const uint64_t code)
@@ -82,11 +92,6 @@ void SysdarftCPUInterruption::do_iret()
     SysdarftRegister::Registers = DecoderDataAccess::pop_memory_from<sysdarft_register_t>(SB, SP);
     // SysdarftRegister::store<StackPointerType>(SP);
 }
-
-class SysdarftCPUFatal final : public SysdarftBaseError {
-public:
-    SysdarftCPUFatal() : SysdarftBaseError("CPU is met with a unrecoverable fatal error") { }
-};
 
 // Hardware Interruptions
 void SysdarftCPUInterruption::do_interruption_fatal_0x00()
@@ -141,4 +146,9 @@ void SysdarftCPUInterruption::do_interruption_cur_pos_0x15()
 {
     const uint16_t linear = cursor_y * V_WIDTH + cursor_x;
     SysdarftRegister::store<ExtendedRegisterType, 0>(linear);
+}
+
+void SysdarftCPUInterruption::do_get_system_hardware_info_0x16()
+{
+    SysdarftRegister::store<FullyExtendedRegisterType, 0>(TotalMemory);
 }

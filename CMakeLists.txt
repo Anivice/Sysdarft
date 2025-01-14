@@ -202,7 +202,7 @@ target_include_directories(SysdarftCoding PUBLIC src/include)
 add_library(SysdarftICH OBJECT
         src/include/SysdarftIOHub.h
         src/SysdarftIOHub.cpp
-        src/include/SysdarftHardDisk.h
+        src/include/SysdarftDisks.h
         src/ext_dev/SysdarftHardDisk.cpp
 )
 target_include_directories(SysdarftICH PUBLIC src/include)

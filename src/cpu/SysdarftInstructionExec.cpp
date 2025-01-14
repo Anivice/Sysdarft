@@ -1,11 +1,13 @@
 #include <SysdarftInstructionExec.h>
 #include <InstructionSet.h>
 
-SysdarftCPUInstructionExecutor::SysdarftCPUInstructionExecutor()
+SysdarftCPUInstructionExecutor::SysdarftCPUInstructionExecutor(const uint64_t memory) : SysdarftCPUInstructionDecoder(memory)
 {
     // Misc
     make_instruction_execution_procedure(OPCODE_NOP, &SysdarftCPUInstructionExecutor::nop);
     make_instruction_execution_procedure(OPCODE_HLT, &SysdarftCPUInstructionExecutor::hlt);
+    make_instruction_execution_procedure(OPCODE_HLT, &SysdarftCPUInstructionExecutor::igni);
+    make_instruction_execution_procedure(OPCODE_HLT, &SysdarftCPUInstructionExecutor::alwi);
 
     // Arithmetic
     make_instruction_execution_procedure(OPCODE_ADD, &SysdarftCPUInstructionExecutor::add);

@@ -87,6 +87,7 @@ void decode_memory(std::vector<std::string> & output, std::vector < uint8_t > & 
         return true;
     };
 
+    operands.emplace_back("(");
     if (!decode_each_parameter()) { return; }
     operands.emplace_back(", ");
     if (!decode_each_parameter()) { return; }

@@ -3,11 +3,6 @@
 #include <iomanip>
 #include <EncodingDecoding.h>
 
-class SysdarftPreProcessorError final : public SysdarftBaseError {
-public:
-    explicit SysdarftPreProcessorError(const std::string& msg) : SysdarftBaseError("Error encountered in preprocessor: " + msg) { }
-};
-
 const std::regex org_pattern(R"(\s*\.org\s+((?:0x[0-9A-Fa-f]+)|(?:\d+))\s*)", std::regex_constants::icase); // .org 0x123
 const std::regex lab_pattern(R"(\s*\.lab\s+([A-Za-z._][A-Za-z0-9._]*(?:\s*,\s*[A-Za-z._][A-Za-z0-9._]*)*)\s*)",
     std::regex_constants::icase);

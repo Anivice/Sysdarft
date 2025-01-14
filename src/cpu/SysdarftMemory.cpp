@@ -2,14 +2,15 @@
 #include <cstring>
 #include <mutex>
 
-SysdarftCPUMemoryAccess::SysdarftCPUMemoryAccess()
+SysdarftCPUMemoryAccess::SysdarftCPUMemoryAccess(const uint64_t totalMemory)
 {
-    // We assume TotalMemory and BLOCK_SIZE are defined in the header.
-    // Example: TotalMemory = 32UL * 1024 * 1024, BLOCK_SIZE = 4096, etc.
-
     std::lock_guard<std::mutex> lock(MemoryAccessMutex);
-
     Memory.clear();
+    TotalMemory = totalMemory;
+
+    if (totalMemory == 0) {
+        throw SysdarftBaseError("Total memory is zero");
+    }
 
     // Fill the vector with (TotalMemory / BLOCK_SIZE) blocks
     const uint64_t numBlocks = TotalMemory / BLOCK_SIZE;
