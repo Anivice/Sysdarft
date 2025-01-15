@@ -29,4 +29,11 @@ int main()
     ui.start_again();
     sleep(1);
     ui.cleanup();
+
+    ui.ringbell();
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    ui.ringbell();
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    ui.ringbell();
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 }

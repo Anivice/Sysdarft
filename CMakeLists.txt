@@ -55,7 +55,6 @@ set(compiler_options
 
         -fno-eliminate-unused-debug-types
         -fno-omit-frame-pointer
-        -std=c++23
         -lasan -lubsan -fPIC --pie
 )
 
@@ -76,7 +75,6 @@ set(linker_options
 
         # Stack protection
         -fstack-protector-all                   # Link with stack protection for all functions
-        -std=c++23
         -lasan -lubsan -fPIC --pie --whole-file
 )
 
@@ -116,8 +114,40 @@ if (("${COMPILE_WITH_MEMORY_SANITIZERS}" STREQUAL "True") AND ("${COMPILE_WITH_T
     message(FATAL_ERROR "Memory sanitizers and thread sanitizers are mutually exclusive!")
 endif ()
 
-add_compile_options(${compiler_options})
-add_link_options(${linker_options})
+set(optimization_flags
+        -O3
+        -march=native
+        -mtune=native
+        -flto
+        -fomit-frame-pointer
+        -ffast-math
+        -fstrict-aliasing
+        -fdata-sections
+        -ffunction-sections
+        -fno-rtti
+)
+
+set(optimization_link_flags
+        -O3
+        -march=native
+        -mtune=native
+        -flto
+        -fomit-frame-pointer
+        -ffast-math
+        -fstrict-aliasing
+        -fdata-sections
+        -ffunction-sections
+        -fno-rtti
+        -Wl,--gc-sections
+)
+
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    add_compile_options(${compiler_options})
+    add_link_options(${linker_options})
+else ()
+    add_compile_options(${optimization_flags})
+    add_compile_options(${optimization_link_flags})
+endif ()
 
 # Read and process the information file
 set(information_file "${CMAKE_CURRENT_SOURCE_DIR}/sysdarft_info.txt")
@@ -160,11 +190,26 @@ target_include_directories(SysdarftModule PUBLIC src/include)
 add_library(SysdarftGlobalEvents OBJECT src/GlobalEvents.cpp)
 target_include_directories(SysdarftGlobalEvents PUBLIC src/include)
 
+# Audio files
+add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c
+        COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/resources
+        COMMAND rm -f bell.wav
+        COMMAND mknod bell.wav p
+        COMMAND cat "${CMAKE_CURRENT_SOURCE_DIR}/resources/bell.wav" > bell.wav &
+        COMMAND xxd -i bell.wav > ${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c
+        DEPENDS resources/bell.wav
+        COMMENT "Building audio resources.."
+)
+
 # Curses:
 find_package(Curses REQUIRED)
-add_library(SysdarftCursesUI OBJECT src/SysdarftCursesUI.cpp)
+find_package(SFML COMPONENTS audio system REQUIRED)
+add_library(SysdarftCursesUI OBJECT
+        src/SysdarftCursesUI.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c)
 target_include_directories(SysdarftCursesUI PUBLIC src/include)
-target_link_libraries(SysdarftCursesUI PUBLIC ${CURSES_LIBRARIES})
+target_link_libraries(SysdarftCursesUI PUBLIC ${CURSES_LIBRARIES} sfml-audio sfml-system)
 
 # CPU
 add_library(SysdarftCPU OBJECT

@@ -1,15 +1,29 @@
 // SysdarftCursesUI.cpp
-#include <cstring>
 #include <SysdarftCursesUI.h>
+#include <cstring>
+#include <thread>
+
+std::mutex bell_memory_access_mutex;
 
 SysdarftCursesUI::SysdarftCursesUI()
-    : cursor_x(0), cursor_y(0), offset_x(0), offset_y(0)
+    : cursor_x(0), cursor_y(0), offset_x(0), offset_y(0), vsb(1)
 {
     // Initialize video memory with spaces
     for (auto & y : video_memory)
     {
         for (char & x : y) {
             x = ' ';
+        }
+    }
+}
+
+SysdarftCursesUI::~SysdarftCursesUI()
+{
+    running = false;
+    for (auto & thread : sound_thread_pool)
+    {
+        if (thread.joinable()) {
+            thread.join();
         }
     }
 }
@@ -48,6 +62,12 @@ void SysdarftCursesUI::start_again()
     clear();
     curs_set(1);         // Ensure cursor visibility is reset
     render_screen();
+}
+
+void SysdarftCursesUI::ringbell()
+{
+    running = true;
+    sound_thread_pool.emplace_back(std::thread(play_bell_sound, std::ref(running)));
 }
 
 void SysdarftCursesUI::cleanup()

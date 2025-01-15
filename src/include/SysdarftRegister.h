@@ -399,8 +399,12 @@ protected:
         } else if constexpr (std::is_same_v<AccessRegisterType, CurrentProcedureStackPreservationSpaceType>) {
             return Registers.CurrentProcedureStackPreservationSpace;
         } else {
+#ifdef __DEBUG__
             throw UnknownRegisterIdentification("Invalid register type: "
                 + std::string(typeid(AccessRegisterType).name()));
+#else
+            throw UnknownRegisterIdentification("Invalid register type");
+#endif
         }
     }
 
@@ -554,9 +558,13 @@ protected:
         } else if constexpr (std::is_same_v<AccessRegisterType, CurrentProcedureStackPreservationSpaceType>) {
             Registers.CurrentProcedureStackPreservationSpace = Reg;
         } else {
+#ifdef __DEBUG__
             throw UnknownRegisterIdentification("Invalid register type [AccessRegisterType = "
                 + std::string(typeid(AccessRegisterType).name())
                 + ", AccessRegisterIndex = " + std::to_string(AccessRegisterIndex));
+#else
+            throw UnknownRegisterIdentification("Invalid register type");
+#endif
         }
     }
 

@@ -45,6 +45,20 @@ SysdarftCPUInterruption::SysdarftCPUInterruption(const uint64_t memory) :
 
 void SysdarftCPUInterruption::do_interruption(const uint64_t code)
 {
+    auto do_interruption = [&](decltype(SysdarftRegister::load<FlagRegisterType>()) & fg)
+    {
+        // software interruptions, maskable
+        const auto location = do_interruption_lookup(code);
+        do_preserve_cpu_state();
+
+        // mask
+        fg.InterruptionMask = 1;
+        SysdarftRegister::store<FlagRegisterType>(fg);
+
+        // setup jump table
+        do_jump_table(location);
+    };
+
     if (code <= 0x1F)
     {
         // hardware interruptions, unmaskable
@@ -57,23 +71,20 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
         case 0x13: do_interruption_newline_0x13();          return;
         case 0x14: do_interruption_getinput_0x14();         return;
         case 0x15: do_interruption_cur_pos_0x15();          return;
-        default: log("Hardware interruption ", code, " not implemented\n"); return;
+        case 0x16: do_get_system_hardware_info_0x16();      return;
+        case 0x17: do_ring_bell_0x17();                     return;
+        default:
+            auto fg = SysdarftRegister::load<FlagRegisterType>();
+            // do interruption, but doesn't check interruption mask since
+            // this is not maskable interruptions
+            do_interruption(fg);
         }
     }
 
     if (auto fg = SysdarftRegister::load<FlagRegisterType>();
         !fg.InterruptionMask)
     {
-        // software interruptions, maskable
-        const auto location = do_interruption_lookup(code);
-        do_preserve_cpu_state();
-
-        // mask
-        fg.InterruptionMask = 1;
-        SysdarftRegister::store<FlagRegisterType>(fg);
-
-        // setup jump table
-        do_jump_table(location);
+        do_interruption(fg);
     }
 }
 
@@ -188,4 +199,9 @@ void SysdarftCPUInterruption::do_interruption_cur_pos_0x15()
 void SysdarftCPUInterruption::do_get_system_hardware_info_0x16()
 {
     SysdarftRegister::store<FullyExtendedRegisterType, 0>(TotalMemory);
+}
+
+void SysdarftCPUInterruption::do_ring_bell_0x17()
+{
+    SysdarftCursesUI::ringbell();
 }

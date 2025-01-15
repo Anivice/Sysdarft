@@ -67,10 +67,10 @@ void disassemble(const std::string & binary_filename, const uint64_t org)
         ss << std::hex << std::setfill('0') << std::setw(16) << std::uppercase
             << bad_data.front().first;
         ss << ": .8bit_data <";
-        for (size_t i = 0; i < bad_data.size(); ++i) {
-            ss << bad_data[i].second << (i < bad_data.size() - 1 ? ", " : "");
+        for (auto & [location, data] : bad_data) {
+            ss << " " << data << ",";
         }
-        ss << ">";
+        ss << " >";
         bad_data.clear();
         lines.push_back(ss.str());
     };
@@ -111,7 +111,10 @@ void disassemble(const std::string & binary_filename, const uint64_t org)
         }
     }
 
-    process_bad_data();
+    if (!bad_data.empty())
+    {
+        process_bad_data();
+    }
 
     for (const auto& line : lines) {
         std::cout << line << "\n";

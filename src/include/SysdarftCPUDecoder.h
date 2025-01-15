@@ -172,7 +172,7 @@ protected:
 
     /*
      * Interruption table:
-     * Hardware Reserved:
+     * Hardware Reserved: [1-F], INVOKED BY HARDWARE, NOT MASKABLE
      *  [0x00] FATAL ERROR (ErrorCode == %EXR0)
      *  [0x01] DIV/0
      *  [0x02] IO ERROR
@@ -189,14 +189,15 @@ protected:
      *  [0x0D]
      *  [0x0E]
      *  [0x0F]
+     *      [10-1F], INVOKED BY USER FOR SPECIFIC HARDWARE FUNCTIONS, NOT MASKABLE
      *  [0x10] TELETYPE (EXR0 == Character ASCII Code)
      *  [0x11] SET CURSOR POSITION (EXR0 == LinearOffset)
      *  [0x12] SET CURSOR VISIBILITY (EXR0 == Visibility)
      *  [0x13] NEW LINE
      *  [0x14] GET INPUT, INPUT == EXR0
-     *  [0x15] GET CURSOR POSITION POSITION == EXR0
-     *  [0x16] GET SYSTEM HARDWARE INFO
-     *  [0x17]
+     *  [0x15] GET CURSOR POSITION == EXR0
+     *  [0x16] GET SYSTEM HARDWARE INFO [TOTAL MEMORY == FER0]
+     *  [0x17] RING BELL
      *  [0x18]
      *  [0x19]
      *  [0x1A]
@@ -222,6 +223,7 @@ protected:
     void do_interruption_getinput_0x14();
     void do_interruption_cur_pos_0x15();
     void do_get_system_hardware_info_0x16();
+    void do_ring_bell_0x17();
 
     std::atomic<bool> hd_int_flag = false;
 
