@@ -52,8 +52,10 @@ void SysdarftCursesUI::start_again()
 
 void SysdarftCursesUI::cleanup()
 {
-    endwin();
-    is_inited = false;
+    if (is_inited) {
+        endwin();
+        is_inited = false;
+    }
 }
 
 void SysdarftCursesUI::set_cursor(const int x, const int y)

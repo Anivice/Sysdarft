@@ -285,6 +285,7 @@ int main(int argc, char** argv)
             uint64_t memory_size = 32 * 1024 * 1024;
             if (parsed_options.contains("memory")) {
                 memory_size = std::strtoll(parsed_options["memory"].at(0).c_str(), nullptr, 10);
+                memory_size *= 1024 * 1024; // 1MB
             }
 
             std::string hdd;

@@ -73,8 +73,9 @@ std::atomic<bool> debug::verbose = false;
 
 std::string debug::separate_before_slash(const std::string& input)
 {
-    size_t pos = input.find('/');
-    if (pos != std::string::npos) {
+    if (const size_t pos = input.find('/');
+        pos != std::string::npos)
+    {
         return input.substr(0, pos);
     }
     return input;
@@ -336,7 +337,7 @@ void debug::_log(const __uint128_t& param)
         tmp /= 10;
     }
 
-    std::reverse(str.begin(), str.end());
+    std::ranges::reverse(str);
     std::cerr << str;
 }
 
@@ -363,6 +364,7 @@ size_t max_line_length(const std::string& input)
     return max_length;
 }
 
+#ifdef __DEBUG__
 std::string initialize_error_msg(const std::string& msg, const int _errno)
 {
     std::string result;
@@ -468,6 +470,7 @@ std::string initialize_error_msg(const std::string& msg, const int _errno)
 
     return ">>> " + msg + " (errno=" + std::to_string(_errno) + ") <<<";
 }
+#endif
 
 SysdarftBaseError::SysdarftBaseError(
     const std::string& msg)
@@ -480,6 +483,7 @@ SysdarftBaseError::SysdarftBaseError(
 {
 }
 
+#ifdef __DEBUG__
 bool isDigits(const std::string& str)
 {
     return std::ranges::all_of(str, ::isdigit);
@@ -661,7 +665,8 @@ std::string debug::get_verbose_info()
     size_t pad_starttime = max_starttime + 3;
 
     auto create_spaces = [](const size_t count) -> std::string {
-        return std::string(count, ' ');
+        const std::string ret_str(count, ' ');
+        return ret_str;
     };
 
     auto pad_right
@@ -702,3 +707,4 @@ std::string debug::get_verbose_info()
 
     return ret.str();
 }
+#endif

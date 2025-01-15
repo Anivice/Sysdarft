@@ -26,6 +26,7 @@ public:
         const std::string & hdd,
         const std::string & fda,
         const std::string & fdb);
+    ~SysdarftCPU() override { SysdarftCursesUI::cleanup(); }
 
     void set_abort_next() { do_abort_int = true; }
     void system_hlt() { SystemHalted = true; }
