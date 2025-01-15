@@ -2,6 +2,7 @@
 #define SYSDARFTMEMORY_H
 
 #include <SysdarftDebug.h>
+#include <array>
 
 /*
  * Memory Layout:

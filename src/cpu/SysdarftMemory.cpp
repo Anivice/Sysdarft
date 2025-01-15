@@ -1,6 +1,7 @@
 #include <SysdarftMemory.h>
 #include <cstring>
 #include <mutex>
+#include <array>
 
 SysdarftCPUMemoryAccess::SysdarftCPUMemoryAccess(const uint64_t totalMemory)
 {
