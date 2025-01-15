@@ -13,6 +13,8 @@
 #define INT_DEBUG       (0x03)
 #define INT_BAD_INTR    (0x04)
 #define INT_ABORT       (0x05)
+#define INT_ILLEGAL_INSTRUCTION (0x06)
+#define INT_STACKOVERFLOW (0x07)
 
 #define INT_TELETYPE    (0x10)
 #define INT_SET_CUR_POS (0x11)
@@ -172,15 +174,16 @@ protected:
 
     /*
      * Interruption table:
-     * Hardware Reserved: [1-F], INVOKED BY HARDWARE, NOT MASKABLE
+     * Hardware Reserved:
+     *      [1-F], INVOKED BY HARDWARE TO INDICATE AN ERROR, NOT MASKABLE
      *  [0x00] FATAL ERROR (ErrorCode == %EXR0)
      *  [0x01] DIV/0
      *  [0x02] IO ERROR
      *  [0x03] DEBUG, BREAKPOINT RIGHT NEXT
      *  [0x04] BAD INTERRUPTION CALL
      *  [0x05] ABORT
-     *  [0x06]
-     *  [0x07]
+     *  [0x06] ILLEGAL INSTRUCTION
+     *  [0x07] STACK OVERFLOW
      *  [0x08]
      *  [0x09]
      *  [0x0A]
@@ -215,6 +218,7 @@ protected:
     // Hardware Interruptions
     void do_interruption_fatal_0x00();
     void do_interruption_debug_0x03();
+    void do_stackoverflow_0x07();
     void do_abort_0x05();
     void do_interruption_tty_0x10();
     void do_interruption_set_cur_pos_0x11();

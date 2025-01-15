@@ -5,6 +5,12 @@
 #include <SysdarftCPUDecoder.h>
 #include <SysdarftIOHub.h>
 
+class SysdarftCPUSubroutineRequestToAbortTheCurrentInstructionExecutionProcedureDueToError : SysdarftBaseError {
+public:
+    SysdarftCPUSubroutineRequestToAbortTheCurrentInstructionExecutionProcedureDueToError() :
+        SysdarftBaseError("Sysdarft Instruction Subroutine Abort") { }
+};
+
 #define add_instruction_exec(name) void name(__uint128_t, WidthAndOperandsType &)
 
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInstructionExecutor : public SysdarftCPUInstructionDecoder, public SysdarftIOHub
@@ -18,8 +24,20 @@ private:
     {
         const auto SP = SysdarftRegister::load<StackPointerType>();
         const auto SB = SysdarftRegister::load<StackBaseType>();
+
+        // Stack overflow
+        if (SP < sizeof(DataType)) {
+            throw StackOverflow();
+        }
+
         const auto StackNewLowerEnd = SP - sizeof(DataType);
-        SysdarftCPUMemoryAccess::write_memory(StackNewLowerEnd + SB, (char*)&val, sizeof(DataType));
+
+        try {
+            SysdarftCPUMemoryAccess::write_memory(StackNewLowerEnd + SB, (char*)&val, sizeof(DataType));
+        } catch (IllegalMemoryAccessException & ) {
+            throw StackOverflow();
+        }
+
         SysdarftRegister::store<StackPointerType>(StackNewLowerEnd);
     }
 
@@ -29,7 +47,13 @@ private:
         DataType val { };
         const auto SP = SysdarftRegister::load<StackPointerType>();
         const auto SB = SysdarftRegister::load<StackBaseType>();
-        SysdarftCPUMemoryAccess::read_memory(SB + SP, (char*)&val, sizeof(DataType));
+
+        try {
+            SysdarftCPUMemoryAccess::read_memory(SB + SP, (char*)&val, sizeof(DataType));
+        } catch (IllegalMemoryAccessException & ) {
+            throw StackOverflow();
+        }
+
         SysdarftRegister::store<StackPointerType>(SP + sizeof(DataType));
         return val;
     }

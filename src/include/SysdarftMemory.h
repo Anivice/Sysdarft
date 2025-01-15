@@ -31,6 +31,11 @@ public:
         SysdarftBaseError("Illegal memory access: " + msg) { }
 };
 
+class StackOverflow final : public SysdarftBaseError {
+public:
+    StackOverflow() : SysdarftBaseError("STack overflow") { }
+};
+
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPUMemoryAccess
 {
 protected:
@@ -45,8 +50,16 @@ protected:
     template < typename DataType >
     void push_memory_to(const uint64_t begin, uint64_t & offset, const DataType & val)
     {
+        if (offset < sizeof(DataType)) {
+            throw StackOverflow();
+        }
+
         offset -= sizeof(DataType);
-        write_memory(begin + offset, (char*)&val, sizeof(DataType));
+        try {
+            write_memory(begin + offset, (char*)&val, sizeof(DataType));
+        } catch (IllegalMemoryAccessException &) {
+            throw StackOverflow();
+        }
     }
 
     void mpush8(const uint64_t begin, uint64_t & offset, uint8_t value) {
@@ -69,7 +82,13 @@ protected:
     DataType pop_memory_from(const uint64_t begin, uint64_t & offset)
     {
         DataType result;
-        read_memory(begin + offset, (char*)&result, sizeof(DataType));
+
+        try {
+            read_memory(begin + offset, (char*)&result, sizeof(DataType));
+        } catch (IllegalMemoryAccessException &) {
+            throw StackOverflow();
+        }
+
         offset += sizeof(DataType);
         return result;
     }

@@ -46,7 +46,11 @@ void SysdarftCPU::Boot()
             do_abort_0x05();
         }
 
-        SysdarftCPUInstructionExecutor::execute(timestamp++);
+        try {
+            SysdarftCPUInstructionExecutor::execute(timestamp++);
+        } catch (std::exception & e) {
+            std::cerr << "Unexpected error detected: " << e.what() << std::endl;
+        }
     }
 
     SysdarftCursesUI::cleanup();

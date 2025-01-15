@@ -1,12 +1,13 @@
-#include <GlobalEvents.h>
-#include <SysdarftCPUDecoder.h>
-#include <SysdarftCursesUI.h>
 #include <termios.h>
 #include <thread>
 #include <unistd.h>
 #include <fcntl.h>
 #include <cerrno>
 #include <cstring>
+#include <GlobalEvents.h>
+#include <SysdarftCPUDecoder.h>
+#include <SysdarftCursesUI.h>
+#include <SysdarftInstructionExec.h>
 
 int my_getch()
 {
@@ -49,7 +50,20 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
     {
         // software interruptions, maskable
         const auto location = do_interruption_lookup(code);
-        do_preserve_cpu_state();
+
+        try {
+            do_preserve_cpu_state();
+        } catch (StackOverflow &) {
+            // TL;DR: stackoverflow happened whilst preserving CPU state during an interruption call!
+            // Long answer: stackoverflow happened whilst preserving CPU state,
+            // this will abort the original interruption procedure,
+            // and directly redirect itself to stackoverflow interruption handler.
+            // however, this will cause the original reason for interruption to be missing, since, well,
+            // stack frame is damaged and cannot be used to preserve any useful information anymore.
+            do_stackoverflow_0x07();
+            // Abort current routine
+            throw SysdarftCPUSubroutineRequestToAbortTheCurrentInstructionExecutionProcedureDueToError();
+        }
 
         // mask
         fg.InterruptionMask = 1;
@@ -65,6 +79,7 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
         switch (code) {
         case 0x00: do_interruption_fatal_0x00();            return;
         case 0x03: do_interruption_debug_0x03();            return;
+        case 0x07: do_stackoverflow_0x07();                 return;
         case 0x10: do_interruption_tty_0x10();              return;
         case 0x11: do_interruption_set_cur_pos_0x11();      return;
         case 0x12: do_interruption_set_cur_visib_0x12();    return;
@@ -136,6 +151,14 @@ void SysdarftCPUInterruption::do_interruption_debug_0x03()
     // software interruptions
     const auto location = do_interruption_lookup(0x03);
     do_preserve_cpu_state();
+    do_jump_table(location);
+}
+
+void SysdarftCPUInterruption::do_stackoverflow_0x07()
+{
+    // We do not preserve CPU state here
+    // It's impossible since, well, stack frame overflowed and cannot be used
+    const auto location = do_interruption_lookup(0x07);
     do_jump_table(location);
 }
 

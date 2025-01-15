@@ -48,13 +48,13 @@ public:
         std::map < std::string, std::pair < uint64_t /* line position */, std::vector < uint64_t > > > defined_line_marker;
         defined_line_marker.emplace("_loop", std::pair < uint64_t, std::vector < uint64_t > > (0, { }));
         std::stringstream ascii_code;
-        ascii_code << "  mov .64bit <%FER0>, <$(16)>                    \n";
-        ascii_code << "  mov .64bit <*1&64($(0), $(0), $(8))>, <$(1)>   \n";
-        ascii_code << "  outs .64bit <$(0x13A)>                         \n";
-        ascii_code << "  mov .64bit <%FER0>, <$(512)>                    \n";
-        ascii_code << "  ins .64bit <$(0x138)>                          \n";
-        ascii_code << "_loop:                                           \n";
-        ascii_code << "  jmp <%CB>, <_loop>                               \n";
+        ascii_code << "  mov .64bit <%FER0>, <$(16)>                        \n";
+        ascii_code << "  mov .64bit <*1&64($(0), $(0), $(8))>, <$(1)>       \n";
+        ascii_code << "  out .64bit <$(0x137)>, <$(10)>                     \n";
+        ascii_code << "  mov .64bit <%FER0>, <$(512)>                       \n";
+        ascii_code << "  in .64bit <$(0x136)>, <%FER0>                      \n";
+        ascii_code << "_loop:                                               \n";
+        ascii_code << "  jmp <%CB>, <_loop>                                 \n";
         SysdarftCompile(code, ascii_code, 0xC1800, defined_line_marker);
 
         uint64_t off = BIOS_START;

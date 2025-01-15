@@ -72,33 +72,39 @@ SysdarftCPUInstructionExecutor::SysdarftCPUInstructionExecutor(const uint64_t me
 
 void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
 {
-    auto [opcode, width, operands, literal]
-        = SysdarftCPUInstructionDecoder::pop_instruction_from_ip_and_increase_ip();
-
-    WidthAndOperandsType Arg = std::make_pair(width, operands);
-
-    if (debug::verbose) {
-        log("[CPU] ", literal, "\n");
-    }
-
-    if (hd_int_flag || is_break_here())
-    {
-        log("[CPU] Breakpoint reached!\n");
-        hd_int_flag = false;
-        breakpoint_handler(timestamp, opcode, Arg);
-    }
-
     try {
-        (this->*ExecutorMap.at(opcode))(timestamp, Arg);
-    } catch (std::out_of_range&) {
-        log("[CPU] Instruction `", literal, "` not implemented.\n");
-    } catch (SysdarftDeviceIOError&) {
-        do_interruption(0x02);
-    } catch (SysdarftBadInterruption &){
-        do_interruption(0x04);
-    } catch (std::exception& err) {
-        std::string err_str = err.what();
-        log("[CPU] Unexpected error:", err.what(), "\n");
-        do_interruption(0x00);
+        try
+        {
+            const auto &[opcode, width, operands, literal]
+                = SysdarftCPUInstructionDecoder::pop_instruction_from_ip_and_increase_ip();
+            WidthAndOperandsType Arg = std::make_pair(width, operands);
+
+            if (debug::verbose) {
+                log("[CPU] ", literal, "\n");
+            }
+
+            if (hd_int_flag || is_break_here())
+            {
+                log("[CPU] Breakpoint reached!\n");
+                hd_int_flag = false;
+                breakpoint_handler(timestamp, opcode, Arg);
+            }
+
+            (this->*ExecutorMap.at(opcode))(timestamp, Arg);
+        } catch (SysdarftDeviceIOError&) {
+            do_interruption(INT_IO_ERROR);
+        } catch (SysdarftBadInterruption &){
+            do_interruption(INT_BAD_INTR);
+        } catch (IllegalInstruction &) {
+            do_interruption(INT_ILLEGAL_INSTRUCTION);
+        } catch (StackOverflow &) {
+            do_interruption(INT_STACKOVERFLOW);
+        } catch (SysdarftBaseError &) {
+            do_interruption(INT_FATAL);
+        }
+    } catch (SysdarftCPUSubroutineRequestToAbortTheCurrentInstructionExecutionProcedureDueToError&) {
+        return; // Abort this routine
+    } catch (std::exception &) {
+        throw;
     }
 }
