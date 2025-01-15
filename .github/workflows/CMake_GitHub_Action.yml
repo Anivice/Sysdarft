@@ -40,15 +40,7 @@ jobs:
             software-properties-common \
             wget \
             apt-transport-https \
-            gnupg
-
-      - name: Install newer CMake (via Kitware’s APT repo)
-        run: |
-          sudo apt-get purge --auto-remove -y cmake
-          wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
-          sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main'
-          sudo apt-get update
-          sudo apt-get install -y cmake
+            gnupg cmake
 
       ########################################################################
       # BUILD & TEST with Memory/Address/Undefined Sanitizers
