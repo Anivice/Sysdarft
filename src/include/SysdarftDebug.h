@@ -15,6 +15,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <sstream>
+#include <array>
 
 #define SYSDARFT_EXPORT_SYMBOL __attribute__((visibility("default")))
 
