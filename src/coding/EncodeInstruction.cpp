@@ -57,7 +57,7 @@ void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> & buffer, co
 {
     const auto cleaned_line = clean_line(instruction);
     if (!instruction_map.contains(cleaned_line[0])) {
-        throw InstructionExpressionError("Illegal instruction " + instruction);
+        throw InstructionExpressionError("Unknown instruction " + instruction);
     }
 
     const auto & instruction_name = cleaned_line[0];
@@ -89,7 +89,7 @@ void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> & buffer, co
         if (cleaned_line.size() - operand_index_begin < argument_count) {
             throw InstructionExpressionError(
                 "Expected " + std::to_string(argument_count) +
-                        ", but found " + std::to_string(cleaned_line.size() - operand_index_begin) +
+                        " operands, but found " + std::to_string(cleaned_line.size() - operand_index_begin) +
                         ": " + instruction);
         }
 
@@ -138,6 +138,18 @@ void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> & buffer, co
 
                     // it should never reach this:
                     default: throw InstructionExpressionError("Unknown error for " + instruction);
+                }
+            }
+
+            if (parsed_target.TargetType == parsed_target_t::MEMORY)
+            {
+                switch (current_ops_width)
+                {
+                case _8bit_prefix:  assertion(parsed_target.memory.MemoryWidth == "8");  break;
+                case _16bit_prefix: assertion(parsed_target.memory.MemoryWidth == "16"); break;
+                case _32bit_prefix: assertion(parsed_target.memory.MemoryWidth == "32"); break;
+                case _64bit_prefix: assertion(parsed_target.memory.MemoryWidth == "64"); break;
+                default: throw InstructionExpressionError("Unknown error for " + instruction);
                 }
             }
         }

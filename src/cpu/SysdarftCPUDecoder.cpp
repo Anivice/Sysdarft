@@ -101,7 +101,6 @@ void OperandType::do_decode_register_without_prefix()
         case _16bit_prefix: OperandReferenceTable.literal = "%EXR" + std::to_string(register_index); break;
         case _32bit_prefix: OperandReferenceTable.literal = "%HER" + std::to_string(register_index); break;
         case _64bit_prefix: OperandReferenceTable.literal = "%FER" + std::to_string(register_index); break;
-        case _float_ptr_prefix: OperandReferenceTable.literal = "%XMM" + std::to_string(register_index); break;
         default: throw IllegalInstruction("Unknown register type");
         }
     }
@@ -110,7 +109,7 @@ void OperandType::do_decode_register_without_prefix()
 void OperandType::do_decode_constant_without_prefix()
 {
     if (const auto & prefix = Access.pop_code8();
-        prefix == _64bit_prefix || prefix == _float_ptr_prefix)
+        prefix == _64bit_prefix)
     {
         std::stringstream ss;
         const auto num = Access.pop_code64();

@@ -231,48 +231,54 @@ enable_testing()
 
 # Function to add unit tests
 function(add_unit_test TARGET_NAME)
-    add_executable(${TARGET_NAME} ${ARGN})
-    target_link_libraries(${TARGET_NAME} PUBLIC Sysdarft)
-    add_test(NAME "Unit Test: ${TARGET_NAME}" COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME})
+    if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+        add_executable(${TARGET_NAME} ${ARGN})
+        target_link_libraries(${TARGET_NAME} PUBLIC Sysdarft)
+        add_test(NAME "Unit Test: ${TARGET_NAME}" COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME})
+    else ()
+        message(STATUS "Unit tests ignored")
+    endif ()
 endfunction()
 
-add_unit_test(test.error tests/test.error.cpp)
-add_unit_test(test.log tests/test.log.cpp)
-add_unit_test(test.execmd tests/test.execmd.cpp)
-add_unit_test(test.curses tests/test.curses.cpp)
-set_tests_properties("Unit Test: test.curses" PROPERTIES LABELS "NotTestable")
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    add_unit_test(test.error tests/test.error.cpp)
+    add_unit_test(test.log tests/test.log.cpp)
+    add_unit_test(test.execmd tests/test.execmd.cpp)
+    add_unit_test(test.curses tests/test.curses.cpp)
+    set_tests_properties("Unit Test: test.curses" PROPERTIES LABELS "NotTestable")
 
-add_library(ExampleModule SHARED tests/example_module.cpp)
-add_unit_test(test.module tests/test.module.cpp)
-add_dependencies(test.module ExampleModule)
+    add_library(ExampleModule SHARED tests/example_module.cpp)
+    add_unit_test(test.module tests/test.module.cpp)
+    add_dependencies(test.module ExampleModule)
 
-add_unit_test(test.message_map tests/test.message_map.cpp)
-add_unit_test(test.coding tests/test.coding.cpp)
-add_unit_test(test.register tests/test.register.cpp)
-add_unit_test(test.memory tests/test.memory.cpp)
-set_tests_properties("Unit Test: test.memory" PROPERTIES LABELS "NotTestable")
-add_unit_test(test.operand tests/test.operand.cpp)
-add_unit_test(test.decode tests/test.decode.cpp)
-add_unit_test(test.executor tests/test.executor.cpp)
-add_unit_test(test.arithmetic tests/test.arithmetic.cpp)
-add_unit_test(test.lgAbit tests/test.lgAbit.cpp)
-add_unit_test(test.dataTsf tests/test.dataTsf.cpp)
-add_unit_test(test.assembler tests/test.assembler.cpp)
-add_unit_test(test.controlflow tests/test.controlflow.cpp)
-add_unit_test(test.io tests/test.io.cpp)
-set_tests_properties("Unit Test: test.io" PROPERTIES LABELS "NotTestable")
-add_unit_test(test.preprocessor tests/test.preprocessor.cpp)
-set_tests_properties("Unit Test: test.preprocessor" PROPERTIES LABELS "NotTestable")
-add_unit_test(test.cpu tests/test.cpu.cpp)
-set_tests_properties("Unit Test: test.cpu" PROPERTIES LABELS "NotTestable")
+    add_unit_test(test.message_map tests/test.message_map.cpp)
+    add_unit_test(test.coding tests/test.coding.cpp)
+    add_unit_test(test.register tests/test.register.cpp)
+    add_unit_test(test.memory tests/test.memory.cpp)
+    set_tests_properties("Unit Test: test.memory" PROPERTIES LABELS "NotTestable")
+    add_unit_test(test.operand tests/test.operand.cpp)
+    add_unit_test(test.decode tests/test.decode.cpp)
+    add_unit_test(test.executor tests/test.executor.cpp)
+    add_unit_test(test.arithmetic tests/test.arithmetic.cpp)
+    add_unit_test(test.lgAbit tests/test.lgAbit.cpp)
+    add_unit_test(test.dataTsf tests/test.dataTsf.cpp)
+    add_unit_test(test.assembler tests/test.assembler.cpp)
+    add_unit_test(test.controlflow tests/test.controlflow.cpp)
+    add_unit_test(test.io tests/test.io.cpp)
+    set_tests_properties("Unit Test: test.io" PROPERTIES LABELS "NotTestable")
+    add_unit_test(test.preprocessor tests/test.preprocessor.cpp)
+    set_tests_properties("Unit Test: test.preprocessor" PROPERTIES LABELS "NotTestable")
+    add_unit_test(test.cpu tests/test.cpu.cpp)
+    set_tests_properties("Unit Test: test.cpu" PROPERTIES LABELS "NotTestable")
 
-add_custom_target(
-        COPY_HDA_FILE ALL
-        COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/hda.img ${CMAKE_CURRENT_BINARY_DIR}/
-        COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/example.sysasm ${CMAKE_CURRENT_BINARY_DIR}/
-        DEPENDS tests/hda.img tests/example.sysasm
-        COMMENT "Copy disk image sample with ASCII texts in it."
-)
+    add_custom_target(
+            COPY_HDA_FILE ALL
+            COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/hda.img ${CMAKE_CURRENT_BINARY_DIR}/
+            COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/example.sysasm ${CMAKE_CURRENT_BINARY_DIR}/
+            DEPENDS tests/hda.img tests/example.sysasm
+            COMMENT "Copy disk image sample with ASCII texts in it."
+    )
+endif ()
 
 # Console Executable:
 add_executable(sysdarft-system
@@ -282,5 +288,5 @@ add_executable(sysdarft-system
         src/MainArgProcessor.cpp
         src/MainCompile.cpp
 )
-target_include_directories(sysdarft-system PUBLIC src/include ${READLINE_INCLUDE_DIRS})
-target_link_libraries(sysdarft-system PUBLIC Sysdarft ${READLINE_LIBRARIES})
+target_include_directories(sysdarft-system PUBLIC src/include)
+target_link_libraries(sysdarft-system PUBLIC Sysdarft)

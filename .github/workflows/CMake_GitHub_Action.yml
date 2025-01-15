@@ -56,8 +56,9 @@ jobs:
       - name: Configure (Memory/Address Sanitizers)
         run: |
           cmake -B build_msan -S . \
-            -D COMPILE_WITH_MEMORY_SANITIZERS=True \
-            -D COMPILE_WITH_THREAD_SANITIZERS=False
+            -D COMPILE_WITH_MEMORY_SANITIZERS=True  \
+            -D COMPILE_WITH_THREAD_SANITIZERS=False \
+            -D CMAKE_BUILD_TYPE=Debug
 
       - name: Build (Memory/Address Sanitizers)
         run: |
@@ -76,7 +77,8 @@ jobs:
         run: |
           cmake -B build_tsan -S . \
             -D COMPILE_WITH_MEMORY_SANITIZERS=False \
-            -D COMPILE_WITH_THREAD_SANITIZERS=True
+            -D COMPILE_WITH_THREAD_SANITIZERS=True  \
+            -D CMAKE_BUILD_TYPE=Debug
 
       - name: Build (Thread/Undefined Sanitizers)
         run: |

@@ -213,7 +213,6 @@ void encode_register(std::vector<uint8_t> & buffer, const parsed_target_t & inpu
     case 'E' : /* 16bit Register */ code_buffer_push8(buffer, _16bit_prefix); code_buffer_push8(buffer, register_index); return;
     case 'H' : /* 32bit Register */ code_buffer_push8(buffer, _32bit_prefix); code_buffer_push8(buffer, register_index); return;
     case 'F' : /* 64bit Register */ code_buffer_push8(buffer, _64bit_prefix); code_buffer_push8(buffer, register_index); return;
-    case 'X' : /* floating-point Register */ code_buffer_push8(buffer, _float_ptr_prefix); code_buffer_push8(buffer, register_index); return;
     default: throw SysdarftCodeExpressionError("Unknown register " + input.RegisterName);
     }
 }
@@ -238,15 +237,9 @@ void encode_constant(std::vector<uint8_t> & buffer, const parsed_target_t & inpu
     code_buffer_push8(buffer, CONSTANT_PREFIX);
     const auto result_from_bc = execute_bc(tmp);
 
-    if (result_from_bc.contains('.')) {
-        code_buffer_push8(buffer, _float_ptr_prefix);
-        const double result = strtod(result_from_bc.c_str(), nullptr);
-        code_buffer_push<64>(buffer, &result);
-    } else {
-        code_buffer_push8(buffer, _64bit_prefix);
-        const __int128_t result = strtoull(result_from_bc.c_str(), nullptr, 10);
-        code_buffer_push<64>(buffer, &result);
-    }
+    code_buffer_push8(buffer, _64bit_prefix);
+    const __int128_t result = strtoull(result_from_bc.c_str(), nullptr, 10);
+    code_buffer_push<64>(buffer, &result);
 }
 
 void encode_memory_width_prefix(std::vector<uint8_t> & buffer, const std::string & input)

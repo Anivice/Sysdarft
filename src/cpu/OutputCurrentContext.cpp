@@ -7,6 +7,8 @@
 #include <vector>
 #include <cstdint>
 
+#ifdef __DEBUG__
+
 /**
  * Generates a string similar to the output of the `xxd` command
  * for the provided vector of bytes.
@@ -115,8 +117,11 @@ std::string to_hex_string(T value)
     return oss.str();
 }
 
+#endif
+
 void SysdarftCPUInstructionExecutor::show_context()
 {
+#ifdef __DEBUG__
     ////////////////////////////////////////////////////////////////////////////////
     // SHOW ALL REGISTERS
     ////////////////////////////////////////////////////////////////////////////////
@@ -346,4 +351,5 @@ void SysdarftCPUInstructionExecutor::show_context()
     for (const auto &instruction : next_8_instructions) {
         log(instruction, "\n");
     }
+#endif
 }

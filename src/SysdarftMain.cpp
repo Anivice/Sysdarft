@@ -7,7 +7,7 @@ void print_help(const char *program_name)
        << "Options:\n";
 
     uint64_t max_length_of_arguments = 0;
-    for (int i = 0; i < std::size(long_options) - 1; i++)
+    for (long unsigned int i = 0; i < std::size(long_options) - 1; i++)
     {
         const auto& opt = long_options[i];
         auto this_len = std::strlen(opt.name) + 1 /* val */ + 5 /* `-[val], --[name]`, 5 additional characters */;
@@ -17,7 +17,7 @@ void print_help(const char *program_name)
     const auto before_explanation = max_length_of_arguments + 10 + 4;
 
     // Dynamically generate help text for each option
-    for (int i = 0; i < std::size(long_options) - 1; i++)
+    for (long unsigned int i = 0; i < std::size(long_options) - 1; i++)
     {
         const auto& opt = long_options[i];
         std::stringstream this_line;
@@ -95,7 +95,7 @@ void boot_sysdarft(
     }
 
     bios_code.resize(file_size);
-    file.read((char*)(bios_code.data()), file_size);
+    file.read((char*)(bios_code.data()), static_cast<ssize_t>(file_size));
     if (static_cast<uint64_t>(file.gcount()) != file_size) {
         throw SysdarftDisassemblerError("Short read on file " + bios);
     }
@@ -200,7 +200,7 @@ int main(int argc, char** argv)
                     exit_failure_on_error();
                 }
 
-                if (src_files.size() == 0) {
+                if (src_files.empty()) {
                     std::cerr << "ERROR: No input files specified!" << std::endl;
                     exit_failure_on_error();
                 }
@@ -219,8 +219,9 @@ int main(int argc, char** argv)
             } catch (std::out_of_range &) {
                 std::cerr << "ERROR: missing format, input file, or output file!" << std::endl;
                 exit_failure_on_error();
-            } catch (SysdarftAssemblerError & e) {
-                std::cerr << "ERROR: Error when compiling code:\n" << e.what() << std::endl;
+            } catch (std::exception & e) {
+                std::cerr << "ERROR: Error when compiling source files:\n" << e.what() << std::endl;
+                return EXIT_FAILURE;
             }
 
             return EXIT_SUCCESS;
@@ -230,7 +231,7 @@ int main(int argc, char** argv)
         {
             try {
                 const auto src_files = parsed_options["disassem"];
-                if (src_files.size() == 0) {
+                if (src_files.empty()) {
                     std::cerr << "ERROR: No input files specified!" << std::endl;
                     exit_failure_on_error();
                 }
@@ -247,8 +248,8 @@ int main(int argc, char** argv)
 
                 for (const auto & src_file : src_files)
                 {
-                    const int len = (line.length() - (src_file.length() + 4)) / 2;
-                    const int space_after = line.length() - len * 2 - 2 - src_file.length();
+                    const auto len = (line.length() - (src_file.length() + 4)) / 2;
+                    const auto space_after = line.length() - len * 2 - 2 - src_file.length();
                     const std::string line_before_n_after(len, '=');
                     const std::string string_space_after(space_after, ' ');
                     std::cout << ";" << line << std::endl;

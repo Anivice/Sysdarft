@@ -125,6 +125,7 @@ void CodeProcessing(
     uint64_t org;
     defined_line_marker_t defined_line_marker;
     std::map < std::string, std::string > equ_replacement;
+    uint64_t line_numer = 0;
 
     auto getline = [](std::vector < std::string > & file_, std::string & line)->bool
     {
@@ -136,13 +137,19 @@ void CodeProcessing(
         return true;
     };
 
+    auto pop_front = [&file, &line_numer]()
+    {
+        line_numer++;
+        file.erase(file.begin());
+    };
+
     std::string line;
     while (getline(file, line))
     {
         auto tmp = line;
         replace_all(tmp, " ", "");
         if (tmp.empty()) {
-            file.erase(file.begin());
+            pop_front();
             continue;
         }
 
@@ -151,18 +158,23 @@ void CodeProcessing(
         // remove '\t'
         replace_all(line, "\t", "    ");
 
-        // search for each preprocessor pattern
-        if (std::regex_match(line, org_pattern)) {
-            process_org(line, org);
-        } else if (std::regex_match(line, lab_pattern)) {
-            process_lab(line, defined_line_marker);
-        } else if (std::regex_match(line, equ_pattern)) {
-            process_equ(line, equ_replacement);
-        } else {
-            break;
+        try {
+            // search for each preprocessor pattern
+            if (std::regex_match(line, org_pattern)) {
+                process_org(line, org);
+            } else if (std::regex_match(line, lab_pattern)) {
+                process_lab(line, defined_line_marker);
+            } else if (std::regex_match(line, equ_pattern)) {
+                process_equ(line, equ_replacement);
+            } else {
+                break;
+            }
+        } catch (const std::exception & e) {
+            throw SysdarftPreProcessorError("Line: " + std::to_string(line_numer)
+                + ": Error occurred when processing " + line + ": " + e.what());
         }
 
-        file.erase(file.begin());
+        pop_front();
     }
 
     std::vector < std::vector <uint8_t> > code_for_this_block;
@@ -180,18 +192,20 @@ void CodeProcessing(
             std::regex_match(line, lab_pattern)             ||
             std::regex_match(line, equ_pattern))
         {
-            throw SysdarftPreProcessorError("PreProcessing indicator found after declaration space!");
+            throw SysdarftPreProcessorError("Line: " + std::to_string(line_numer)
+                + ": PreProcessing indicator found after declaration space: " + line);
         }
 
         // not a preprocessor
         sed_equ(line, equ_replacement);
-        replace_all(line, ":", ":\n");
+        // replace_all(line, ":", ":\n"); We revoked this so that line number can count correctly
         code_block << line << std::endl;
+        // we don't use pop_front(); since we want to preserve line number offset
         file.erase(file.begin());
     }
 
     auto str = code_block.str();
-    SysdarftCompile(code_for_this_block, code_block, org, defined_line_marker);
+    SysdarftCompile(code_for_this_block, code_block, org, defined_line_marker, line_numer);
 
     // no additional processing from line marker should be performed after this block
     for (auto marker : defined_line_marker) {

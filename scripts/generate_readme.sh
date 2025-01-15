@@ -10,8 +10,10 @@ lines=0;
 size=0;
 for FILE in $LIST;
 do
-    ((lines +=$(wc -l < "$FILE" )));
-    ((size += $(du "$FILE" | awk '{print $1}')));
+    if test -f "$FILE"; then
+        ((lines +=$(wc -l < "$FILE" )));
+        ((size += $(du "$FILE" | awk '{print $1}')));
+    fi
 done;
 
 echo "# Sysdarft""

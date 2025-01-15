@@ -106,9 +106,9 @@ bool process_resvb(std::string& input, std::vector <uint8_t> & code)
     {
         auto expression = match[1].str();
         process_base16(expression);
-        auto processed_expression = execute_bc(expression);
+        const auto processed_expression = execute_bc(expression);
         const auto count = std::strtoll(processed_expression.c_str(), nullptr, 10);
-        for (uint64_t i = 0; i < count; i++) {
+        for (long long int i = 0; i < count; i++) {
             code.push_back(0x00);
         }
         return true;
@@ -164,8 +164,8 @@ bool process_string(std::string& input, std::vector <uint8_t> & code)
         input = unescapeString(input);
 
         // find out fist and last appearance of '"'
-        const auto first_of = input.find_first_of("\"");
-        const auto last_of = input.find_last_of("\"");
+        const auto first_of = input.find_first_of('"');
+        const auto last_of = input.find_last_of('"');
 
         // sanity check
         if (first_of == std::string::npos || last_of == std::string::npos || first_of >= last_of) {
@@ -215,83 +215,91 @@ void SysdarftCompile(
     std::vector < std::vector <uint8_t> > & code,
     std::basic_iostream < char > & file,
     const uint64_t org,
-    defined_line_marker_t & defined_line_marker)
+    defined_line_marker_t & defined_line_marker,
+    uint64_t line_number)
 {
     std::vector < data_expression_identifier > data_processors;
     const std::regex line_mark_pattern(R"(\s*([A-Za-z_]\w*)(?=)\s*:\s*)");
     std::string line;
     while (std::getline(file, line))
     {
-        // discard empty lines
-        auto tmp = line;
-        replace_all(tmp, " ", "");
-        if (tmp.empty()) {
-            continue;
-        }
+        line_number++;
 
-        std::vector <uint8_t> code_for_this_instruction;
-        if (std::smatch match; std::regex_match(tmp, match, line_mark_pattern))
-        {
-            // found a line marker in this line
-            auto marker = match[1].str();
-
-            // register current offset
-            defined_line_marker[marker].first = code_size_now(code) + org;
-            continue;
-        }
-
-        // preprocessor .string expression
-        if (process_string(line, code_for_this_instruction)) {
-            code.emplace_back(code_for_this_instruction);
-            continue; // preprocessor that does not need to be compiled
-        }
-
-        // preprocessor @@ (org)
-        if (line.find("@@") != std::string::npos) {
-            replace_all(line, "@@", std::to_string(org));
-        }
-
-        // preprocessor @ (current offset)
-        if (line.find('@') != std::string::npos) {
-            replace_all(line, "@", std::to_string(code_size_now(code) + org));
-        }
-
-        // preprocessor .resvb expression
-        if (process_resvb(line, code_for_this_instruction)) {
-            code.emplace_back(code_for_this_instruction);
-            continue; // preprocessor that does not need to be compiled
-        }
-
-        // preprocessor 'ASCII'
-        process_ascii_value(line);
-
-        // process data
-        if (process_data(line, data_processors))
-        {
-            code.emplace_back(std::vector <uint8_t>(data_processors.back().data_byte_count));
-            data_processors.back().data_appearance = code.size() - 1;
-            continue; // this preprocessor is the most complicated.
-            // it needs to handle @ and @@ and all line markers, turn them into actual offsets,
-            // then calculate the processed expression using bc
-        }
-
-        for (const auto & line_marker : defined_line_marker)
-        {
-            std::smatch matches;
-            if (std::regex marker(R"((.*)(<\s*)" + line_marker.first + R"(\s*>)(.*))");
-                std::regex_search(line, matches, marker))
-            {
-                if (matches.size() != 4) {
-                    throw SysdarftAssemblerError("Error encountered while parsing line marker: " + line);
-                }
-                replace_all(line, matches[2], "<$(0xFFFFFFFFFFFFFFFF)>");
-                defined_line_marker[line_marker.first].second.emplace_back(code.size()); // This address usage appeared here
-                break;
+        try {
+            // discard empty lines
+            auto tmp = line;
+            replace_all(tmp, " ", "");
+            if (tmp.empty()) {
+                continue;
             }
-        }
 
-        encode_instruction(code_for_this_instruction, line);
-        code.emplace_back(code_for_this_instruction);
+            std::vector <uint8_t> code_for_this_instruction;
+            if (std::smatch match; std::regex_match(tmp, match, line_mark_pattern))
+            {
+                // found a line marker in this line
+                auto marker = match[1].str();
+
+                // register current offset
+                defined_line_marker[marker].first = code_size_now(code) + org;
+                continue;
+            }
+
+            // preprocessor .string expression
+            if (process_string(line, code_for_this_instruction)) {
+                code.emplace_back(code_for_this_instruction);
+                continue; // preprocessor that does not need to be compiled
+            }
+
+            // preprocessor @@ (org)
+            if (line.find("@@") != std::string::npos) {
+                replace_all(line, "@@", std::to_string(org));
+            }
+
+            // preprocessor @ (current offset)
+            if (line.find('@') != std::string::npos) {
+                replace_all(line, "@", std::to_string(code_size_now(code) + org));
+            }
+
+            // preprocessor .resvb expression
+            if (process_resvb(line, code_for_this_instruction)) {
+                code.emplace_back(code_for_this_instruction);
+                continue; // preprocessor that does not need to be compiled
+            }
+
+            // preprocessor 'ASCII'
+            process_ascii_value(line);
+
+            // process data
+            if (process_data(line, data_processors))
+            {
+                code.emplace_back(data_processors.back().data_byte_count);
+                data_processors.back().data_appearance = code.size() - 1;
+                continue; // this preprocessor is the most complicated.
+                // it needs to handle @ and @@ and all line markers, turn them into actual offsets,
+                // then calculate the processed expression using bc
+            }
+
+            for (const auto & line_marker : defined_line_marker)
+            {
+                std::smatch matches;
+                if (std::regex marker(R"((.*)(<\s*)" + line_marker.first + R"(\s*>)(.*))");
+                    std::regex_search(line, matches, marker))
+                {
+                    if (matches.size() != 4) {
+                        throw SysdarftAssemblerError("Error encountered while parsing line marker: " + line);
+                    }
+                    replace_all(line, matches[2], "<$(0xFFFFFFFFFFFFFFFF)>");
+                    defined_line_marker[line_marker.first].second.emplace_back(code.size()); // This address usage appeared here
+                    break;
+                }
+            }
+
+            encode_instruction(code_for_this_instruction, line);
+            code.emplace_back(code_for_this_instruction);
+        } catch (std::exception & e) {
+            throw SysdarftAssemblerError(std::string("Line: ") + std::to_string(line_number)
+                + ": Error occurred when compiling: " + std::string(e.what()));
+        }
     }
 
     // process line numbers
@@ -322,13 +330,13 @@ void SysdarftCompile(
         // actual number, signed
         auto data = strtoll(processed_expression.c_str(), nullptr, 10);
         uint64_t compliment = 0xFFFFFFFFFFFFFFFF;
-        compliment = compliment >> 64 - (data_byte_count * 8);
+        compliment = compliment >> (64 - (data_byte_count * 8));
         uint64_t raw_data = *(uint64_t*)&data;
         raw_data = raw_data & compliment;
 
         // emplace data
         std::vector < uint8_t > data_sequence;
-        for (int i = 0; i < data_byte_count; i++) {
+        for (uint64_t i = 0; i < data_byte_count; i++) {
             data_sequence.emplace_back(((uint8_t*)&raw_data)[i]);
         }
 

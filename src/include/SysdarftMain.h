@@ -53,7 +53,7 @@ const option_complicated long_options[] = {
     {"hdd",     required_argument,  nullptr, 'L',   "Specify a Hard Disk"},
     {"fda",     required_argument,  nullptr, 'A',   "Specify floppy disk A"},
     {"fdb",     required_argument,  nullptr, 'B',   "Specify floppy disk B"},
-    {"memory",  required_argument,  nullptr, 'm',   "Specify memory size\n"
+    {"memory",  required_argument,  nullptr, 'M',   "Specify memory size\n"
                                                                                               "Left unset and default size is 32MB"},
     {"boot",    no_argument,        nullptr, 'S',   "Boot the system"},
     {nullptr,   0,                  nullptr,  0,    nullptr }

@@ -6,7 +6,6 @@
 #define _16bit_prefix (0x16)
 #define _32bit_prefix (0x32)
 #define _64bit_prefix (0x64)
-#define _float_ptr_prefix (0xFC)
 
 // Prefix
 #define REGISTER_PREFIX (0x01)
@@ -27,6 +26,7 @@
 #include <cassert>
 #include <cstdint>
 #include <vector>
+#include <iomanip>
 #include <SysdarftDebug.h>
 
 class SysdarftCodeExpressionError final : public SysdarftBaseError
@@ -64,7 +64,8 @@ public:
 
 class SysdarftPreProcessorError final : public SysdarftBaseError {
 public:
-    explicit SysdarftPreProcessorError(const std::string& msg) : SysdarftBaseError("Error encountered in preprocessor: " + msg) { }
+    explicit SysdarftPreProcessorError(const std::string& msg) :
+        SysdarftBaseError("Error encountered in preprocessor: " + msg) { }
 };
 
 inline std::string & remove_space(std::string & str)
@@ -158,6 +159,35 @@ struct SYSDARFT_EXPORT_SYMBOL parsed_target_t
     } memory { };
 };
 
+template < typename Type, unsigned size = sizeof(Type) >
+std::string bad_nbit(const Type & data)
+{
+    std::stringstream ss;
+    const auto cdata = (const char *)(&data);
+    ss << ".8bit_data <";
+
+    for (unsigned i = 0; i < size; i++)
+    {
+        if (std::isprint(cdata[i])) {
+            ss << "\'" << cdata[i] << "\'";
+        } else {
+            ss  << "0x" << std::setw(2)
+                << std::setfill('0')
+                << std::uppercase << std::hex
+                << static_cast<int>(*(unsigned char *)(cdata + i));
+        }
+
+        // only append when more than one byte
+        if (size > 1) {
+            ss << ", ";
+        }
+    }
+
+    ss << ">";
+    auto str = ss.str();
+    return ss.str();
+}
+
 typedef std::map < std::string, std::pair < uint64_t /* line position */, std::vector < uint64_t > > > defined_line_marker_t;
 
 void SYSDARFT_EXPORT_SYMBOL process_base16(std::string &);
@@ -170,7 +200,8 @@ void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector < uint8_t > &, const 
 void SYSDARFT_EXPORT_SYMBOL decode_instruction(std::vector < std::string > &, std::vector<uint8_t> &);
 void SYSDARFT_EXPORT_SYMBOL SysdarftCompile(std::vector < std::vector < uint8_t > > &,
     std::basic_iostream < char > &,
-    uint64_t, defined_line_marker_t &);
+    uint64_t, defined_line_marker_t &,
+    uint64_t line_number = 0);
 void SYSDARFT_EXPORT_SYMBOL CodeProcessing(std::vector < uint8_t > &, std::basic_istream < char > &);
 
 #endif // INSTRUCTIONS_H

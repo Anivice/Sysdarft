@@ -7,8 +7,7 @@ void decode_instruction(std::vector < std::string > & output, std::vector<uint8_
     try
     {
         std::stringstream buffer;
-        uint64_t instruction = 0;
-        instruction = code_buffer_pop8(input);
+        const auto instruction = code_buffer_pop8(input);
 
         for (const auto &[fst, snd] : instruction_map)
         {
@@ -16,16 +15,18 @@ void decode_instruction(std::vector < std::string > & output, std::vector<uint8_
             {
                 buffer << fst;
 
+                uint8_t op_width = 0;
                 if (snd.at(ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION) != 0)
                 {
-                    switch (code_buffer_pop8(input))
+                    switch (op_width = code_buffer_pop8(input))
                     {
                     case _8bit_prefix:  buffer << " .8bit "; break;
                     case _16bit_prefix: buffer << " .16bit";  break;
                     case _32bit_prefix: buffer << " .32bit";  break;
                     case _64bit_prefix: buffer << " .64bit";  break;
                     default:
-                        output.emplace_back("(bad)");
+                        output.emplace_back(bad_nbit(instruction));
+                        output.emplace_back(bad_nbit(op_width));
                         return;
                     }
                 }
@@ -36,7 +37,11 @@ void decode_instruction(std::vector < std::string > & output, std::vector<uint8_
                     try {
                         decode_target(operands, input);
                     } catch (SysdarftBaseError &) {
-                        output.emplace_back("(bad)");
+                        output.emplace_back(bad_nbit(instruction));
+                        if (op_width) {
+                            output.emplace_back(bad_nbit(op_width));
+                        }
+                        output.insert(output.end(), operands.begin(), operands.end());
                         return;
                     }
 
@@ -52,10 +57,13 @@ void decode_instruction(std::vector < std::string > & output, std::vector<uint8_
                 }
 
                 output.emplace_back(buffer.str());
+                return;
             }
         }
+
+        output.emplace_back(bad_nbit(instruction));
     } catch (...) {
-        output.emplace_back("(bad)");
+        // output.emplace_back("(bad)");
         return;
     }
 }
