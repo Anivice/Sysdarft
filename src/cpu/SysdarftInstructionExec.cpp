@@ -81,6 +81,7 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
 
             if (debug::verbose) {
                 log("[CPU] ", literal, "\n");
+                show_context();
             }
 
             if (hd_int_flag || is_break_here())

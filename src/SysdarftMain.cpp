@@ -77,6 +77,27 @@ void complicated_to_gnu(option * dest, const option_complicated * src)
 }
 
 volatile std::atomic < SysdarftCPU * > g_cpu_instance = nullptr;
+// Signal handler for window resize
+void resize_handler(int)
+{
+    if (g_cpu_instance) {
+        g_cpu_instance.load()->handle_resize();
+    }
+}
+
+void int_handler(int)
+{
+    if (g_cpu_instance) {
+        g_cpu_instance.load()->set_abort_next();
+    }
+}
+
+void stop_handler(int)
+{
+    if (g_cpu_instance) {
+        g_cpu_instance.load()->system_hlt();
+    }
+}
 
 void boot_sysdarft(
     const uint64_t memory_size,
@@ -105,6 +126,10 @@ void boot_sysdarft(
     SysdarftCPU CPUInstance(memory_size, bios_code, hdd, fda, fdb);
     g_cpu_instance = &CPUInstance;
 
+    std::signal(SIGINT, int_handler);
+    std::signal(SIGWINCH, resize_handler);
+    std::signal(SIGTSTP, stop_handler);
+
     try {
         CPUInstance.Boot();
     } catch (...) {
@@ -113,28 +138,6 @@ void boot_sysdarft(
     }
 
     g_cpu_instance = nullptr;
-}
-
-// Signal handler for window resize
-void resize_handler(int)
-{
-    if (g_cpu_instance) {
-        g_cpu_instance.load()->handle_resize();
-    }
-}
-
-void int_hamdler(int)
-{
-    if (g_cpu_instance) {
-        g_cpu_instance.load()->set_abort_next();
-    }
-}
-
-void stop_handler(int)
-{
-    if (g_cpu_instance) {
-        g_cpu_instance.load()->system_hlt();
-    }
 }
 
 int main(int argc, char** argv)
@@ -302,10 +305,6 @@ int main(int argc, char** argv)
             if (parsed_options.contains("fdb")) {
                 fdb = parsed_options["fdb"].at(0);
             }
-
-            std::signal(SIGINT, int_hamdler);
-            std::signal(SIGWINCH, resize_handler);
-            std::signal(SIGTSTP, stop_handler);
 
             // boot system
             boot_sysdarft(memory_size, bios_path, hdd, fda, fdb);

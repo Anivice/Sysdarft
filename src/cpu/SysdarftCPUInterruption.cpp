@@ -46,7 +46,16 @@ SysdarftCPUInterruption::SysdarftCPUInterruption(const uint64_t memory) :
 
 void SysdarftCPUInterruption::do_interruption(const uint64_t code)
 {
-    auto do_interruption = [&](decltype(SysdarftRegister::load<FlagRegisterType>()) & fg)
+    auto fg = SysdarftRegister::load<FlagRegisterType>();
+
+    auto mask_fg = [&]()
+    {
+        // mask
+        fg.InterruptionMask = 1;
+        SysdarftRegister::store<FlagRegisterType>(fg);
+    };
+
+    auto do_interruption = [&]()
     {
         // software interruptions, maskable
         const auto location = do_interruption_lookup(code);
@@ -61,13 +70,20 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
             // however, this will cause the original reason for interruption to be missing, since, well,
             // stack frame is damaged and cannot be used to preserve any useful information anymore.
             do_stackoverflow_0x07();
+
+            // we are about to abort the cpu instruction execution here since this is a fatal error,
+            // and we are not sure who raised this.
+            // It can be raised by anyone in any given state, so we abandon the current instruction routine.
+            // thus, mask fg will not be executed unless we do it manually again, at here
+            mask_fg();
+
             // Abort current routine
             throw SysdarftCPUSubroutineRequestToAbortTheCurrentInstructionExecutionProcedureDueToError();
         }
 
-        // mask
-        fg.InterruptionMask = 1;
-        SysdarftRegister::store<FlagRegisterType>(fg);
+        // mask interruption flag
+        // this will be done AFTER the preservation of CPU state
+        mask_fg();
 
         // setup jump table
         do_jump_table(location);
@@ -89,17 +105,14 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
         case 0x16: do_get_system_hardware_info_0x16();      return;
         case 0x17: do_ring_bell_0x17();                     return;
         default:
-            auto fg = SysdarftRegister::load<FlagRegisterType>();
             // do interruption, but doesn't check interruption mask since
             // this is not maskable interruptions
-            do_interruption(fg);
+            do_interruption();
         }
     }
 
-    if (auto fg = SysdarftRegister::load<FlagRegisterType>();
-        !fg.InterruptionMask)
-    {
-        do_interruption(fg);
+    if (!fg.InterruptionMask) {
+        do_interruption();
     }
 }
 
@@ -141,8 +154,9 @@ void SysdarftCPUInterruption::do_iret()
 // Hardware Interruptions
 void SysdarftCPUInterruption::do_interruption_fatal_0x00()
 {
-    log("Unrecoverable Fatal Error!");
-    throw SysdarftCPUFatal();
+    const auto location = do_interruption_lookup(0x00);
+    set_mask(); // we don't preserve the CPU state here so that further damage won't be done
+    do_jump_table(location);
 }
 
 void SysdarftCPUInterruption::do_interruption_debug_0x03()
@@ -151,6 +165,7 @@ void SysdarftCPUInterruption::do_interruption_debug_0x03()
     // software interruptions
     const auto location = do_interruption_lookup(0x03);
     do_preserve_cpu_state();
+    set_mask();
     do_jump_table(location);
 }
 
@@ -159,6 +174,7 @@ void SysdarftCPUInterruption::do_stackoverflow_0x07()
     // We do not preserve CPU state here
     // It's impossible since, well, stack frame overflowed and cannot be used
     const auto location = do_interruption_lookup(0x07);
+    set_mask();
     do_jump_table(location);
 }
 
@@ -166,6 +182,7 @@ void SysdarftCPUInterruption::do_abort_0x05()
 {
     const auto location = do_interruption_lookup(0x05);
     do_preserve_cpu_state();
+    set_mask();
     do_jump_table(location);
 }
 
@@ -199,7 +216,7 @@ void SysdarftCPUInterruption::do_interruption_newline_0x13()
 void SysdarftCPUInterruption::do_interruption_getinput_0x14()
 {
     char ch;
-    while (!SystemHalted) // abort if external halt is triggered
+    while (!SystemHalted && !do_abort_int) // abort if external halt or keyboard interrupt is triggered
     {
         if (const ssize_t n = read(STDIN_FILENO, &ch, 1); n > 0)
         {

@@ -310,6 +310,7 @@ void SysdarftCPUInstructionExecutor::show_context()
     }
     log(xxd_like_dump(stack_off, stack_buffer), "\n");
 
+# ifdef __INSANE_DEBUG__
     ////////////////////////////////////////////////////////////////////////////////
     // SHOW NEXT 8 INSTRUCTIONS
     ////////////////////////////////////////////////////////////////////////////////
@@ -351,5 +352,6 @@ void SysdarftCPUInstructionExecutor::show_context()
     for (const auto &instruction : next_8_instructions) {
         log(instruction, "\n");
     }
+# endif //__INSANE_DEBUG__
 #endif
 }

@@ -166,6 +166,7 @@ class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInterruption : public DecoderDataAccess
 protected:
     // External halt is handled at upper level
     std::atomic<bool> SystemHalted = false;
+    std::atomic < bool > do_abort_int = false;
 
     struct InterruptionPointer {
         uint64_t InterruptionTargetCodeBase;
@@ -234,7 +235,15 @@ protected:
     void do_interruption(uint64_t code);
     void do_iret();
 
-    explicit SysdarftCPUInterruption(const uint64_t memory);
+    explicit SysdarftCPUInterruption(uint64_t memory);
+private:
+
+    void set_mask()
+    {
+        auto fg = SysdarftRegister::load<FlagRegisterType>();
+        fg.InterruptionMask = 1;
+        SysdarftRegister::store<FlagRegisterType>(fg);
+    }
 };
 
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInstructionDecoder : public SysdarftCPUInterruption

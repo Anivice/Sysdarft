@@ -35,13 +35,15 @@ void SysdarftCPU::Boot()
     SystemHalted = false;
     do_abort_int = false;
     hd_int_flag = false;
+    timestamp = 0;
 
     SysdarftCursesUI::initialize();
 
     while (!SystemHalted)
     {
         // capture and control area
-        if (do_abort_int) {
+        if (do_abort_int)
+        {
             do_abort_int = false;
             do_abort_0x05();
         }
