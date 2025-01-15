@@ -40,7 +40,7 @@ jobs:
             software-properties-common \
             wget \
             apt-transport-https \
-            gnupg cmake
+            gnupg cmake libsfml-dev
 
       ########################################################################
       # BUILD & TEST with Memory/Address/Undefined Sanitizers
