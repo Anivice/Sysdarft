@@ -124,7 +124,6 @@ set(optimization_flags
         -fstrict-aliasing
         -fdata-sections
         -ffunction-sections
-        -fno-rtti
 )
 
 set(optimization_link_flags
@@ -137,7 +136,6 @@ set(optimization_link_flags
         -fstrict-aliasing
         -fdata-sections
         -ffunction-sections
-        -fno-rtti
         -Wl,--gc-sections
 )
 
