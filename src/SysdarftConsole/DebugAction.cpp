@@ -1,6 +1,9 @@
 #include <SysdarftMain.h>
 
-void RemoteDebugServer::at_breakpoint(__uint128_t, const uint8_t opcode, const SysdarftCPU::WidthAndOperandsType & args)
+void RemoteDebugServer::at_breakpoint(__uint128_t,
+    uint64_t actual_ip,
+    const uint8_t opcode,
+    const SysdarftCPU::WidthAndOperandsType & args)
 {
     while (true)
     {
@@ -20,7 +23,7 @@ void RemoteDebugServer::at_breakpoint(__uint128_t, const uint8_t opcode, const S
                 debug_action_result = "Continue";
                 return;
             case SHOW_CONTEXT:
-                debug_action_result = show_context(CPUInstance, opcode, args);
+                debug_action_result = show_context(CPUInstance, actual_ip, opcode, args);
                 break;
             default: /* ignore any abnormal behavior */ break;
             }

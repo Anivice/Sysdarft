@@ -146,7 +146,10 @@ std::string current_instruction(const uint8_t opcode, const SysdarftCPU::WidthAn
     return ss.str();
 }
 
-std::string show_context(SysdarftCPU & CPUInstance, const uint8_t opcode, const SysdarftCPU::WidthAndOperandsType & Arg)
+std::string show_context(SysdarftCPU &CPUInstance,
+    uint64_t actual_ip,
+    const uint8_t opcode,
+    const SysdarftCPU::WidthAndOperandsType &Arg)
 {
     std::stringstream ss;
 
@@ -275,7 +278,7 @@ std::string show_context(SysdarftCPU & CPUInstance, const uint8_t opcode, const 
         auto sb  = CPUInstance.load<StackBaseType>();
         auto sp  = CPUInstance.load<StackPointerType>();
         auto cb  = CPUInstance.load<CodeBaseType>();
-        auto rip = CPUInstance.load<InstructionPointerType>();
+        auto rip = actual_ip;
         auto db  = CPUInstance.load<DataBaseType>();
         auto dp  = CPUInstance.load<DataPointerType>();
         auto eb  = CPUInstance.load<ExtendedBaseType>();

@@ -75,6 +75,8 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
     try {
         try
         {
+            const auto ip_before_pop = SysdarftRegister::load<InstructionPointerType>();
+
             const auto &[opcode, width, operands, literal]
                 = SysdarftCPUInstructionDecoder::pop_instruction_from_ip_and_increase_ip();
             WidthAndOperandsType Arg = std::make_pair(width, operands);
@@ -89,7 +91,7 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
             if (hd_int_flag || is_break_here(timestamp))
             {
                 hd_int_flag = false;
-                breakpoint_handler(timestamp, opcode, Arg);
+                breakpoint_handler(timestamp, ip_before_pop, opcode, Arg);
             }
 
             (this->*ExecutorMap.at(opcode))(timestamp, Arg);

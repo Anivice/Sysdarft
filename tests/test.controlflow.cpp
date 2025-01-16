@@ -11,7 +11,7 @@ public:
         return true;
     }
 
-    void h_breakpoint_handler(__uint128_t, const uint8_t opcode, const WidthAndOperandsType & WAOpT)
+    void h_breakpoint_handler(__uint128_t, uint64_t, const uint8_t opcode, const WidthAndOperandsType & WAOpT)
     {
         show_context();
 

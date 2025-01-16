@@ -74,10 +74,10 @@ protected:
 
     void show_context();
     bool default_is_break_here(__uint128_t) { return false; }
-    void default_breakpoint_handler(__uint128_t, uint8_t, const WidthAndOperandsType &) { }
+    void default_breakpoint_handler(__uint128_t, uint64_t, uint8_t, const WidthAndOperandsType &) { }
 
     using IsBreakHereFn = std::function<bool(__uint128_t)>;
-    using BreakpointHandlerFn = std::function<void(__uint128_t, uint8_t, const WidthAndOperandsType &)>;
+    using BreakpointHandlerFn = std::function<void(__uint128_t, uint64_t, uint8_t, const WidthAndOperandsType &)>;
 
     IsBreakHereFn is_break_here;
     BreakpointHandlerFn breakpoint_handler;
@@ -93,13 +93,13 @@ public:
 
     template < class InstanceType >
     void bindBreakpointHandler(InstanceType* instance, void (InstanceType::*memFunc)(
-        __uint128_t, uint8_t, const WidthAndOperandsType &))
+        __uint128_t, uint64_t, uint8_t, const WidthAndOperandsType &))
     {
-        breakpoint_handler = [instance, memFunc](__uint128_t val,
+        breakpoint_handler = [instance, memFunc](__uint128_t val, uint64_t ip,
             uint8_t opcode,
             const WidthAndOperandsType & wapr)
         {
-            (instance->*memFunc)(val, opcode, wapr);
+            (instance->*memFunc)(val, ip, opcode, wapr);
         };
     }
 

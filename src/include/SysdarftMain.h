@@ -78,7 +78,7 @@ using ParsedArgs = std::pair<ParsedOptions, std::vector<std::string>>;
 ParsedArgs get_args(int argc, char** argv, option long_options[]);
 void compile_to_binary(const std::vector< std::string > &, const std::string &);
 void disassemble(const std::string &, uint64_t);
-std::string show_context(SysdarftCPU &, uint8_t, const SysdarftCPU::WidthAndOperandsType &);
+std::string show_context(SysdarftCPU &, uint64_t actual_ip, uint8_t, const SysdarftCPU::WidthAndOperandsType &);
 
 #define CONTINUE        (0x00)
 #define SHOW_CONTEXT    (0x01)
@@ -178,7 +178,7 @@ public:
     RemoteDebugServer & operator=(const RemoteDebugServer &) = delete;
 
     bool if_breakpoint(__uint128_t);
-    void at_breakpoint(__uint128_t, uint8_t, const SysdarftCPU::WidthAndOperandsType &);
+    void at_breakpoint(__uint128_t, uint64_t, uint8_t, const SysdarftCPU::WidthAndOperandsType &);
 };
 
 #endif //SYSDARFTMAIN_H
