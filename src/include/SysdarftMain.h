@@ -20,7 +20,7 @@
 #include <cstring>
 #include <memory>
 #include <csignal>
-#include <crow/crow.h>
+#include <crow.h>
 // remove debug logging.
 // Manual activation can be done by including SysdarftDebug.h again after this header
 // should further requirement of log() needed.
