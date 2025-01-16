@@ -79,14 +79,15 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
                 = SysdarftCPUInstructionDecoder::pop_instruction_from_ip_and_increase_ip();
             WidthAndOperandsType Arg = std::make_pair(width, operands);
 
+#ifdef __DEBUG__
             if (debug::verbose) {
                 log("[CPU] ", literal, "\n");
                 show_context();
             }
+#endif
 
-            if (hd_int_flag || is_break_here())
+            if (hd_int_flag || is_break_here(timestamp))
             {
-                log("[CPU] Breakpoint reached!\n");
                 hd_int_flag = false;
                 breakpoint_handler(timestamp, opcode, Arg);
             }

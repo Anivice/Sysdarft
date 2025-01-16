@@ -192,7 +192,8 @@ typedef std::map < std::string, std::pair < uint64_t /* line position */, std::v
 
 void SYSDARFT_EXPORT_SYMBOL process_base16(std::string &);
 void SYSDARFT_EXPORT_SYMBOL replace_all(std::string &, const std::string &, const std::string &);
-std::string execute_bc(const std::string &);
+std::string SYSDARFT_EXPORT_SYMBOL execute_bc(const std::string &);
+
 parsed_target_t encode_target(std::vector < uint8_t > &, const std::string &);
 void decode_target(std::vector < std::string > &, std::vector < uint8_t > &);
 

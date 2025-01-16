@@ -1,11 +1,6 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-#ifdef log
-#warning Marco "log" being overriden by debug.h!
-#undef log
-#endif // log
-
 #include <atomic>
 #include <map>
 #include <mutex>
@@ -16,6 +11,11 @@
 #include <unordered_map>
 #include <sstream>
 #include <array>
+
+#ifdef log
+#  warning "Macro 'log' being overridden/undefined"
+#  undef log
+#endif
 
 #define SYSDARFT_EXPORT_SYMBOL __attribute__((visibility("default")))
 

@@ -319,19 +319,26 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     add_custom_target(
             COPY_HDA_FILE ALL
             COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/hda.img ${CMAKE_CURRENT_BINARY_DIR}/
-            COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/example.sysasm ${CMAKE_CURRENT_BINARY_DIR}/
-            DEPENDS tests/hda.img tests/example.sysasm
+            COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/example.asm ${CMAKE_CURRENT_BINARY_DIR}/
+            COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/example2.asm ${CMAKE_CURRENT_BINARY_DIR}/
+            DEPENDS tests/hda.img tests/example.asm
             COMMENT "Copy disk image sample with ASCII texts in it."
     )
 endif ()
 
 # Console Executable:
+find_package(nlohmann_json REQUIRED)
+
 add_executable(sysdarft-system
-        src/SysdarftMain.cpp
+        src/SysdarftConsole/SysdarftMain.cpp
         src/include/SysdarftConsole.h
         src/include/SysdarftMain.h
-        src/MainArgProcessor.cpp
-        src/MainCompile.cpp
+        src/SysdarftConsole/MainArgProcessor.cpp
+        src/SysdarftConsole/MainCompile.cpp
+        src/SysdarftConsole/RemoteDebugServer.cpp
+        src/SysdarftConsole/ConditionalExpression.cpp
+        src/SysdarftConsole/ShowContext.cpp
+        src/SysdarftConsole/DebugAction.cpp
 )
-target_include_directories(sysdarft-system PUBLIC src/include)
-target_link_libraries(sysdarft-system PUBLIC Sysdarft)
+target_include_directories(sysdarft-system PUBLIC src/include src/include/crow)
+target_link_libraries(sysdarft-system PUBLIC Sysdarft nlohmann_json::nlohmann_json)

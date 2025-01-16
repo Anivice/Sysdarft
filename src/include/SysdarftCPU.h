@@ -32,6 +32,7 @@ public:
     void Boot();
 
     SysdarftCPU & operator = (const SysdarftCPU &) = delete;
+    [[nodiscard]] uint64_t SystemTotalMemory() const { return TotalMemory; }
 };
 
 #endif //CPU_H

@@ -7,7 +7,7 @@
 
 class Exec final : public SysdarftCPUInstructionExecutor {
 public:
-    bool h_is_break_here()
+    bool h_is_break_here(__uint128_t)
     {
         return true;
     }

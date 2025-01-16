@@ -1,8 +1,6 @@
 #ifndef UI_CURSES_H
 #define UI_CURSES_H
 
-#include <SFML/Audio.hpp>
-#include <ncurses.h>
 #include <string>
 #include <thread>
 #include <SysdarftDebug.h>

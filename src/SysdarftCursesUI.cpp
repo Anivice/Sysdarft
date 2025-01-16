@@ -1,7 +1,9 @@
 // SysdarftCursesUI.cpp
-#include <SysdarftCursesUI.h>
 #include <cstring>
 #include <thread>
+#include <SFML/Audio.hpp>
+#include <ncurses.h>
+#include <SysdarftCursesUI.h>
 
 std::mutex bell_memory_access_mutex;
 

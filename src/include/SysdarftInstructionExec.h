@@ -5,7 +5,8 @@
 #include <SysdarftCPUDecoder.h>
 #include <SysdarftIOHub.h>
 
-class SysdarftCPUSubroutineRequestToAbortTheCurrentInstructionExecutionProcedureDueToError : SysdarftBaseError {
+// CPU subroutine request to abort the current instruction execution procedure dur to error
+class SysdarftCPUSubroutineRequestToAbortTheCurrentInstructionExecutionProcedureDueToError final : SysdarftBaseError {
 public:
     SysdarftCPUSubroutineRequestToAbortTheCurrentInstructionExecutionProcedureDueToError() :
         SysdarftBaseError("Sysdarft Instruction Subroutine Abort") { }
@@ -58,8 +59,10 @@ private:
         return val;
     }
 
-protected:
+public:
     typedef std::pair < uint8_t /* width */, std::vector < OperandType > > WidthAndOperandsType;
+
+protected:
     std::map <uint8_t /* opcode */,
         void (SysdarftCPUInstructionExecutor::*)(__uint128_t, WidthAndOperandsType &) /* method */ > ExecutorMap;
 
@@ -70,20 +73,21 @@ protected:
     }
 
     void show_context();
-    bool default_is_break_here() { return false; }
+    bool default_is_break_here(__uint128_t) { return false; }
     void default_breakpoint_handler(__uint128_t, uint8_t, const WidthAndOperandsType &) { }
 
-    using IsBreakHereFn = std::function<bool()>;
+    using IsBreakHereFn = std::function<bool(__uint128_t)>;
     using BreakpointHandlerFn = std::function<void(__uint128_t, uint8_t, const WidthAndOperandsType &)>;
 
     IsBreakHereFn is_break_here;
     BreakpointHandlerFn breakpoint_handler;
 
+public:
     template < class InstanceType >
-    void bindIsBreakHere(InstanceType* instance, bool (InstanceType::*memFunc)())
+    void bindIsBreakHere(InstanceType* instance, bool (InstanceType::*memFunc)(__uint128_t))
     {
-        is_break_here = [instance, memFunc]() -> bool {
-            return (instance->*memFunc)();
+        is_break_here = [instance, memFunc](__uint128_t timestamp) -> bool {
+            return (instance->*memFunc)(timestamp);
         };
     }
 
@@ -156,7 +160,7 @@ private:
     add_instruction_exec(int3);
     add_instruction_exec(iret);
 
-    // io
+    // IO
     add_instruction_exec(in);
     add_instruction_exec(out);
     add_instruction_exec(ins);

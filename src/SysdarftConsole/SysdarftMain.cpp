@@ -1,4 +1,8 @@
+#include <algorithm>
+#include <ranges>
+#include <string_view>
 #include <SysdarftMain.h>
+#include <SysdarftDebug.h>
 
 void print_help(const char *program_name)
 {
@@ -104,7 +108,11 @@ void boot_sysdarft(
     const std::string & bios,
     const std::string & hdd,
     const std::string & fda,
-    const std::string & fdb)
+    const std::string & fdb,
+    const bool debug,
+    const std::string & ip,
+    const uint16_t port,
+    const std::string & log_path)
 {
     std::ifstream file(bios, std::ios::in | std::ios::binary);
     std::vector<uint8_t> bios_code;
@@ -130,7 +138,13 @@ void boot_sysdarft(
     std::signal(SIGWINCH, resize_handler);
     std::signal(SIGTSTP, stop_handler);
 
+    std::unique_ptr < RemoteDebugServer > debug_server;
+
     try {
+        if (debug) { // request a debug server
+            debug_server = std::make_unique<RemoteDebugServer>(ip, port, CPUInstance, log_path);
+        }
+
         CPUInstance.Boot();
     } catch (...) {
         g_cpu_instance = nullptr;
@@ -145,7 +159,7 @@ int main(int argc, char** argv)
     try
     {
         std::vector<std::unique_ptr<SysdarftModule>> loaded_modules;
-        std::unique_ptr < option[] > gnu_long_options = std::make_unique < option[] > (std::size(long_options));
+        auto gnu_long_options = std::make_unique < option[] > (std::size(long_options));
         complicated_to_gnu(gnu_long_options.get(), long_options);
         auto [parsed_options, positional_args]
             = get_args(argc, argv, gnu_long_options.get());
@@ -167,10 +181,23 @@ int main(int argc, char** argv)
             return EXIT_SUCCESS;
         }
 
+        auto split = [](std::string_view input, char delimiter)->std::vector<std::string>
+        {
+            std::vector<std::string> parts;
+            // Create a split view on the input based on the delimiter
+            auto view = std::views::split(input, delimiter);
+
+            // For each sub-range produced by the view, convert it to a string
+            for (auto subrange : view) {
+                parts.emplace_back(subrange.begin(), subrange.end());
+            }
+
+            return parts;
+        };
+
         // Handle --verbose option
         if (parsed_options.contains("verbose")) {
             debug::verbose = true;
-            std::cerr << "Verbose mode enabled." << std::endl;
         }
 
         // Handle --module option
@@ -306,14 +333,44 @@ int main(int argc, char** argv)
                 fdb = parsed_options["fdb"].at(0);
             }
 
+            bool debug = false;
+            std::string ip{};
+            uint64_t port = 0;
+            std::string log_file{};
+            if (parsed_options.contains("debug"))
+            {
+                debug = true;
+                auto ip_with_port = parsed_options["debug"].at(0);
+                std::vector < std::string > ip_and_port;
+
+                ip_and_port = split(ip_with_port, ':');
+                if (ip_and_port.size() != 2)
+                {
+                    std::cerr << "ERROR: Incorrect target format provided!" << std::endl;
+                    exit_failure_on_error();
+                }
+
+                ip = ip_and_port[0];
+                const std::string port_literal = ip_and_port[1];
+                port = std::strtoll(port_literal.c_str(), nullptr, 10);
+
+                if (parsed_options.contains("crow-log")) {
+                    log_file = parsed_options["crow-log"].at(0);
+                }
+            }
+
             // boot system
-            boot_sysdarft(memory_size, bios_path, hdd, fda, fdb);
+            boot_sysdarft(memory_size, bios_path, hdd, fda, fdb, debug, ip, port, log_file);
             return EXIT_SUCCESS;
         }
 
+        std::cout   << "If you see this message, that means you have provided one or more arguments,\n"
+                    << "but none of them triggered any meaningful actions.\n"
+                    << "Please refer to the help messages shown below to correct your arguments."
+                    << std::endl;
         print_help(argv[0]);
-        print_version();
-        return EXIT_SUCCESS;
+        // print_version();
+        return EXIT_FAILURE;
     } catch (const std::invalid_argument& e) {
         std::cerr << "Argument parsing error: " << e.what() << std::endl;
         return EXIT_FAILURE;

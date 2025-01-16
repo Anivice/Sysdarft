@@ -1,6 +1,6 @@
 # Sysdarft
-![Lines of Code](https://img.shields.io/badge/ProjectLines-11576-cyan)
-![Size of Code](https://img.shields.io/badge/ProjectSize-696%20K-yellow)
+![Lines of Code](https://img.shields.io/badge/ProjectLines-27080-cyan)
+![Size of Code](https://img.shields.io/badge/ProjectSize-1324%20K-yellow)
 [![Automated CMake Test Workflow](https://github.com/Anivice/Sysdarft/actions/workflows/CMake_GitHub_Action.yml/badge.svg)](https://github.com/Anivice/Sysdarft/actions/workflows/CMake_GitHub_Action.yml)
 
 Sysdarft is a hypothetical binary 64bit architecture.

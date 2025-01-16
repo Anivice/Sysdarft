@@ -5,7 +5,7 @@
 int main()
 {
     std::vector < uint8_t > code;
-    std::fstream file("example.sysasm", std::ios::in);
+    std::fstream file("example.asm", std::ios::in);
     CodeProcessing(code, file);
     SysdarftCPU cpu(32 * 1024 * 1024, code, "hda.img", "", "");
     cpu.Boot();
