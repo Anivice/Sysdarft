@@ -200,7 +200,7 @@ void SysdarftCPUInstructionExecutor::movs(__uint128_t, WidthAndOperandsType &)
     const uint64_t dest = SysdarftRegister::load<DataPointerType>() + SysdarftRegister::load<DataBaseType>();
     const uint64_t src = SysdarftRegister::load<ExtendedPointerType>() + SysdarftRegister::load<ExtendedBaseType>();
     const uint64_t count = SysdarftRegister::load<FullyExtendedRegisterType, 0>();
-    auto buffer = new char [count];
+    const auto buffer = new char [count];
     SysdarftCPUMemoryAccess::read_memory(src, buffer, count);
     SysdarftCPUMemoryAccess::write_memory(dest, buffer, count);
     delete[] buffer;

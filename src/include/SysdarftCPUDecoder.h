@@ -49,11 +49,10 @@ class OperandType;
 
 class DecoderDataAccess
     : public SysdarftRegister,
-      public SysdarftCPUMemoryAccess,
       public SysdarftCursesUI
 {
 protected:
-    explicit DecoderDataAccess(const uint64_t memory) : SysdarftCPUMemoryAccess(memory) { }
+    explicit DecoderDataAccess(const uint64_t memory) : SysdarftCursesUI(memory) { }
 
     template < typename DataType >
     DataType pop_code_and_inc_ip()
@@ -202,7 +201,7 @@ protected:
      *  [0x15] GET CURSOR POSITION == EXR0
      *  [0x16] GET SYSTEM HARDWARE INFO [TOTAL MEMORY == FER0]
      *  [0x17] RING BELL
-     *  [0x18]
+     *  [0x18] REFRESH
      *  [0x19]
      *  [0x1A]
      *  [0x1B]
@@ -229,6 +228,7 @@ protected:
     void do_interruption_cur_pos_0x15();
     void do_get_system_hardware_info_0x16();
     void do_ring_bell_0x17();
+    void do_refresh_screen_0x18();
 
     std::atomic<bool> hd_int_flag = false;
 

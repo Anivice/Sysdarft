@@ -10,6 +10,7 @@
  * 0x00000 - 0x9FFFF [BOOT CODE]     - 640KB
  * 0xA0000 - 0xC17FF [CONFIGURATION] - 134KB
  *                    - 0xA0000 - 0xA0FFF [4KB Interruption Table: 256 Interrupts]
+ *                    - 0xB8000 - 0xB87CF [2000 Bytes, 80x25 Video Space]
  * 0xC1800 - 0xFFFFF [FIRMWARE]      - 250KB
  */
 #define BOOT_LOADER_START   (0x00000)
@@ -18,6 +19,9 @@
 #define INTERRUPTION_VECTOR (0xA0000)
 #define INTERRUPTION_VEC_ED (0xA0FFF)
 #define INTERRUPTION_VEC_LN (INTERRUPTION_VEC_ED - INTERRUPTION_VECTOR + 1)
+#define VIDEO_MEMORY_START  (0xB8000)
+#define VIDEO_MEMORY_END    (0xB87CF)
+#define VIDEO_MEMORY_SIZE   (VIDEO_MEMORY_END - VIDEO_MEMORY_START + 1)
 #define BIOS_START          (0xC1800)
 #define BIOS_END            (0xFFFFF)
 #define BIOS_SIZE           (BIOS_END - BIOS_START + 1)
@@ -38,14 +42,16 @@ public:
 
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPUMemoryAccess
 {
+public:
+    void read_memory(uint64_t address, char * _dest, uint64_t size);
+    void write_memory(uint64_t address, const char* _source, uint64_t size);
+
 protected:
     std::mutex MemoryAccessMutex;
     std::vector < std::array < uint8_t, BLOCK_SIZE > > Memory;
     std::atomic<uint64_t> TotalMemory = 0; // 32MB Memory
 
     explicit SysdarftCPUMemoryAccess(uint64_t totalMemory);
-    void read_memory(uint64_t address, char * _dest, uint64_t size);
-    void write_memory(uint64_t address, const char* _source, uint64_t size);
 
     template < typename DataType >
     void push_memory_to(const uint64_t begin, uint64_t & offset, const DataType & val)

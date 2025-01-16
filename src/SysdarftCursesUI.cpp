@@ -5,15 +5,16 @@
 
 std::mutex bell_memory_access_mutex;
 
-SysdarftCursesUI::SysdarftCursesUI()
-    : cursor_x(0), cursor_y(0), offset_x(0), offset_y(0), vsb(1)
+SysdarftCursesUI::SysdarftCursesUI(const uint64_t memory)
+    :   SysdarftCPUMemoryAccess(memory),
+        cursor_x(0), cursor_y(0),
+        offset_x(0), offset_y(0),
+        vsb(1)
 {
+    video_memory = (char*)SysdarftCPUMemoryAccess::Memory[184].data();
     // Initialize video memory with spaces
-    for (auto & y : video_memory)
-    {
-        for (char & x : y) {
-            x = ' ';
-        }
+    for (int i = 0; i < V_HEIGHT * V_WIDTH; i++) {
+        video_memory[i] = ' ';
     }
 }
 
@@ -109,7 +110,7 @@ void SysdarftCursesUI::teletype(const char text)
     int current_y = cursor_y;
 
     // Store character in video memory
-    video_memory[current_y][current_x] = text;
+    video_at(current_x, current_y) = text;
     current_x++;
 
     // Update cursor position after printing
@@ -127,10 +128,11 @@ void SysdarftCursesUI::newline()
     if (cursor_y == V_HEIGHT - 1)
     {
         for (uint64_t i = 0; i < V_HEIGHT - 1; i++) {
-            std::memcpy(video_memory[i], video_memory[i + 1], V_WIDTH);
+            std::memcpy(video_memory + i * V_WIDTH,
+                video_memory + (i + 1) * V_WIDTH, V_WIDTH);
         }
 
-        std::memset(video_memory[V_HEIGHT - 1], ' ', V_WIDTH);
+        std::memset(video_memory + (V_HEIGHT - 1) * V_WIDTH, ' ', V_WIDTH);
         cursor_x = 0;
         set_cursor(cursor_x, cursor_y);
         render_screen();
@@ -188,7 +190,7 @@ void SysdarftCursesUI::render_screen()
     // Render video_memory to the screen using current offsets
     for (int y = 0; y < V_HEIGHT; ++y) {
         for (int x = 0; x < V_WIDTH; ++x) {
-            mvaddch(offset_y + y, offset_x + x, video_memory[y][x]);
+            mvaddch(offset_y + y, offset_x + x, video_at(x, y));
         }
     }
     // Position the cursor in the re-rendered screen
@@ -196,4 +198,25 @@ void SysdarftCursesUI::render_screen()
     refresh();
 
     set_cursor_visibility(vsb);
+}
+
+void SysdarftCursesUI::play_bell_sound(const std::atomic < bool > & running_flag)
+{
+    sf::SoundBuffer buffer;
+    {
+        std::lock_guard<std::mutex> guard(bell_memory_access_mutex);
+        if (!buffer.loadFromMemory(bell_wav, bell_wav_len)) {
+            log("Failed to load bell wav from memory");
+            return;
+        }
+    }
+
+    sf::Sound sound;
+    sound.setBuffer(buffer);
+    sound.play();
+
+    // Wait until the sound finishes playing
+    while (running_flag && sound.getStatus() == sf::Sound::Playing) {
+        sf::sleep(sf::milliseconds(50));
+    }
 }

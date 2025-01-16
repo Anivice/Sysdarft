@@ -13,7 +13,7 @@ void resize_handler(int sig) {
 
 int main()
 {
-    SysdarftCursesUI ui;
+    SysdarftCursesUI ui(1024 * 1024);
     g_ui_instance = &ui;
 
     // Register the SIGWINCH handler

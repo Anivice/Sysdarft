@@ -146,17 +146,17 @@ void CodeProcessing(
     std::string line;
     while (getline(file, line))
     {
+        // remove comments
+        line = truncateAfterSemicolonOrHash(line);
+        // remove '\t'
+        replace_all(line, "\t", "    ");
+
         auto tmp = line;
         replace_all(tmp, " ", "");
         if (tmp.empty()) {
             pop_front();
             continue;
         }
-
-        // remove comments
-        line = truncateAfterSemicolonOrHash(line);
-        // remove '\t'
-        replace_all(line, "\t", "    ");
 
         try {
             // search for each preprocessor pattern
@@ -188,6 +188,7 @@ void CodeProcessing(
         // remove '\t'
         replace_all(line, "\t", "    ");
         // search for each preprocessor pattern
+
         if (std::regex_match(line, org_pattern)             ||
             std::regex_match(line, lab_pattern)             ||
             std::regex_match(line, equ_pattern))

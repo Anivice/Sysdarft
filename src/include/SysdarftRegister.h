@@ -237,6 +237,7 @@ protected:
     // that means no hyper-thread in this CPU (for now?)
     std::mutex RegisterModificationMutex;
 
+public:
     template < typename AccessRegisterType, unsigned AccessRegisterIndex = 0 >
     requires std::is_same_v<AccessRegisterType, FullyExtendedRegisterType>
     || std::is_same_v<AccessRegisterType, HalfExtendedRegisterType>
@@ -568,6 +569,7 @@ protected:
         }
     }
 
+protected:
     SysdarftRegister() {
         store<InstructionPointerType>(BIOS_START);
     }

@@ -1,3 +1,8 @@
+; example.asm
+; this code will attempt to read 4 sectors from the disk
+; then print it out
+; it also handles keyboard interruption
+; it will print a notification and ring the bell when triggered
 .equ 'HDD_SEC_START', '0x137'
 .equ 'HDD_SEC_COUNT', '0x138'
 .equ 'HDD_IO', '0x139'
@@ -18,16 +23,17 @@ reads:
 
 puts:
     pushall
-    xor .64bit <%DP>, <%DP>                         ; set dp = 0
-    xor .64bit <%FER1>, <%FER1>                     ; clear counter
-    _loop:
-        xor .8bit <%R1>, <%R1>
-        mov .8bit <%R0>, <*1&8(%DP, $(0), $(0))>    ; move db:dp to R0
-        int <$(0x10)>                               ; print R2
-        add .64bit <%DP>, <$(1)>                    ; inc dp
-        add .64bit <%FER1>, <$(1)>                  ; inc FER1
-        cmp .64bit <%FER1>, <$(2048)>               ; see if the data at it end
-        jne <%CB>, <_loop>                          ; if not, continue
+    mov .64bit <%FER0>, <$(2000)>
+    mov .64bit <%DP>, <$(0xB8000)>
+    movs
+
+    ; refresh
+    int <$(0x18)>
+
+    ; move cursor to last position
+    mov .16bit <%EXR0>, <$(1999)>
+    int <$(0x11)>
+
     popall
     ret
 

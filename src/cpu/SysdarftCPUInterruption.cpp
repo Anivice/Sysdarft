@@ -104,6 +104,7 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
         case 0x15: do_interruption_cur_pos_0x15();          return;
         case 0x16: do_get_system_hardware_info_0x16();      return;
         case 0x17: do_ring_bell_0x17();                     return;
+        case 0x18: do_refresh_screen_0x18();                return;
         default:
             // do interruption, but doesn't check interruption mask since
             // this is not maskable interruptions
@@ -198,7 +199,7 @@ void SysdarftCPUInterruption::do_interruption_set_cur_pos_0x11()
     if (linear > V_WIDTH * V_HEIGHT - 1) {
         throw SysdarftBadInterruption("Teletype linear address out of range");
     }
-    const auto x = linear / V_WIDTH, y = linear % V_WIDTH;
+    const auto y = linear / V_WIDTH, x = linear % V_WIDTH;
     SysdarftCursesUI::set_cursor(x, y);
 }
 
@@ -244,4 +245,9 @@ void SysdarftCPUInterruption::do_get_system_hardware_info_0x16()
 void SysdarftCPUInterruption::do_ring_bell_0x17()
 {
     SysdarftCursesUI::ringbell();
+}
+
+void SysdarftCPUInterruption::do_refresh_screen_0x18()
+{
+    SysdarftCursesUI::render_screen();
 }
