@@ -328,6 +328,19 @@ endif ()
 
 # Console Executable:
 find_package(nlohmann_json REQUIRED)
+## Find the Asio headers
+find_path(ASIO_INCLUDE_DIR
+        NAMES asio.hpp
+        PATHS /usr/include /usr/local/include
+        DOC "Path to the standalone Asio headers (asio.hpp)"
+)
+if(NOT ASIO_INCLUDE_DIR)
+    message(FATAL_ERROR "Could not find <asio.hpp>.")
+else ()
+    message(STATUS "Found <asio.hpp> in ${ASIO_INCLUDE_DIR}")
+endif()
+
+add_compile_definitions(ASIO_STANDALONE)
 
 add_executable(sysdarft-system
         src/SysdarftConsole/SysdarftMain.cpp
@@ -340,5 +353,5 @@ add_executable(sysdarft-system
         src/SysdarftConsole/ShowContext.cpp
         src/SysdarftConsole/DebugAction.cpp
 )
-target_include_directories(sysdarft-system PUBLIC src/include src/include/crow)
+target_include_directories(sysdarft-system PUBLIC ${ASIO_INCLUDE_DIR} src/include src/include/crow)
 target_link_libraries(sysdarft-system PUBLIC Sysdarft nlohmann_json::nlohmann_json)
