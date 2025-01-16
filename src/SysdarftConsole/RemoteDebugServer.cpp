@@ -98,6 +98,8 @@ RemoteDebugServer::RemoteDebugServer(
         const auto CB = std::strtoull(CB_literal.c_str(), nullptr, 10);
         const auto IP = std::strtoull(IP_literal.c_str(), nullptr, 10);
 
+        std::lock_guard lock(g_br_list_access_mutex);
+
         bool have_i_processed = false;
         for (auto it = breakpoint_list.begin(); it != breakpoint_list.end(); ++it)
         {
@@ -126,10 +128,51 @@ RemoteDebugServer::RemoteDebugServer(
         const auto timeNow = std::chrono::system_clock::now();
         response["UNIXTimestamp"] = std::to_string(std::chrono::duration_cast<std::chrono::seconds>(
             timeNow.time_since_epoch()).count());
-        response["Result"] = "Success";
 
-        response["Context"] = invoke_action(SHOW_CONTEXT);
+        if (!breakpoint_triggered) {
+            response["Result"] = "Still running";
+            return crow::response(400, response.dump());
+        }
 
+        response["Result"] = invoke_action(SHOW_CONTEXT);
+        return crow::response{response.dump()};
+    });
+
+    CROW_ROUTE(JSONBackend, "/ShowBreakpoint").methods(crow::HTTPMethod::GET)([this]()
+    {
+        json response;
+        response["Version"] = SYSDARFT_VERSION;
+        const auto timeNow = std::chrono::system_clock::now();
+        response["UNIXTimestamp"] = std::to_string(std::chrono::duration_cast<std::chrono::seconds>(
+            timeNow.time_since_epoch()).count());
+        std::stringstream ss;
+
+        ss << "[BREAKPOINT]" << std::endl;
+        std::lock_guard lock(g_br_list_access_mutex);
+        for (const auto& breakpoint : breakpoint_list)
+        {
+            ss  << std::hex << std::setfill('0') << std::setw(16) << std::uppercase
+                << breakpoint.first.first + breakpoint.first.second << ": ";
+            for (const auto & e : breakpoint.second) {
+                ss << e;
+            }
+
+            ss << std::endl;
+        }
+
+        ss << "[WATCHLIST]" << std::endl;
+        for (const auto& watch : watch_list)
+        {
+            for (const auto & e : watch.first) {
+                ss << e;
+            }
+
+            ss << std::endl;
+        }
+
+        ss << "[END]" << std::endl;
+
+        response["Result"] = ss.str();
         return crow::response{response.dump()};
     });
 
@@ -140,9 +183,101 @@ RemoteDebugServer::RemoteDebugServer(
         const auto timeNow = std::chrono::system_clock::now();
         response["UNIXTimestamp"] = std::to_string(std::chrono::duration_cast<std::chrono::seconds>(
             timeNow.time_since_epoch()).count());
-        response["Result"] = "Success";
+
+        if (!breakpoint_triggered) {
+            response["Result"] = "Already running";
+            return crow::response(400, response.dump());
+        }
 
         invoke_action(CONTINUE);
+        response["Result"] = "Success";
+        return crow::response{response.dump()};
+    });
+
+    CROW_ROUTE(JSONBackend, "/Action").methods(crow::HTTPMethod::POST)
+    ([this](const crow::request& req)
+    {
+        // Create a JSON object using nlohmann/json
+        json response;
+        response["Version"] = SYSDARFT_VERSION;
+        const auto timeNow = std::chrono::system_clock::now();
+        response["UNIXTimestamp"] = std::to_string(std::chrono::duration_cast<std::chrono::seconds>(
+            timeNow.time_since_epoch()).count());
+
+        if (!breakpoint_triggered) {
+            response["Result"] = "Still running";
+            return crow::response(400, response.dump());
+        }
+
+        std::string bodyString = req.body;
+        json clientJson;
+        try {
+            clientJson = json::parse(bodyString);
+        } catch (const std::exception&) {
+            response["Result"] = "Invalid Argument";
+            return crow::response(400, response.dump());
+        }
+
+        if  (!clientJson.contains("Expression"))
+        {
+            response["Result"] = "Invalid Argument (Missing expression)";
+            return crow::response(400, response.dump());
+        }
+
+        try {
+            const std::vector<uint8_t> expression_byte_code
+                = compile_action_from_expression_to_byte_code(clientJson["Expression"]);
+            // act
+            const auto & result = invoke_action(expression_byte_code);
+            if (result != "Success") {
+                throw std::runtime_error("Action failed: " + result);
+            }
+
+            response["Result"] = result;
+        } catch (const std::exception & e) {
+            response["Result"] = "Conditional Expression Error: " + std::string(e.what());
+            return crow::response(400, response.dump());
+        }
+
+        return crow::response{response.dump()};
+    });
+
+    CROW_ROUTE(JSONBackend, "/Watcher").methods(crow::HTTPMethod::POST)
+    ([this](const crow::request& req)
+    {
+        // Create a JSON object using nlohmann/json
+        json response;
+        response["Version"] = SYSDARFT_VERSION;
+        const auto timeNow = std::chrono::system_clock::now();
+        response["UNIXTimestamp"] = std::to_string(std::chrono::duration_cast<std::chrono::seconds>(
+            timeNow.time_since_epoch()).count());
+
+        std::string bodyString = req.body;
+        json clientJson;
+        try {
+            clientJson = json::parse(bodyString);
+        } catch (const std::exception&) {
+            response["Result"] = "Invalid Argument";
+            return crow::response(400, response.dump());
+        }
+
+        if  (!clientJson.contains("Expression"))
+        {
+            response["Result"] = "Invalid Argument (Missing expression)";
+            return crow::response(400, response.dump());
+        }
+
+        std::vector<uint8_t> expression_byte_code;
+        try {
+            expression_byte_code = compile_conditional_expression_to_byte_code(clientJson["Expression"]);
+        } catch (const std::exception & e) {
+            response["Result"] = "Expression Error: " + std::string(e.what());
+            return crow::response(400, response.dump());
+        }
+
+        std::lock_guard lock(g_br_list_access_mutex);
+        watch_list.emplace_back(expression_byte_code, false);
+        response["Result"] = "Success";
 
         return crow::response{response.dump()};
     });
@@ -169,21 +304,40 @@ RemoteDebugServer::~RemoteDebugServer()
 
 bool RemoteDebugServer::if_breakpoint(__uint128_t)
 {
+    breakpoint_triggered = false;
     const auto CB = CPUInstance.load<CodeBaseType>();
     const auto IP = CPUInstance.load<InstructionPointerType>();
 
     // halt system at startup, which is exactly where the start of BIOS is located
-    if (!skip_bios_ip_check) {
+    if (!skip_bios_ip_check && (IP + CB == BIOS_START)) {
         skip_bios_ip_check = true; // skip next IP+CB == BIOS scenario
+        breakpoint_triggered = true;
         return true;
     }
 
-    for (auto & [breakpoint, condition] : breakpoint_list)
+    std::lock_guard lock(g_br_list_access_mutex);
+    for (const auto & [breakpoint, condition] :
+        breakpoint_list)
     {
-        if ((CB + IP) == (breakpoint.first + breakpoint.second)) {
-            return is_condition_met(condition);
+        if ((CB + IP) == (breakpoint.first + breakpoint.second))
+        {
+            if (is_condition_met(condition)) {
+                breakpoint_triggered = true;
+                return true;
+            }
         }
     }
 
-    return false;
+    bool is_hit = false;
+    for (auto & watch : watch_list)
+    {
+        if (is_condition_met(watch.first))
+        {
+            watch.second = true;
+            breakpoint_triggered = true;
+            is_hit = true;
+        }
+    }
+
+    return is_hit;
 }

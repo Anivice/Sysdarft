@@ -95,9 +95,14 @@ private:
     SysdarftCPU & CPUInstance;
     crow::SimpleApp JSONBackend;
     std::thread server_thread;
+
+    std::mutex g_br_list_access_mutex;
     std::map < std::pair < uint64_t /* CB */, uint64_t /* IP */ > /* breakpoint */,
         std::vector < uint8_t > /* conditional byte code */ > breakpoint_list;
+    std::vector < std::pair < std::vector < uint8_t >, bool > > watch_list;
+
     std::atomic < bool > skip_bios_ip_check = false;
+    std::atomic < bool > breakpoint_triggered = false;
     std::ofstream crow_log;
     std::mutex sseMutex;
     std::vector<SSEConnection> sseClients;
@@ -108,31 +113,14 @@ private:
 
     std::vector < uint8_t > compile_conditional_expression_to_byte_code(const std::string & conditional_expression);
     bool is_condition_met(std::vector < uint8_t > condition_expression_byte_code);
+    std::vector < uint8_t > compile_action_from_expression_to_byte_code(const std::string & action_expression);
+    std::string invoke_action(const std::vector < uint8_t > & action_code);
 
     template < typename... Args >
     std::string invoke_action(const uint8_t action, const Args &... args)
     {
-        {
-            const auto action_code = do_action(action, args...);
-            std::lock_guard<std::mutex> lock(action_access_mutex);
-            debug_action_request = action_code;
-        }
-
-        std::string result;
-
-        while (result.empty())
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            std::lock_guard<std::mutex> lock(action_result_access_mutex);
-            result = debug_action_result;
-        }
-
-        {
-            std::lock_guard<std::mutex> lock(action_result_access_mutex);
-            debug_action_result.clear();
-        }
-
-        return result;
+        const auto action_code = do_action(action, args...);
+        return invoke_action(action_code);
     }
 
     class SysdarftLogHandler final : public crow::ILogHandler

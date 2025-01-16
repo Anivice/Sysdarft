@@ -65,7 +65,7 @@ void disassemble(const std::string & binary_filename, const uint64_t org)
     {
         std::stringstream ss;
         ss << std::hex << std::setfill('0') << std::setw(16) << std::uppercase
-            << bad_data.front().first;
+           << bad_data.front().first;
         ss << ": .8bit_data <";
         for (auto & [location, data] : bad_data) {
             ss << " " << data << ",";

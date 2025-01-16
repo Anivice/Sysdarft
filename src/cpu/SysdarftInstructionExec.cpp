@@ -76,6 +76,7 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
         try
         {
             const auto ip_before_pop = SysdarftRegister::load<InstructionPointerType>();
+            const bool breakpoint_reached = is_break_here(timestamp);
 
             const auto &[opcode, width, operands, literal]
                 = SysdarftCPUInstructionDecoder::pop_instruction_from_ip_and_increase_ip();
@@ -88,7 +89,7 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
             }
 #endif
 
-            if (hd_int_flag || is_break_here(timestamp))
+            if (hd_int_flag || breakpoint_reached)
             {
                 hd_int_flag = false;
                 breakpoint_handler(timestamp, ip_before_pop, opcode, Arg);
