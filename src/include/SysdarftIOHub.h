@@ -19,7 +19,7 @@ public:
 };
 
 class ControllerDataStream {
-protected:
+private:
     std::mutex buffer_mutex_;
     std::vector < uint8_t > device_buffer;
 

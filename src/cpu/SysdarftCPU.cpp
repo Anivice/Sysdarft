@@ -70,8 +70,7 @@ void SysdarftCPU::Boot()
         SysdarftCPUInstructionExecutor::protector.unlock();
 
         try {
-            timestamp.store(timestamp.load() + 1);
-            SysdarftCPUInstructionExecutor::execute(timestamp);
+            SysdarftCPUInstructionExecutor::execute(timestamp++);
         } catch (std::exception & e) {
             std::cerr << "Unexpected error detected: " << e.what() << std::endl;
         }
