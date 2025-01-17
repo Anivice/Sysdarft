@@ -16,11 +16,13 @@ SysdarftDiskImager(const std::string &file_name)
         throw SysdarftDiskError("Cannot open file " + file_name);
     }
 
-    device_buffer.emplace(REG_SIZE,         ControllerDataStream());
-    device_buffer.emplace(REG_START_SEC,    ControllerDataStream());
-    device_buffer.emplace(REG_SEC_COUNT,    ControllerDataStream());
-    device_buffer.emplace(CMD_REQUEST_RD,   ControllerDataStream());
-    device_buffer.emplace(CMD_REQUEST_WR,   ControllerDataStream());
+    device_buffer.emplace(REG_SIZE,         std::make_unique<ControllerDataStream>());
+    device_buffer.emplace(REG_START_SEC,    std::make_unique<ControllerDataStream>());
+    device_buffer.emplace(REG_SEC_COUNT,    std::make_unique<ControllerDataStream>());
+    device_buffer.emplace(CMD_REQUEST_RD,   std::make_unique<ControllerDataStream>());
+    device_buffer.emplace(CMD_REQUEST_WR,   std::make_unique<ControllerDataStream>());
+
+    (*(uint64_t*)&device_size) = getFileSize(_sysdarftHardDiskFile);
 }
 
 template <  unsigned REG_SIZE,
@@ -32,17 +34,15 @@ bool
 SysdarftDiskImager < REG_SIZE, REG_START_SEC, REG_SEC_COUNT, CMD_REQUEST_RD, CMD_REQUEST_WR > ::
 request_read(const uint64_t port)
 {
-    const uint64_t size = getFileSize(_sysdarftHardDiskFile);
-
     if (port == REG_SIZE)
     {
-        device_buffer.at(port).push(size);
+        device_buffer.at(port)->push(device_size);
         return true;
     }
     else if (port == CMD_REQUEST_RD)
     {
         if (const uint64_t ops_end_sector = (start_sector + sector_count) * 512;
-            ops_end_sector > size)
+            ops_end_sector > device_size)
         {
             return false;
         }
@@ -50,7 +50,7 @@ request_read(const uint64_t port)
         const uint64_t start_off = start_sector * 512;
         const uint64_t length = sector_count * 512;
 
-        if (length == 0 || start_off + length > size) {
+        if (length == 0 || start_off + length > device_size) {
             return false;
         }
 
@@ -60,7 +60,7 @@ request_read(const uint64_t port)
             return false;
         }
 
-        auto & buffer = device_buffer.at(port).device_buffer;
+        std::vector<uint8_t> buffer;
         buffer.resize(length);
 
         // Read 'length' bytes from the file
@@ -71,6 +71,8 @@ request_read(const uint64_t port)
         {
             return false;
         }
+
+        device_buffer.at(port)->insert(buffer);
 
         return true;
     }
@@ -87,32 +89,31 @@ bool
 SysdarftDiskImager < REG_SIZE, REG_START_SEC, REG_SEC_COUNT, CMD_REQUEST_RD, CMD_REQUEST_WR > ::
 request_write(const uint64_t port)
 {
-    const uint64_t size = getFileSize(_sysdarftHardDiskFile);
     if (port == REG_START_SEC)
     {
-        start_sector = device_buffer.at(port).pop<uint64_t>();
+        start_sector = device_buffer.at(port)->pop<uint64_t>();
         return true;
     }
     else if (port == REG_SEC_COUNT)
     {
-        sector_count = device_buffer.at(port).pop<uint64_t>();
+        sector_count = device_buffer.at(port)->pop<uint64_t>();
         return true;
     }
     else if (port == CMD_REQUEST_WR)
     {
         if (const uint64_t ops_end_sector = (start_sector + sector_count) * 512;
-            ops_end_sector > size)
+            ops_end_sector > device_size)
         {
             return false;
         }
 
         const uint64_t start_off = start_sector * 512;
         const uint64_t length = sector_count * 512;
-        if (length == 0 || start_off + length > size) {
+        if (length == 0 || start_off + length > device_size) {
             return false;
         }
 
-        auto & buffer = device_buffer.at(port).device_buffer;
+        auto buffer = device_buffer.at(port)->getObject();
 
         if (length != buffer.size()) {
             return false;
@@ -129,7 +130,7 @@ request_write(const uint64_t port)
             return false;
         }
 
-        buffer.clear();
+        device_buffer.at(port)->clear();
         return true;
     }
 

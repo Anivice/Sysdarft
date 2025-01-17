@@ -43,30 +43,8 @@ public:
     // Delete copy constructor and copy assignment operator
     WorkerThread(const WorkerThread&) = delete;
     WorkerThread& operator=(const WorkerThread&) = delete;
-
-    // Move constructor and move assignment operator can be provided if needed
-    WorkerThread(WorkerThread&& other) noexcept
-        : method_(std::move(other.method_)),
-          running(other.running.load()),
-          WorkerThreadInstance(std::move(other.WorkerThreadInstance))
-    {
-        other.stop();
-    }
-
-    WorkerThread& operator=(WorkerThread&& other) noexcept
-    {
-        if (this != &other)
-        {
-            this->stop();
-            other.stop();
-
-            method_ = std::move(other.method_);
-            running = other.running.load();
-            WorkerThreadInstance = std::move(other.WorkerThreadInstance);
-        }
-
-        return *this;
-    }
+    WorkerThread(WorkerThread&& other) = delete;
+    WorkerThread& operator=(WorkerThread&& other) = delete;
 
     template <typename... Args>
     void start(Args&... args)

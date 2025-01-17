@@ -1,5 +1,6 @@
 #include <SysdarftCPU.h>
 #include <SysdarftDisks.h>
+#include <RealTimeClock.h>
 
 SysdarftCPU::SysdarftCPU(const uint64_t memory,
     const std::vector < uint8_t > & bios,
@@ -16,18 +17,24 @@ SysdarftCPU::SysdarftCPU(const uint64_t memory,
 
     // hard disk
     if (!hdd.empty()) {
-        device_list.emplace_back(std::make_unique<SysdarftHardDisk>(hdd));
+        add_device<SysdarftHardDisk>(hdd);
     }
 
     // floppy disk a
     if (!fda.empty()) {
-        device_list.emplace_back(std::make_unique<SysdarftFloppyDiskA>(fda));
+        add_device<SysdarftFloppyDiskA>(fda);
     }
 
     // floppy disk b (not bootable)
     if (!fdb.empty()) {
-        device_list.emplace_back(std::make_unique<SysdarftFloppyDiskB>(fdb));
+        add_device<SysdarftFloppyDiskB>(fda);
     }
+
+    // RTC
+    add_device<SysdarftRealTimeClock>(*this);
+
+    // reset timestamp
+    timestamp = 0;
 }
 
 void SysdarftCPU::Boot()
@@ -44,12 +51,27 @@ void SysdarftCPU::Boot()
         // capture and control area
         if (do_abort_int)
         {
+            // the reason why 0x05 is raised using flags is that
+            // we don't want the program to be halting inside a
+            // signal capturing state where thread safety is harder to regulate.
+            // also, if we interrupt whist protector is locked, it will cause a deadlock
             do_abort_int = false;
             do_abort_0x05();
         }
 
+        SysdarftCPUInterruption::protector.lock();
+
+        for (const auto & i : interruption_requests) {
+            do_interruption(i);
+            external_device_requested = false;
+        }
+
+        interruption_requests.clear();
+        SysdarftCPUInstructionExecutor::protector.unlock();
+
         try {
-            SysdarftCPUInstructionExecutor::execute(timestamp++);
+            timestamp.store(timestamp.load() + 1);
+            SysdarftCPUInstructionExecutor::execute(timestamp);
         } catch (std::exception & e) {
             std::cerr << "Unexpected error detected: " << e.what() << std::endl;
         }

@@ -19,12 +19,15 @@ public:
 };
 
 class ControllerDataStream {
-public:
+protected:
+    std::mutex buffer_mutex_;
     std::vector < uint8_t > device_buffer;
 
+public:
     template < typename DataType >
     void push(const DataType & data)
     {
+        std::lock_guard<std::mutex> lock(buffer_mutex_);
         for (unsigned int i = 0; i < sizeof(data); i++) {
             device_buffer.emplace_back(((uint8_t*)&data)[i]);
         }
@@ -33,6 +36,7 @@ public:
     template < typename DataType >
     DataType pop()
     {
+        std::lock_guard<std::mutex> lock(buffer_mutex_);
         DataType data { };
         for (unsigned int i = 0; i < sizeof(data); i++)
         {
@@ -46,13 +50,47 @@ public:
 
         return data;
     }
+
+    void insert(const std::vector<uint8_t> & data)
+    {
+        std::lock_guard<std::mutex> lock(buffer_mutex_);
+        device_buffer.insert(device_buffer.end(), data.begin(), data.end());
+    }
+
+    void insert(ControllerDataStream & data)
+    {
+        std::lock_guard lock(buffer_mutex_);
+        std::lock_guard lock2(data.buffer_mutex_);
+        device_buffer.insert(device_buffer.end(), data.device_buffer.begin(), data.device_buffer.end());
+    }
+
+    std::vector < uint8_t > getObject()
+    {
+        std::lock_guard<std::mutex> lock(buffer_mutex_);
+        return device_buffer;
+    }
+
+    [[nodiscard]] uint64_t getSize()
+    {
+        std::lock_guard lock(buffer_mutex_);
+        return device_buffer.size();
+    }
+
+    void clear()
+    {
+        std::lock_guard<std::mutex> lock(buffer_mutex_);
+        device_buffer.clear();
+    }
+
+    ControllerDataStream & operator=(ControllerDataStream&) = delete;
 };
 
 class SysdarftExternalDeviceBaseClass
 {
 public:
     virtual ~SysdarftExternalDeviceBaseClass() = default;
-    std::map < uint64_t /* IO Port */, ControllerDataStream > device_buffer;
+    std::mutex buffer_mutex_;
+    std::map < uint64_t /* IO Port */, std::unique_ptr < ControllerDataStream > > device_buffer;
     virtual bool request_read(uint64_t /* IO Port */) { return false; }
     virtual bool request_write(uint64_t /* IO Port */) { return false; }
 };
@@ -63,9 +101,10 @@ private:
     SysdarftExternalDeviceBaseClass & query_device_based_on_port(uint64_t);
 
 protected:
+    std::mutex list_mutex_;
     std::vector < std::unique_ptr < SysdarftExternalDeviceBaseClass > > device_list;
-    void ins(uint64_t port, ControllerDataStream & buffer);
-    void outs(uint64_t port, const ControllerDataStream & buffer);
+    ControllerDataStream & ins(uint64_t port);
+    void outs(uint64_t port, ControllerDataStream & buffer);
 };
 
 #endif //SYSDARFTIOHUB_H

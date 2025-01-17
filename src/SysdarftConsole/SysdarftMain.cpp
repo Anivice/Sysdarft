@@ -156,6 +156,7 @@ void boot_sysdarft(
 
 int main(int argc, char** argv)
 {
+    // TODO: Self link check
     try
     {
         std::vector<std::unique_ptr<SysdarftModule>> loaded_modules;

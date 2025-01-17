@@ -56,6 +56,10 @@
 #define OPCODE_INT      (0x39)
 #define OPCODE_INT3     (0x3A)
 #define OPCODE_IRET     (0x3B)
+#define OPCODE_JC       (0x3C)
+#define OPCODE_JNC      (0x3D)
+#define OPCODE_JO       (0x3E)
+#define OPCODE_JNO      (0x3F)
 
 #define OPCODE_HLT      (0x40)
 #define OPCODE_IGNI     (0x41)
@@ -373,6 +377,40 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
          {ENTRY_ARGUMENT_COUNT, 0},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
      }
+    },
+
+    {"JC", {
+               {ENTRY_OPCODE, OPCODE_JC},
+               {ENTRY_ARGUMENT_COUNT, 2},
+               {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
+           }
+    },
+
+    {"JNC", {
+               {ENTRY_OPCODE, OPCODE_JNC},
+               {ENTRY_ARGUMENT_COUNT, 2},
+               {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
+           }
+    },
+
+    {"JO", {
+               {ENTRY_OPCODE, OPCODE_JO},
+               {ENTRY_ARGUMENT_COUNT, 2},
+               {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
+           }
+    },
+
+    {"JNO", {
+               {ENTRY_OPCODE, OPCODE_JNO},
+               {ENTRY_ARGUMENT_COUNT, 2},
+               {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
+           }
+    },
+    {"IRET", {
+               {ENTRY_OPCODE, OPCODE_IRET},
+               {ENTRY_ARGUMENT_COUNT, 0},
+               {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
+           }
     },
 
     ////////////////////////////////////////////////////////////////////////////////////////////

@@ -3,8 +3,7 @@
 void SysdarftCPUInstructionExecutor::in(__uint128_t, WidthAndOperandsType & Operands)
 {
     const auto & port = Operands.second[0].get_val();
-    ControllerDataStream buffer;
-    SysdarftIOHub::ins(port, buffer);
+    auto && buffer = SysdarftIOHub::ins(port);
     const auto & data = buffer.pop<uint64_t>();
     Operands.second[1].set_val(data);
 }
@@ -21,17 +20,20 @@ void SysdarftCPUInstructionExecutor::out(__uint128_t, WidthAndOperandsType & Ope
 
 void SysdarftCPUInstructionExecutor::ins(__uint128_t, WidthAndOperandsType & Operands)
 {
-    ControllerDataStream buffer;
     const auto DB = SysdarftRegister::load<DataBaseType>();
     const auto DP = SysdarftRegister::load<DataPointerType>();
     const auto CX = SysdarftRegister::load<FullyExtendedRegisterType, 0>();
     const auto & port = Operands.second[0].get_val();
 
-    SysdarftIOHub::ins(port, buffer);
-    if (buffer.device_buffer.size() != CX) {
+    auto & buffer = SysdarftIOHub::ins(port);
+    if (buffer.getSize() != CX) {
         throw SysdarftDeviceIOError("IO data length mismatch");
     }
-    SysdarftCPUMemoryAccess::write_memory(DB + DP, (char*)buffer.device_buffer.data(), CX);
+    std::vector<uint8_t> wbuf;
+    wbuf.resize(buffer.getSize());
+
+    SysdarftCPUMemoryAccess::write_memory(DB + DP, (char*)wbuf.data(), CX);
+    buffer.push(wbuf);
 }
 
 void SysdarftCPUInstructionExecutor::outs(__uint128_t, WidthAndOperandsType & Operands)
@@ -42,7 +44,10 @@ void SysdarftCPUInstructionExecutor::outs(__uint128_t, WidthAndOperandsType & Op
     const auto CX = SysdarftRegister::load<FullyExtendedRegisterType, 0>();
     const auto & port = Operands.second[0].get_val();
 
-    buffer.device_buffer.resize(CX);
-    SysdarftCPUMemoryAccess::read_memory(DB + DP, (char*)buffer.device_buffer.data(), CX);
+    std::vector<uint8_t> wbuf;
+    wbuf.resize(CX);
+
+    SysdarftCPUMemoryAccess::read_memory(DB + DP, (char*)wbuf.data(), CX);
+    buffer.insert(wbuf);
     SysdarftIOHub::outs(port, buffer);
 }

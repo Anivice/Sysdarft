@@ -252,6 +252,8 @@ add_library(SysdarftICH OBJECT
         src/include/SysdarftDisks.h
         src/ext_dev/SysdarftHardDisk.cpp
         src/include/SysdarftDisks.inl
+        src/include/RealTimeClock.h
+        src/ext_dev/RealTimeClock.cpp
 )
 target_include_directories(SysdarftICH PUBLIC src/include)
 

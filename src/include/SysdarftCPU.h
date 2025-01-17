@@ -17,7 +17,7 @@ public:
 
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPU final : public SysdarftCPUInstructionExecutor {
 private:
-    __uint128_t timestamp;
+    std::atomic < __uint128_t > timestamp;
 
 public:
     explicit SysdarftCPU(uint64_t memory,
@@ -33,6 +33,13 @@ public:
 
     SysdarftCPU & operator = (const SysdarftCPU &) = delete;
     [[nodiscard]] uint64_t SystemTotalMemory() const { return TotalMemory; }
+
+    template < typename DeviceType, typename ... Args,
+        typename = std::enable_if_t<std::is_base_of_v<SysdarftExternalDeviceBaseClass, DeviceType> > >
+    void add_device(Args&... args)
+    {
+        device_list.emplace_back(std::make_unique<DeviceType>(args...));
+    }
 };
 
 #endif //CPU_H

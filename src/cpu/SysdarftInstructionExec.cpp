@@ -82,6 +82,8 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
                 = SysdarftCPUInstructionDecoder::pop_instruction_from_ip_and_increase_ip();
             WidthAndOperandsType Arg = std::make_pair(width, operands);
 
+            current_routine_pop_len = SysdarftRegister::load<InstructionPointerType>() - ip_before_pop;
+
 #ifdef __DEBUG__
             if (debug::verbose) {
                 log("[CPU] ", literal, "\n");
@@ -99,6 +101,8 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
         } catch (SysdarftDeviceIOError&) {
             do_interruption(INT_IO_ERROR);
         } catch (SysdarftBadInterruption &){
+            do_interruption(INT_BAD_INTR);
+        } catch (SysdarftInterruptionOutOfRange &) {
             do_interruption(INT_BAD_INTR);
         } catch (IllegalInstruction &) {
             do_interruption(INT_ILLEGAL_INSTRUCTION);

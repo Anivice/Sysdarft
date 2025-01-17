@@ -86,11 +86,17 @@ void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> & buffer, co
 
     for (uint64_t i = 0; i  < argument_count; i++)
     {
-        if (cleaned_line.size() - operand_index_begin < argument_count) {
+        const auto & provided_args = cleaned_line.size() - operand_index_begin;
+        if (provided_args < argument_count) {
             throw InstructionExpressionError(
                 "Expected " + std::to_string(argument_count) +
                         " operands, but found " + std::to_string(cleaned_line.size() - operand_index_begin) +
                         ": " + instruction);
+        }
+
+        if (provided_args > argument_count) {
+            throw InstructionExpressionError("Only need " + std::to_string(argument_count)
+                + ", but given " + std::to_string(provided_args) + ": " + instruction);
         }
 
         auto tmp = cleaned_line[i + operand_index_begin];

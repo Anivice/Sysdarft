@@ -21,6 +21,57 @@ std::vector<std::string> splitString(const std::string& input, const char delimi
     return result;
 }
 
+std::string truncateAfterSemicolonOrHash(const std::string& input)
+{
+    // Find the first occurrence of either ';' or '#'
+    // If found, return substring from beginning to that position
+    if (const size_t pos = input.find_first_of(";#");
+        pos != std::string::npos)
+    {
+        return input.substr(0, pos);
+    }
+    // If neither found, return the original string
+    return input;
+}
+
+std::vector < std::pair < std::string, std::string > > line_marker_register(std::vector<std::string> & input)
+{
+    std::string upper_line_marker;
+    std::vector < std::pair < std::string, std::string > > result;
+    for (auto & line : input)
+    {
+        line = truncateAfterSemicolonOrHash(line);
+        if (line.find(":") != std::string::npos)
+        {
+            replace_all(line, " ", "");
+            replace_all(line, "\t", "");
+
+            std::string before = line;
+
+            if (line.find(".") != std::string::npos)
+            {
+                std::string prefix;
+                if (line.front() != '.') {
+                    prefix = "_";
+                }
+
+                // attach line marker
+                replace_all(line, ".", "_");
+                auto tmp = upper_line_marker;
+                replace_all(tmp, ":", "");
+                line = tmp + prefix + line;
+
+                result.emplace_back(before, line);
+            } else {
+                upper_line_marker = line;
+                result.emplace_back(before, line);
+            }
+        }
+    }
+
+    return result;
+}
+
 std::string convertEscapeSequences(const std::string& input)
 {
     std::string output;
@@ -58,19 +109,6 @@ std::string convertEscapeSequences(const std::string& input)
     }
 
     return output;
-}
-
-std::string truncateAfterSemicolonOrHash(const std::string& input)
-{
-    // Find the first occurrence of either ';' or '#'
-    // If found, return substring from beginning to that position
-    if (const size_t pos = input.find_first_of(";#");
-        pos != std::string::npos)
-    {
-        return input.substr(0, pos);
-    }
-    // If neither found, return the original string
-    return input;
 }
 
 void process_org(const std::string& input, uint64_t & org)
@@ -142,6 +180,23 @@ void CodeProcessing(
         line_numer++;
         file.erase(file.begin());
     };
+
+    auto markers = line_marker_register(file);
+
+    for (auto & marker : markers)
+    {
+        replace_all(marker.first, ":", "");
+        replace_all(marker.second, ":", "");
+        defined_line_marker.emplace(marker.second,
+            std::pair < uint64_t, std::vector < uint64_t > > (0, { }));
+    }
+
+    for (auto & line : file)
+    {
+        for (auto & marker : markers) {
+            replace_all(line, marker.first, marker.second);
+        }
+    }
 
     std::string line;
     while (getline(file, line))

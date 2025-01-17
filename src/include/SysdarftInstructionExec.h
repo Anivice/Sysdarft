@@ -159,6 +159,10 @@ private:
     add_instruction_exec(int_);
     add_instruction_exec(int3);
     add_instruction_exec(iret);
+    add_instruction_exec(jc);
+    add_instruction_exec(jnc);
+    add_instruction_exec(jo);
+    add_instruction_exec(jno);
 
     // IO
     add_instruction_exec(in);

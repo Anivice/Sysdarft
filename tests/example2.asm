@@ -27,7 +27,7 @@ puts:
     mov .64bit <%DP>, <$(0xB8000)>
     movs
 
-    ; refresh
+    ; refresh screen
     int <$(0x18)>
 
     ; move cursor to last position
@@ -74,11 +74,11 @@ _int_kb_abort:
         add .64bit <%FER2>, <$(1)>
         cmp .8bit <%R0>, <$(0)>
         je <%cb>,  < _loop_msg_end >
-        int <$(0x10)>
+        int <$(0x10)>       ; putc
         jmp <%cb>, < _loop_message >
     _loop_msg_end:
-        int <$(0x13)>
-        int <$(0x17)>                                           ; ring the bell
+        int <$(0x13)>       ; newline
+        int <$(0x17)>       ; ring the bell
     iret
 
 _message:

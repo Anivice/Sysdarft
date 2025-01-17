@@ -38,6 +38,7 @@ private:
     std::fstream _sysdarftHardDiskFile;
     uint64_t start_sector = 0;
     uint64_t sector_count = 0;
+    const uint64_t device_size = 0;
 
 public:
     explicit SysdarftDiskImager(const std::string & file_name);

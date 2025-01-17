@@ -111,3 +111,47 @@ void SysdarftCPUInstructionExecutor::iret(__uint128_t, WidthAndOperandsType &)
 {
     SysdarftCPUInterruption::do_iret();
 }
+
+void SysdarftCPUInstructionExecutor::jc(__uint128_t, WidthAndOperandsType & WidthAndOperands)
+{
+    if (SysdarftRegister::load<FlagRegisterType>().Carry)
+    {
+        const uint64_t addr_base = WidthAndOperands.second[0].get_val();
+        const uint64_t ip = WidthAndOperands.second[1].get_val();
+        SysdarftRegister::store<CodeBaseType>(addr_base);
+        SysdarftRegister::store<InstructionPointerType>(ip);
+    }
+}
+
+void SysdarftCPUInstructionExecutor::jnc(__uint128_t, WidthAndOperandsType & WidthAndOperands)
+{
+    if (!SysdarftRegister::load<FlagRegisterType>().Carry)
+    {
+        const uint64_t addr_base = WidthAndOperands.second[0].get_val();
+        const uint64_t ip = WidthAndOperands.second[1].get_val();
+        SysdarftRegister::store<CodeBaseType>(addr_base);
+        SysdarftRegister::store<InstructionPointerType>(ip);
+    }
+}
+
+void SysdarftCPUInstructionExecutor::jo(__uint128_t, WidthAndOperandsType & WidthAndOperands)
+{
+    if (SysdarftRegister::load<FlagRegisterType>().Overflow)
+    {
+        const uint64_t addr_base = WidthAndOperands.second[0].get_val();
+        const uint64_t ip = WidthAndOperands.second[1].get_val();
+        SysdarftRegister::store<CodeBaseType>(addr_base);
+        SysdarftRegister::store<InstructionPointerType>(ip);
+    }
+}
+
+void SysdarftCPUInstructionExecutor::jno(__uint128_t, WidthAndOperandsType & WidthAndOperands)
+{
+    if (!SysdarftRegister::load<FlagRegisterType>().Overflow)
+    {
+        const uint64_t addr_base = WidthAndOperands.second[0].get_val();
+        const uint64_t ip = WidthAndOperands.second[1].get_val();
+        SysdarftRegister::store<CodeBaseType>(addr_base);
+        SysdarftRegister::store<InstructionPointerType>(ip);
+    }
+}

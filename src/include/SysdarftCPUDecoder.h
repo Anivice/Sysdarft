@@ -45,6 +45,11 @@ public:
     SysdarftCPUInitializeFailed() : SysdarftBaseError("Setup is met with a unrecoverable fatal error") { }
 };
 
+class SysdarftInterruptionOutOfRange final : public SysdarftBaseError {
+public:
+    explicit SysdarftInterruptionOutOfRange(const std::string & msg) : SysdarftBaseError("Interruption out of range: " + msg) { }
+};
+
 class OperandType;
 
 class DecoderDataAccess
@@ -155,17 +160,16 @@ public:
     explicit OperandType(DecoderDataAccess & Access_) : Access(Access_) { do_decode_operand(); }
 };
 
-class SysdarftInterruptionOutOfRange final : public SysdarftBaseError {
-public:
-    explicit SysdarftInterruptionOutOfRange(const std::string & msg) : SysdarftBaseError("Interruption out of range: " + msg) { }
-};
-
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInterruption : public DecoderDataAccess
 {
 protected:
     // External halt is handled at upper level
     std::atomic<bool> SystemHalted = false;
     std::atomic < bool > do_abort_int = false;
+    std::mutex protector;
+    std::vector < uint64_t > interruption_requests;
+    std::atomic < bool > external_device_requested = false;
+    std::atomic < uint64_t > current_routine_pop_len = 0;
 
     struct InterruptionPointer {
         uint64_t InterruptionTargetCodeBase;
@@ -244,6 +248,9 @@ private:
         fg.InterruptionMask = 1;
         SysdarftRegister::store<FlagRegisterType>(fg);
     }
+
+public:
+    void do_ext_dev_interruption(uint64_t code);
 };
 
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInstructionDecoder : public SysdarftCPUInterruption

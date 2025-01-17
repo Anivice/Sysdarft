@@ -117,6 +117,23 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
     }
 }
 
+void SysdarftCPUInterruption::do_ext_dev_interruption(const uint64_t code)
+{
+    if (code > 0x1F && code < 512)
+    {
+        if (!protector.try_lock()) {
+            return; // ignore this interruption, the system is currently masked
+            // (the system processing other hardware interruptions, bus not free)
+        }
+
+        interruption_requests.emplace_back(code);
+        external_device_requested = true;
+        protector.unlock();
+    } else {
+        throw SysdarftInterruptionOutOfRange("External hardware has invoked a invalid interruption code");
+    }
+}
+
 SysdarftCPUInterruption::InterruptionPointer SysdarftCPUInterruption::do_interruption_lookup(const uint64_t code)
 {
     InterruptionPointer pointer { };
@@ -149,7 +166,7 @@ void SysdarftCPUInterruption::do_iret()
     const auto SB = SysdarftRegister::load<StackBaseType>();
     auto SP = SysdarftRegister::load<StackPointerType>();
     SysdarftRegister::Registers = DecoderDataAccess::pop_memory_from<sysdarft_register_t>(SB, SP);
-    // SysdarftRegister::store<StackPointerType>(SP);
+    // iret doesn't need to reset IM
 }
 
 // Hardware Interruptions
@@ -217,7 +234,8 @@ void SysdarftCPUInterruption::do_interruption_newline_0x13()
 void SysdarftCPUInterruption::do_interruption_getinput_0x14()
 {
     char ch;
-    while (!SystemHalted && !do_abort_int) // abort if external halt or keyboard interrupt is triggered
+    while (!SystemHalted && !do_abort_int)
+        // abort if external halt or device interruption triggered
     {
         if (const ssize_t n = read(STDIN_FILENO, &ch, 1); n > 0)
         {
@@ -225,6 +243,20 @@ void SysdarftCPUInterruption::do_interruption_getinput_0x14()
             return;
         } else if (n == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
             throw SysdarftCPUFatal();
+        }
+
+        if (external_device_requested)
+        {
+            // revert IP, so when it comes back it's still requesting input
+            auto IP = SysdarftRegister::load<InstructionPointerType>();
+            IP -= current_routine_pop_len;
+            SysdarftRegister::store<InstructionPointerType>(IP);
+
+            auto FG = SysdarftRegister::load<FlagRegisterType>();
+            FG.InterruptionMask = 0;
+            SysdarftRegister::store<FlagRegisterType>(FG);
+
+            return; // abort when an external device called
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
