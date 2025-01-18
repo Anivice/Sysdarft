@@ -3,6 +3,7 @@
 #include <SysdarftMain.h>
 #include <chrono>
 #include <fstream>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <nlohmann/json.hpp>
@@ -84,19 +85,6 @@ RemoteDebugServer::RemoteDebugServer(
             return crow::response(400, response.dump());
         }
 
-        std::string condition = clientJson["Condition"];
-
-        try {
-            if (!condition.empty()) {
-                Parser parser(condition);
-                parser.parseExpression(); // try parse once to do a sanity check
-            }
-
-        } catch (const std::exception & e) {
-            response["Result"] = "Conditional Expression Error: " + std::string(e.what());
-            return crow::response(400, response.dump());
-        }
-
         std::string CB_literal = clientJson["CB"];
         std::string IP_literal = clientJson["IP"];
 
@@ -109,13 +97,45 @@ RemoteDebugServer::RemoteDebugServer(
         const auto CB = std::strtoull(CB_literal.c_str(), nullptr, 10);
         const auto IP = std::strtoull(IP_literal.c_str(), nullptr, 10);
 
-        std::lock_guard lock(g_br_list_access_mutex);
-        breakpoint_list.emplace(std::pair(CB, IP), condition);
+        std::stringstream address_literal;
+        address_literal << "0x" << std::uppercase << std::hex << CB + IP;
 
-        std::stringstream ss;
-        ss << "0x" << std::uppercase << std::hex << CB + IP;
+        std::string condition = clientJson["Condition"];
+        std::string delete_check = condition;
+        capitalization(delete_check);
+        if (delete_check == "DELETE")
+        {
+            std::lock_guard lock(g_br_list_access_mutex);
+            for (auto it = breakpoint_list.begin(); it != breakpoint_list.end(); ++it)
+            {
+                if ((it->first.first + it->first.second) == (IP + CB))
+                {
+                    breakpoint_list.erase(it);
+                    response["Result"] = "Breakpoint deleted at: " + address_literal.str();
+                    return crow::response(400, response.dump());
+                }
+            }
+
+            response["Result"] = "No breakpoint found at: " + address_literal.str();
+            return crow::response(400, response.dump());
+        }
+
+        try {
+            if (!condition.empty()) {
+                Parser parser(condition);
+                parser.parseExpression(); // try parse once to do a sanity check
+            }
+
+        } catch (const std::exception & e) {
+            response["Result"] = "Conditional Expression Error: " + std::string(e.what());
+            return crow::response(400, response.dump());
+        }
+
+        std::lock_guard lock(g_br_list_access_mutex);
+        breakpoint_list[std::pair(CB, IP)] = condition;
+
         response["Result"] = "Success";
-        response["Linear"] = ss.str();
+        response["Linear"] = address_literal.str();
         // Return the JSON as a Crow response with the correct MIME type
         return crow::response{response.dump()};
     });
