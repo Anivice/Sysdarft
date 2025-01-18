@@ -29,11 +29,9 @@ void SysdarftCPUInstructionExecutor::ins(__uint128_t, WidthAndOperandsType & Ope
     if (buffer.getSize() != CX) {
         throw SysdarftDeviceIOError("IO data length mismatch");
     }
-    std::vector<uint8_t> wbuf;
-    wbuf.resize(buffer.getSize());
-
+    std::vector<uint8_t> wbuf = buffer.getObject();
+    buffer.clear();
     SysdarftCPUMemoryAccess::write_memory(DB + DP, (char*)wbuf.data(), CX);
-    buffer.push(wbuf);
 }
 
 void SysdarftCPUInstructionExecutor::outs(__uint128_t, WidthAndOperandsType & Operands)
