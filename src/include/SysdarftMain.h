@@ -13,6 +13,7 @@
 #include <map>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 #include <fstream>
 #include <iomanip>
@@ -80,11 +81,6 @@ void compile_to_binary(const std::vector< std::string > &, const std::string &);
 void disassemble(const std::string &, uint64_t);
 std::string show_context(SysdarftCPU &, uint64_t actual_ip, uint8_t, const SysdarftCPU::WidthAndOperandsType &);
 
-#define CONTINUE        (0x00)
-#define SHOW_CONTEXT    (0x01)
-
-#define do_action(action, ...) std::vector < uint8_t > { static_cast<uint8_t>(action), __VA_ARGS__ }
-
 class RemoteDebugServer {
 private:
     struct ConditionalTargetExpression {
@@ -107,7 +103,7 @@ private:
 
     class Parser {
     public:
-        explicit Parser(const std::string& input) : input(input), pos(0) {}
+        explicit Parser(std::string input) : input(std::move(input)), pos(0) {}
         std::unique_ptr<ConditionalTargetExpression> parseExpression();
 
     private:
@@ -117,7 +113,7 @@ private:
         void skipWhitespace();
         bool match(const std::string& keyword);
         std::unique_ptr<ConditionalTargetExpression> parseValEqual();
-        std::unique_ptr<ConditionalTargetExpression> parseLogical(const int condType);
+        std::unique_ptr<ConditionalTargetExpression> parseLogical(int);
 
         // Regex processing remains unchanged
         std::string processTgExp(const std::string& exp);
@@ -167,11 +163,20 @@ private:
         void log(std::string message, crow::LogLevel level) override;
     } SysdarftLogHandlerInstance;
 
+    void crow_setup_action();
+    void crow_setup_continue();
+    void crow_setup_showContext();
+    void crow_setup_intAlertSSE();
+    void crow_setup_isAPIAvailable();
+    void crow_setup_setBreakpoint();
+    void crow_setup_showBreakpoint();
+    void crow_setup_stepi();
+    void crow_setup_watcher();
 public:
-    RemoteDebugServer(const std::string & ip,
-        uint16_t port,
-        SysdarftCPU & _CPUInstance,
-        const std::string & crow_log_file);
+    RemoteDebugServer(const std::string &,
+        uint16_t,
+        SysdarftCPU &,
+        const std::string &);
     ~RemoteDebugServer();
     RemoteDebugServer(const RemoteDebugServer &) = delete;
     RemoteDebugServer(RemoteDebugServer &&) = delete;
@@ -182,5 +187,10 @@ public:
     bool if_breakpoint(__uint128_t);
     void at_breakpoint(__uint128_t, uint64_t, uint8_t, const SysdarftCPU::WidthAndOperandsType &);
 };
+
+inline void remove_spaces(std::string &input)
+{
+    input.erase(std::ranges::remove_if(input, ::isspace).begin(), input.end());
+}
 
 #endif //SYSDARFTMAIN_H

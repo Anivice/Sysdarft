@@ -34,11 +34,16 @@ public:
     SysdarftCPU & operator = (const SysdarftCPU &) = delete;
     [[nodiscard]] uint64_t SystemTotalMemory() const { return TotalMemory; }
 
-    template < typename DeviceType, typename ... Args,
-        typename = std::enable_if_t<std::is_base_of_v<SysdarftExternalDeviceBaseClass, DeviceType> > >
-    void add_device(Args&... args)
+    template <typename DeviceType, typename... Args,
+              typename = std::enable_if_t<std::is_base_of_v<SysdarftExternalDeviceBaseClass, DeviceType>>>
+    void add_device(Args &...args)
     {
         device_list.emplace_back(std::make_unique<DeviceType>(args...));
+    }
+
+    explicit operator bool() const
+    {
+        return !SystemHalted;
     }
 };
 

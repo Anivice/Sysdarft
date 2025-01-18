@@ -14,7 +14,6 @@
 #include "crow/http_request.h"
 #include "crow/utility.h"
 #include "crow/logging.h"
-#include "crow/exceptions.h"
 #include "crow/websocket.h"
 #include "crow/mustache.h"
 #include "crow/middleware.h"
@@ -97,14 +96,12 @@ namespace crow // NOTE: Already documented in "crow/app.h"
         {}
 
         virtual void validate() = 0;
-
-        void set_added()
-        {
+        
+        void set_added() {
             added_ = true;
         }
 
-        bool is_added()
-        {
+        bool is_added() {
             return added_;
         }
 
@@ -248,17 +245,23 @@ namespace crow // NOTE: Already documented in "crow/app.h"
                 template<typename... Args>
                 void set_(Func f, typename std::enable_if<!std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request&>::value, int>::type = 0)
                 {
-                    handler_ = ([f = std::move(f)](const request&, response& res, Args... args) {
-                        res = response(f(args...));
-                        res.end();
-                    });
+                    handler_ = (
+#ifdef CROW_CAN_USE_CPP14
+                      [f = std::move(f)]
+#else
+                      [f]
+#endif
+                      (const request&, response& res, Args... args) {
+                          res = response(f(args...));
+                          res.end();
+                      });
                 }
 
                 template<typename Req, typename... Args>
                 struct req_handler_wrapper
                 {
-                    req_handler_wrapper(Func fun):
-                      f(std::move(fun))
+                    req_handler_wrapper(Func f):
+                      f(std::move(f))
                     {
                     }
 
@@ -348,10 +351,16 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             static_assert(!std::is_same<void, decltype(f())>::value,
                           "Handler function cannot have void return type; valid return types: string, int, crow::response, crow::returnable");
 
-            handler_ = ([f = std::move(f)](const request&, response& res) {
-                res = response(f());
-                res.end();
-            });
+            handler_ = (
+#ifdef CROW_CAN_USE_CPP14
+              [f = std::move(f)]
+#else
+              [f]
+#endif
+              (const request&, response& res) {
+                  res = response(f());
+                  res.end();
+              });
         }
 
         template<typename Func>
@@ -364,10 +373,16 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             static_assert(!std::is_same<void, decltype(f(std::declval<crow::request>()))>::value,
                           "Handler function cannot have void return type; valid return types: string, int, crow::response, crow::returnable");
 
-            handler_ = ([f = std::move(f)](const request& req, response& res) {
-                res = response(f(req));
-                res.end();
-            });
+            handler_ = (
+#ifdef CROW_CAN_USE_CPP14
+              [f = std::move(f)]
+#else
+              [f]
+#endif
+              (const crow::request& req, crow::response& res) {
+                  res = response(f(req));
+                  res.end();
+              });
         }
 
         template<typename Func>
@@ -380,9 +395,15 @@ namespace crow // NOTE: Already documented in "crow/app.h"
         {
             static_assert(std::is_same<void, decltype(f(std::declval<crow::response&>()))>::value,
                           "Handler function with response argument should have void return type");
-            handler_ = ([f = std::move(f)](const request&, response& res) {
-                f(res);
-            });
+            handler_ = (
+#ifdef CROW_CAN_USE_CPP14
+              [f = std::move(f)]
+#else
+              [f]
+#endif
+              (const crow::request&, crow::response& res) {
+                  f(res);
+              });
         }
 
         template<typename Func>
@@ -440,12 +461,12 @@ namespace crow // NOTE: Already documented in "crow/app.h"
         void handle_upgrade(const request& req, response&, SocketAdaptor&& adaptor) override
         {
             max_payload_ = max_payload_override_ ? max_payload_ : app_->websocket_max_payload();
-            new crow::websocket::Connection<SocketAdaptor, App>(req, std::move(adaptor), app_, max_payload_, subprotocols_, open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_, mirror_protocols_);
+            new crow::websocket::Connection<SocketAdaptor, App>(req, std::move(adaptor), app_, max_payload_, open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
         }
 #ifdef CROW_ENABLE_SSL
         void handle_upgrade(const request& req, response&, SSLAdaptor&& adaptor) override
         {
-            new crow::websocket::Connection<SSLAdaptor, App>(req, std::move(adaptor), app_, max_payload_, subprotocols_, open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_, mirror_protocols_);
+            new crow::websocket::Connection<SSLAdaptor, App>(req, std::move(adaptor), app_, max_payload_, open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
         }
 #endif
 
@@ -454,12 +475,6 @@ namespace crow // NOTE: Already documented in "crow/app.h"
         {
             max_payload_ = max_payload;
             max_payload_override_ = true;
-            return *this;
-        }
-
-        self_t& subprotocols(const std::vector<std::string>& subprotocols)
-        {
-            subprotocols_ = subprotocols;
             return *this;
         }
 
@@ -498,23 +513,15 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             return *this;
         }
 
-        self_t& mirrorprotocols(bool mirror_protocols = true)
-        {
-            mirror_protocols_ = mirror_protocols;
-            return *this;
-        }
-
     protected:
         App* app_;
         std::function<void(crow::websocket::connection&)> open_handler_;
         std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler_;
-        std::function<void(crow::websocket::connection&, const std::string&, uint16_t)> close_handler_;
+        std::function<void(crow::websocket::connection&, const std::string&)> close_handler_;
         std::function<void(crow::websocket::connection&, const std::string&)> error_handler_;
         std::function<bool(const crow::request&, void**)> accept_handler_;
-        bool mirror_protocols_ = false;
         uint64_t max_payload_;
         bool max_payload_override_ = false;
-        std::vector<std::string> subprotocols_;
     };
 
     /// Allows the user to assign parameters using functions.
@@ -664,9 +671,15 @@ namespace crow // NOTE: Already documented in "crow/app.h"
         template<typename Func>
         void operator()(Func&& f)
         {
-            handler_ = ([f = std::move(f)](request& req, response& res, Args... args) {
-                detail::wrapped_handler_call(req, res, f, std::forward<Args>(args)...);
-            });
+            handler_ = (
+#ifdef CROW_CAN_USE_CPP14
+              [f = std::move(f)]
+#else
+              [f]
+#endif
+              (crow::request& req, crow::response& res, Args... args) {
+                  detail::wrapped_handler_call(req, res, f, std::forward<Args>(args)...);
+              });
         }
 
         template<typename Func>
@@ -1082,7 +1095,7 @@ namespace crow // NOTE: Already documented in "crow/app.h"
         Node head_;
     };
 
-    /// A blueprint can be considered a smaller section of a Crow app, specifically where the router is concerned.
+    /// A blueprint can be considered a smaller section of a Crow app, specifically where the router is conecerned.
 
     ///
     /// You can use blueprints to assign a common prefix to rules' prefix, set custom static and template folders, and set a custom catchall route.
@@ -1091,9 +1104,7 @@ namespace crow // NOTE: Already documented in "crow/app.h"
     {
     public:
         Blueprint(const std::string& prefix):
-          prefix_(prefix),
-          static_dir_(prefix),
-          templates_dir_(prefix){};
+          prefix_(prefix){};
 
         Blueprint(const std::string& prefix, const std::string& static_dir):
           prefix_(prefix), static_dir_(static_dir){};
@@ -1153,13 +1164,11 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             return static_dir_;
         }
 
-        void set_added()
-        {
+        void set_added() {
             added_ = true;
         }
 
-        bool is_added()
-        {
+        bool is_added() {
             return added_;
         }
 
@@ -1244,9 +1253,7 @@ namespace crow // NOTE: Already documented in "crow/app.h"
     class Router
     {
     public:
-        bool using_ssl;
-
-        Router() : using_ssl(false)
+        Router()
         {}
 
         DynamicRule& new_rule_dynamic(const std::string& rule)
@@ -1338,8 +1345,7 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             }
         }
 
-        void validate_bp()
-        {
+        void validate_bp() {
             //Take all the routes from the registered blueprints and add them to `all_rules_` to be processed.
             detail::middleware_indices blueprint_mw;
             validate_bp(blueprints_, blueprint_mw);
@@ -1359,8 +1365,8 @@ namespace crow // NOTE: Already documented in "crow/app.h"
                     get_recursive_child_methods(blueprint, methods);
                     for (HTTPMethod x : methods)
                     {
-                        int method_index = static_cast<int>(x);
-                        per_methods_[method_index].trie.add(blueprint->prefix(), 0, blueprint->prefix().length(), method_index);
+                        int i = static_cast<int>(x);
+                        per_methods_[i].trie.add(blueprint->prefix(), 0, blueprint->prefix().length(), i);
                     }
                 }
 
@@ -1415,9 +1421,9 @@ namespace crow // NOTE: Already documented in "crow/app.h"
 
             if (!rule_index)
             {
-                for (auto& method : per_methods_)
+                for (auto& per_method : per_methods_)
                 {
-                    if (method.trie.find(req.url).rule_index)
+                    if (per_method.trie.find(req.url).rule_index)
                     {
                         CROW_LOG_DEBUG << "Cannot match method " << req.url << " " << method_name(req.method);
                         res = response(405);
@@ -1439,7 +1445,16 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             {
                 CROW_LOG_INFO << "Redirecting to a url with trailing slash: " << req.url;
                 res = response(301);
-                res.add_header("Location", req.url + "/");
+
+                // TODO(ipkn) absolute url building
+                if (req.get_header_value("Host").empty())
+                {
+                    res.add_header("Location", req.url + "/");
+                }
+                else
+                {
+                    res.add_header("Location", "http://" + req.get_header_value("Host") + req.url + "/");
+                }
                 res.end();
                 return;
             }
@@ -1678,7 +1693,16 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             {
                 CROW_LOG_INFO << "Redirecting to a url with trailing slash: " << req.url;
                 res = response(301);
-                res.add_header("Location", req.url + "/");
+
+                // TODO(ipkn) absolute url building
+                if (req.get_header_value("Host").empty())
+                {
+                    res.add_header("Location", req.url + "/");
+                }
+                else
+                {
+                    res.add_header("Location", "http://" + req.get_header_value("Host") + req.url + "/");
+                }
                 res.end();
                 return;
             }
@@ -1687,7 +1711,7 @@ namespace crow // NOTE: Already documented in "crow/app.h"
 
             try
             {
-                BaseRule& rule = *rules[rule_index];
+                auto& rule = rules[rule_index];
                 handle_rule<App>(rule, req, res, found.r_params);
             }
             catch (...)
@@ -1700,13 +1724,13 @@ namespace crow // NOTE: Already documented in "crow/app.h"
 
         template<typename App>
         typename std::enable_if<std::tuple_size<typename App::mw_container_t>::value != 0, void>::type
-          handle_rule(BaseRule& rule, crow::request& req, crow::response& res, const crow::routing_params& rp)
+          handle_rule(BaseRule* rule, crow::request& req, crow::response& res, const crow::routing_params& rp)
         {
-            if (!rule.mw_indices_.empty())
+            if (!rule->mw_indices_.empty())
             {
                 auto& ctx = *reinterpret_cast<typename App::context_t*>(req.middleware_context);
                 auto& container = *reinterpret_cast<typename App::mw_container_t*>(req.middleware_container);
-                detail::middleware_call_criteria_dynamic<false> crit_fwd(rule.mw_indices_.indices());
+                detail::middleware_call_criteria_dynamic<false> crit_fwd(rule->mw_indices_.indices());
 
                 auto glob_completion_handler = std::move(res.complete_request_handler_);
                 res.complete_request_handler_ = [] {};
@@ -1721,7 +1745,7 @@ namespace crow // NOTE: Already documented in "crow/app.h"
                 }
 
                 res.complete_request_handler_ = [&rule, &ctx, &container, &req, &res, glob_completion_handler] {
-                    detail::middleware_call_criteria_dynamic<true> crit_bwd(rule.mw_indices_.indices());
+                    detail::middleware_call_criteria_dynamic<true> crit_bwd(rule->mw_indices_.indices());
 
                     detail::after_handlers_call_helper<
                       decltype(crit_bwd),
@@ -1731,14 +1755,14 @@ namespace crow // NOTE: Already documented in "crow/app.h"
                     glob_completion_handler();
                 };
             }
-            rule.handle(req, res, rp);
+            rule->handle(req, res, rp);
         }
 
         template<typename App>
         typename std::enable_if<std::tuple_size<typename App::mw_container_t>::value == 0, void>::type
-          handle_rule(BaseRule& rule, crow::request& req, crow::response& res, const crow::routing_params& rp)
+          handle_rule(BaseRule* rule, crow::request& req, crow::response& res, const crow::routing_params& rp)
         {
-            rule.handle(req, res, rp);
+            rule->handle(req, res, rp);
         }
 
         void debug_print()
@@ -1772,11 +1796,6 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             try
             {
                 throw;
-            }
-            catch (const bad_request& e)
-            {
-                res = response (400);
-                res.body = e.what();
             }
             catch (const std::exception& e)
             {

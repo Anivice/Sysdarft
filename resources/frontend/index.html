@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Crow SSE Demo</title>
+</head>
+<body>
+<h1>Server-Sent Events with Crow</h1>
+<div id="messages">
+    <p><em>Waiting for messages...</em></p>
+</div>
+
+<script>
+    // Create a new EventSource connection to the SSE endpoint
+    const evtSource = new EventSource("http://localhost:8080/IntAlertSSE");
+
+    // Listen for messages from the server
+    evtSource.onmessage = function(event) {
+        // Create a new paragraph element for each message received
+        const para = document.createElement("p");
+        para.textContent = "Received: " + event.data;
+        document.getElementById("messages").appendChild(para);
+    };
+
+    evtSource.onerror = function(err) {
+        console.error("EventSource failed:", err);
+        evtSource.close();
+    };
+</script>
+</body>
+</html>

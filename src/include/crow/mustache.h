@@ -1,9 +1,3 @@
-/**
- * \file crow/mustache.h
- * \brief This file includes the definition of the crow::mustache
- * namespace and its members.
- */
-
 #pragma once
 #include <string>
 #include <vector>
@@ -15,61 +9,27 @@
 #include "crow/returnable.h"
 #include "crow/utility.h"
 
-namespace crow // NOTE: Already documented in "crow/app.h"
+namespace crow
 {
-    /**
-     * \namespace crow::mustache
-     * \brief In this namespace is defined most of the functions and
-     * classes related to template rendering.
-     *
-     * If you are here you might want to read these functions and
-     * classes:
-     *
-     * - \ref template_t
-     * - \ref load_text
-     * - \ref load_text_unsafe
-     * - \ref load
-     * - \ref load_unsafe
-     *
-     * As name suggest, crow uses [mustache](https://en.wikipedia.org/wiki/Mustache_(template_system))
-     * as main template rendering system.
-     *
-     * You may be interested in taking a look at the [Templating guide
-     * page](https://crowcpp.org/master/guides/templating/).
-     */
     namespace mustache
     {
         using context = json::wvalue;
 
         template_t load(const std::string& filename);
 
-        /**
-         * \class invalid_template_exception
-         * \brief Represents compilation error of an template. Throwed
-         * specially at mustache compile time.
-         */
         class invalid_template_exception : public std::exception
         {
         public:
-            invalid_template_exception(const std::string& msg_):
-              msg("crow::mustache error: " + msg_)
+            invalid_template_exception(const std::string& msg):
+              msg("crow::mustache error: " + msg)
             {}
-            virtual const char* what() const throw() override
+            virtual const char* what() const throw()
             {
                 return msg.c_str();
             }
             std::string msg;
         };
 
-        /**
-         * \struct rendered_template
-         * \brief Returned object after call the
-         * \ref template_t::render() method. Its intended to be
-         * returned during a **rule declaration**.
-         *
-         * \see \ref CROW_ROUTE
-         * \see \ref CROW_BP_ROUTE
-         */
         struct rendered_template : returnable
         {
             rendered_template():
@@ -86,13 +46,6 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             }
         };
 
-        /**
-         * \enum ActionType
-         * \brief Used in \ref Action to represent different parsing
-         * behaviors.
-         *
-         * \see \ref Action
-         */
         enum class ActionType
         {
             Ignore,
@@ -104,55 +57,19 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             Partial,
         };
 
-        /**
-         * \struct Action
-         * \brief Used during mustache template compilation to
-         * represent parsing actions.
-         *
-         * \see \ref compile
-         * \see \ref template_t
-         */
         struct Action
         {
-            bool has_end_match;
-            char tag_char;
             int start;
             int end;
             int pos;
             ActionType t;
-
-            Action(char tag_char_, ActionType t_, size_t start_, size_t end_, size_t pos_ = 0):
-              has_end_match(false), tag_char(tag_char_), start(static_cast<int>(start_)), end(static_cast<int>(end_)), pos(static_cast<int>(pos_)), t(t_)
+            Action(ActionType t, size_t start, size_t end, size_t pos = 0):
+              start(static_cast<int>(start)), end(static_cast<int>(end)), pos(static_cast<int>(pos)), t(t)
             {
-            }
-
-            bool missing_end_pair() const {
-                switch (t)
-                {
-                    case ActionType::Ignore:
-                    case ActionType::Tag:
-                    case ActionType::UnescapeTag:
-                    case ActionType::CloseBlock:
-                    case ActionType::Partial:
-                        return false;
-
-                    // requires a match
-                    case ActionType::OpenBlock:
-                    case ActionType::ElseBlock:
-                        return !has_end_match;
-
-                    default:
-                        throw std::logic_error("invalid type");
-                }
             }
         };
 
-        /**
-         * \class template_t
-         * \brief Compiled mustache template object.
-         *
-         * \warning Use \ref compile instead.
-         */
+        /// A mustache template object.
         class template_t
         {
         public:
@@ -506,7 +423,7 @@ namespace crow // NOTE: Already documented in "crow/app.h"
                     if (idx == body_.npos)
                     {
                         fragments_.emplace_back(static_cast<int>(current), static_cast<int>(body_.size()));
-                        actions_.emplace_back('!', ActionType::Ignore, 0, 0);
+                        actions_.emplace_back(ActionType::Ignore, 0, 0);
                         break;
                     }
                     fragments_.emplace_back(static_cast<int>(current), static_cast<int>(idx));
@@ -523,8 +440,7 @@ namespace crow // NOTE: Already documented in "crow/app.h"
                         throw invalid_template_exception("not matched opening tag");
                     }
                     current = endIdx + tag_close.size();
-                    char tag_char = body_[idx];
-                    switch (tag_char)
+                    switch (body_[idx])
                     {
                         case '#':
                             idx++;
@@ -533,7 +449,7 @@ namespace crow // NOTE: Already documented in "crow/app.h"
                             while (body_[endIdx - 1] == ' ')
                                 endIdx--;
                             blockPositions.emplace_back(static_cast<int>(actions_.size()));
-                            actions_.emplace_back(tag_char, ActionType::OpenBlock, idx, endIdx);
+                            actions_.emplace_back(ActionType::OpenBlock, idx, endIdx);
                             break;
                         case '/':
                             idx++;
@@ -542,29 +458,17 @@ namespace crow // NOTE: Already documented in "crow/app.h"
                             while (body_[endIdx - 1] == ' ')
                                 endIdx--;
                             {
-                                if (blockPositions.empty())
-                                {
-                                    throw invalid_template_exception(
-                                             std::string("unexpected closing tag: ")
-                                             + body_.substr(idx, endIdx - idx)
-                                             );
-                                }
                                 auto& matched = actions_[blockPositions.back()];
                                 if (body_.compare(idx, endIdx - idx,
                                                   body_, matched.start, matched.end - matched.start) != 0)
                                 {
-                                     throw invalid_template_exception(
-                                             std::string("not matched {{")
-                                             + matched.tag_char
-                                             + "{{/ pair: "
-                                             + body_.substr(matched.start, matched.end - matched.start) + ", "
-                                             + body_.substr(idx, endIdx - idx)
-                                             );
+                                    throw invalid_template_exception("not matched {{# {{/ pair: " +
+                                                                     body_.substr(matched.start, matched.end - matched.start) + ", " +
+                                                                     body_.substr(idx, endIdx - idx));
                                 }
-                                matched.pos = static_cast<int>(actions_.size());
-                                matched.has_end_match = true;
+                                matched.pos = actions_.size();
                             }
-                            actions_.emplace_back(tag_char, ActionType::CloseBlock, idx, endIdx, blockPositions.back());
+                            actions_.emplace_back(ActionType::CloseBlock, idx, endIdx, blockPositions.back());
                             blockPositions.pop_back();
                             break;
                         case '^':
@@ -574,11 +478,11 @@ namespace crow // NOTE: Already documented in "crow/app.h"
                             while (body_[endIdx - 1] == ' ')
                                 endIdx--;
                             blockPositions.emplace_back(static_cast<int>(actions_.size()));
-                            actions_.emplace_back(tag_char, ActionType::ElseBlock, idx, endIdx);
+                            actions_.emplace_back(ActionType::ElseBlock, idx, endIdx);
                             break;
                         case '!':
                             // do nothing action
-                            actions_.emplace_back(tag_char, ActionType::Ignore, idx + 1, endIdx);
+                            actions_.emplace_back(ActionType::Ignore, idx + 1, endIdx);
                             break;
                         case '>': // partial
                             idx++;
@@ -586,7 +490,7 @@ namespace crow // NOTE: Already documented in "crow/app.h"
                                 idx++;
                             while (body_[endIdx - 1] == ' ')
                                 endIdx--;
-                            actions_.emplace_back(tag_char, ActionType::Partial, idx, endIdx);
+                            actions_.emplace_back(ActionType::Partial, idx, endIdx);
                             break;
                         case '{':
                             if (tag_open != "{{" || tag_close != "}}")
@@ -601,7 +505,7 @@ namespace crow // NOTE: Already documented in "crow/app.h"
                                 idx++;
                             while (body_[endIdx - 1] == ' ')
                                 endIdx--;
-                            actions_.emplace_back(tag_char, ActionType::UnescapeTag, idx, endIdx);
+                            actions_.emplace_back(ActionType::UnescapeTag, idx, endIdx);
                             current++;
                             break;
                         case '&':
@@ -610,12 +514,12 @@ namespace crow // NOTE: Already documented in "crow/app.h"
                                 idx++;
                             while (body_[endIdx - 1] == ' ')
                                 endIdx--;
-                            actions_.emplace_back(tag_char, ActionType::UnescapeTag, idx, endIdx);
+                            actions_.emplace_back(ActionType::UnescapeTag, idx, endIdx);
                             break;
                         case '=':
                             // tag itself is no-op
                             idx++;
-                            actions_.emplace_back(tag_char, ActionType::Ignore, idx, endIdx);
+                            actions_.emplace_back(ActionType::Ignore, idx, endIdx);
                             endIdx--;
                             if (body_[endIdx] != '=')
                                 throw invalid_template_exception("{{=: not matching = tag: " + body_.substr(idx, endIdx - idx));
@@ -656,27 +560,13 @@ namespace crow // NOTE: Already documented in "crow/app.h"
                                 idx++;
                             while (body_[endIdx - 1] == ' ')
                                 endIdx--;
-                            actions_.emplace_back(tag_char, ActionType::Tag, idx, endIdx);
+                            actions_.emplace_back(ActionType::Tag, idx, endIdx);
                             break;
                     }
                 }
 
-                // ensure no unmatched tags
-                for (int i = 0; i < static_cast<int>(actions_.size()); i++)
-                {
-                    if (actions_[i].missing_end_pair())
-                    {
-                        throw invalid_template_exception(
-                                std::string("open tag has no matching end tag {{")
-                                + actions_[i].tag_char
-                                + " {{/ pair: "
-                                + body_.substr(actions_[i].start, actions_[i].end - actions_[i].start)
-                                );
-                    }
-                }
-
                 // removing standalones
-                for (int i = static_cast<int>(actions_.size()) - 2; i >= 0; i--)
+                for (int i = actions_.size() - 2; i >= 0; i--)
                 {
                     if (actions_[i].t == ActionType::Tag || actions_[i].t == ActionType::UnescapeTag)
                         continue;
@@ -736,13 +626,10 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             std::string body_;
         };
 
-        /// \brief The function that compiles a source into a mustache
-        /// template.
         inline template_t compile(const std::string& body)
         {
             return template_t(body);
         }
-
         namespace detail
         {
             inline std::string& get_template_base_directory_ref()
@@ -759,9 +646,6 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             }
         } // namespace detail
 
-        /// \brief The default way that \ref load, \ref load_unsafe,
-        /// \ref load_text and \ref load_text_unsafe use to read the
-        /// contents of a file.
         inline std::string default_loader(const std::string& filename)
         {
             std::string path = detail::get_template_base_directory_ref();
@@ -783,8 +667,6 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             }
         } // namespace detail
 
-        /// \brief Defines the templates directory path at **route
-        /// level**. By default is `templates/`.
         inline void set_base(const std::string& path)
         {
             auto& base = detail::get_template_base_directory_ref();
@@ -796,8 +678,6 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             }
         }
 
-        /// \brief Defines the templates directory path at **global
-        /// level**. By default is `templates/`.
         inline void set_global_base(const std::string& path)
         {
             auto& base = detail::get_global_template_base_directory_ref();
@@ -809,22 +689,11 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             }
         }
 
-        /// \brief Change the way that \ref load, \ref load_unsafe,
-        /// \ref load_text and \ref load_text_unsafe reads a file.
-        ///
-        /// By default, the previously mentioned functions load files
-        /// using \ref default_loader, that only reads a file and
-        /// returns a std::string.
         inline void set_loader(std::function<std::string(std::string)> loader)
         {
             detail::get_loader_ref() = std::move(loader);
         }
 
-        /// \brief Open, read and sanitize a file but returns a
-        /// std::string without a previous rendering process.
-        ///
-        /// Except for the **sanitize process** this function does the
-        /// almost the same thing that \ref load_text_unsafe.
         inline std::string load_text(const std::string& filename)
         {
             std::string filename_sanitized(filename);
@@ -832,33 +701,11 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             return detail::get_loader_ref()(filename_sanitized);
         }
 
-        /// \brief Open and read a file but returns a std::string
-        /// without a previous rendering process.
-        ///
-        /// This function is more like a helper to reduce code like
-        /// this...
-        ///
-        /// ```cpp
-        /// std::ifstream file("home.html");
-        /// return std::string({std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()});
-        /// ```
-        ///
-        /// ... Into this...
-        ///
-        /// ```cpp
-        /// return load("home.html");
-        /// ```
-        ///
-        /// \warning Usually \ref load_text is more recommended to use
-        /// instead because it may prevent some [XSS Attacks](https://en.wikipedia.org/wiki/Cross-site_scripting).
-        /// **Never blindly trust your users!**
         inline std::string load_text_unsafe(const std::string& filename)
         {
             return detail::get_loader_ref()(filename);
         }
 
-        /// \brief Open, read and renders a file using a mustache
-        /// compiler. It also sanitize the input before compilation.
         inline template_t load(const std::string& filename)
         {
             std::string filename_sanitized(filename);
@@ -866,13 +713,6 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             return compile(detail::get_loader_ref()(filename_sanitized));
         }
 
-        /// \brief Open, read and renders a file using a mustache
-        /// compiler. But it **do not** sanitize the input before
-        /// compilation.
-        ///
-        /// \warning Usually \ref load is more recommended to use
-        /// instead because it may prevent some [XSS Attacks](https://en.wikipedia.org/wiki/Cross-site_scripting).
-        /// **Never blindly trust your users!**
         inline template_t load_unsafe(const std::string& filename)
         {
             return compile(detail::get_loader_ref()(filename));
