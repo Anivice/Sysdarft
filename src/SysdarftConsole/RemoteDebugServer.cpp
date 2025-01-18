@@ -125,14 +125,18 @@ RemoteDebugServer::RemoteDebugServer(
                 Parser parser(condition);
                 parser.parseExpression(); // try parse once to do a sanity check
             }
-
         } catch (const std::exception & e) {
             response["Result"] = "Conditional Expression Error: " + std::string(e.what());
             return crow::response(400, response.dump());
         }
 
         std::lock_guard lock(g_br_list_access_mutex);
-        breakpoint_list[std::pair(CB, IP)] = condition;
+        try {
+            breakpoint_list[std::pair(CB, IP)] = condition;
+        } catch (const std::exception & e) {
+            response["Result"] = "Conditional Expression Error: " + std::string(e.what());
+            return crow::response(400, response.dump());
+        }
 
         response["Result"] = "Success";
         response["Linear"] = address_literal.str();
