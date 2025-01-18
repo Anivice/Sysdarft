@@ -121,6 +121,8 @@ private:
     add_instruction_exec(div);
     add_instruction_exec(neg);
     add_instruction_exec(cmp);
+    add_instruction_exec(inc);
+    add_instruction_exec(dec);
 
     // Data Transfer
     add_instruction_exec(mov);
@@ -163,6 +165,7 @@ private:
     add_instruction_exec(jnc);
     add_instruction_exec(jo);
     add_instruction_exec(jno);
+    add_instruction_exec(loop);
 
     // IO
     add_instruction_exec(in);

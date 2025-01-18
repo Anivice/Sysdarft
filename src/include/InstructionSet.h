@@ -21,6 +21,8 @@
 #define OPCODE_DIV      (0x08)
 #define OPCODE_NEG      (0x09)
 #define OPCODE_CMP      (0x0A)
+#define OPCODE_INC      (0x0B)
+#define OPCODE_DEC      (0x0C)
 
 #define OPCODE_AND      (0x10)
 #define OPCODE_OR       (0x11)
@@ -60,6 +62,7 @@
 #define OPCODE_JNC      (0x3D)
 #define OPCODE_JO       (0x3E)
 #define OPCODE_JNO      (0x3F)
+#define OPCODE_LOOP     (0x60)
 
 #define OPCODE_HLT      (0x40)
 #define OPCODE_IGNI     (0x41)
@@ -147,6 +150,20 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
          {ENTRY_ARGUMENT_COUNT, 2},
          {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
      }
+    },
+
+    {"INC", {
+               {ENTRY_OPCODE, OPCODE_INC},
+               {ENTRY_ARGUMENT_COUNT, 1},
+               {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+           }
+    },
+
+    {"DEC", {
+               {ENTRY_OPCODE, OPCODE_DEC},
+               {ENTRY_ARGUMENT_COUNT, 1},
+               {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+           }
     },
 
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -406,9 +423,17 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
                {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
            }
     },
+
     {"IRET", {
                {ENTRY_OPCODE, OPCODE_IRET},
                {ENTRY_ARGUMENT_COUNT, 0},
+               {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
+           }
+    },
+
+    {"LOOP", {
+               {ENTRY_OPCODE, OPCODE_LOOP},
+               {ENTRY_ARGUMENT_COUNT, 2},
                {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
            }
     },

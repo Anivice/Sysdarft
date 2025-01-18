@@ -5,9 +5,8 @@
 #include <SysdarftDebug.h>
 #include <InstructionSet.h>
 
-std::regex target_pattern(R"(<\s*(?:\*\s*(?:1|2|4|8|16)\&(8|16|32|64)\s*\([^,]+,[^,]+,[^,]+\)|%(?:R|EXR|HER)[0-7]|%(FER)([\d]+)|%(SB|SP|CB|DB|DP|EB|EP)|%XMM[0-5]|\$\s*\(\s*(?:0[xX][A-Fa-f0-9]+|\s|[+\-.',*\/^%()xX0-9-])+\s*\))\s*>)");
-std::regex instruction_pattern(R"(([A-Z-0-9]+))");
-std::regex operation_width(R"(.8BIT|.16BIT|.32BIT|.64BIT)");
+const std::regex instruction_pattern(R"(([A-Z-0-9]+))");
+const std::regex operation_width(R"(.8BIT|.16BIT|.32BIT|.64BIT)");
 
 std::vector<std::string> clean_line(const std::string & _input)
 {

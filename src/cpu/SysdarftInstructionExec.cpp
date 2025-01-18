@@ -20,6 +20,8 @@ SysdarftCPUInstructionExecutor::SysdarftCPUInstructionExecutor(const uint64_t me
     make_instruction_execution_procedure(OPCODE_DIV, &SysdarftCPUInstructionExecutor::div);
     make_instruction_execution_procedure(OPCODE_NEG, &SysdarftCPUInstructionExecutor::neg);
     make_instruction_execution_procedure(OPCODE_CMP, &SysdarftCPUInstructionExecutor::cmp);
+    make_instruction_execution_procedure(OPCODE_INC, &SysdarftCPUInstructionExecutor::inc);
+    make_instruction_execution_procedure(OPCODE_DEC, &SysdarftCPUInstructionExecutor::dec);
 
     // Data Transfer
     make_instruction_execution_procedure(OPCODE_MOV, &SysdarftCPUInstructionExecutor::mov);
@@ -58,6 +60,7 @@ SysdarftCPUInstructionExecutor::SysdarftCPUInstructionExecutor(const uint64_t me
     make_instruction_execution_procedure(OPCODE_INT, &SysdarftCPUInstructionExecutor::int_);
     make_instruction_execution_procedure(OPCODE_INT3, &SysdarftCPUInstructionExecutor::int3);
     make_instruction_execution_procedure(OPCODE_IRET, &SysdarftCPUInstructionExecutor::iret);
+    make_instruction_execution_procedure(OPCODE_LOOP, &SysdarftCPUInstructionExecutor::loop);
 
     // IOH
     make_instruction_execution_procedure(OPCODE_IN, &SysdarftCPUInstructionExecutor::in);

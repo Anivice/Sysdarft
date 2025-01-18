@@ -37,7 +37,7 @@ ParsedArgs get_args(const int argc, char** argv, option long_options[])
                     const std::string opt_name(long_options[idx].name);
                     // If this option appears multiple times,
                     // push_back each new value instead of overwriting.
-                    parsed_options[opt_name].push_back(optarg ? optarg : "");
+                    parsed_options[opt_name].emplace_back(optarg ? optarg : "");
                     break;
                 }
             }

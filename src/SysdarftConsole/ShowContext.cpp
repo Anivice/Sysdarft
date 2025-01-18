@@ -350,20 +350,12 @@ std::string show_context(SysdarftCPU &CPUInstance,
     ss << "==============================================================================\n";
 
     ////////////////////////////////////////////////////////////////////////////////
-    // SHOW CURRENT INSTRUCTION PENDING TO BE EXECUTED
+    // SHOW CURRENT AND NEXT 8 INSTRUCTIONS
     ////////////////////////////////////////////////////////////////////////////////
-
-    ss << " =============> " << current_instruction(opcode, Arg) << "\n";
-
-    ////////////////////////////////////////////////////////////////////////////////
-    // SHOW NEXT 8 INSTRUCTIONS
-    ////////////////////////////////////////////////////////////////////////////////
+    auto show_next_8_instructions = [&]()
     {
-        ss << "Following instructions:\n";
         std::vector<std::string> next_8_instructions;
-        const uint64_t offset =
-              CPUInstance.load<CodeBaseType>()
-            + CPUInstance.load<InstructionPointerType>();
+        const uint64_t offset = CPUInstance.load<CodeBaseType>() + CPUInstance.load<InstructionPointerType>();
         const uint64_t length = std::min<uint64_t>(256, CPUInstance.SystemTotalMemory() - offset);
         std::vector<uint8_t> buffer_max256;
         buffer_max256.reserve(length);
@@ -396,7 +388,10 @@ std::string show_context(SysdarftCPU &CPUInstance,
         for (const auto &instruction : next_8_instructions) {
             ss << instruction << "\n";
         }
-    }
+    };
+
+    ss << " =============> " << current_instruction(opcode, Arg) << "\n";
+    show_next_8_instructions();
 
     // return result
     return ss.str();

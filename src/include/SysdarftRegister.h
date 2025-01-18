@@ -431,7 +431,7 @@ public:
     || std::is_same_v<AccessRegisterType, ExtendedPointerType>
     || std::is_same_v<AccessRegisterType, WholeRegisterType>
     || std::is_same_v<AccessRegisterType, CurrentProcedureStackPreservationSpaceType>
-    void store(const typename RegisterTypeIdentifier < AccessRegisterType >::type & Reg)
+    void store(const typename RegisterTypeIdentifier < AccessRegisterType >::type Reg)
     {
         std::lock_guard<std::mutex> lock(RegisterModificationMutex);
         if constexpr (std::is_same_v<AccessRegisterType, FullyExtendedRegisterType> && AccessRegisterIndex == 0) {

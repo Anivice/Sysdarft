@@ -155,3 +155,17 @@ void SysdarftCPUInstructionExecutor::jno(__uint128_t, WidthAndOperandsType & Wid
         SysdarftRegister::store<InstructionPointerType>(ip);
     }
 }
+
+void SysdarftCPUInstructionExecutor::loop(__uint128_t, WidthAndOperandsType & WidthAndOperands)
+{
+    // jump if %fer3 != 0
+    if (const auto cx = SysdarftRegister::load<FullyExtendedRegisterType, 3>() - 1;
+        cx != 0)
+    {
+        const uint64_t addr_base = WidthAndOperands.second[0].get_val();
+        const uint64_t ip = WidthAndOperands.second[1].get_val();
+        SysdarftRegister::store<CodeBaseType>(addr_base);
+        SysdarftRegister::store<InstructionPointerType>(ip);
+        SysdarftRegister::store<FullyExtendedRegisterType, 3>(cx);
+    }
+}

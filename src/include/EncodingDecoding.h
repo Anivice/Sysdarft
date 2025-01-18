@@ -194,9 +194,10 @@ void SYSDARFT_EXPORT_SYMBOL process_base16(std::string &);
 void SYSDARFT_EXPORT_SYMBOL replace_all(std::string &, const std::string &, const std::string &);
 std::string SYSDARFT_EXPORT_SYMBOL execute_bc(const std::string &);
 
-parsed_target_t encode_target(std::vector < uint8_t > &, const std::string &);
+parsed_target_t SYSDARFT_EXPORT_SYMBOL encode_target(std::vector < uint8_t > &, const std::string &);
 void decode_target(std::vector < std::string > &, std::vector < uint8_t > &);
 
+const std::regex target_pattern(R"(<\s*(?:\*\s*(?:1|2|4|8|16)\&(8|16|32|64)\s*\([^,]+,[^,]+,[^,]+\)|%(?:R|EXR|HER)[0-7]|%(FER)([\d]+)|%(SB|SP|CB|DB|DP|EB|EP)|%XMM[0-5]|\$\s*\(\s*(?:0[xX][A-Fa-f0-9]+|\s|[+\-.',*\/^%()xX0-9-])+\s*\))\s*>)");
 void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector < uint8_t > &, const std::string &);
 void SYSDARFT_EXPORT_SYMBOL decode_instruction(std::vector < std::string > &, std::vector<uint8_t> &);
 void SYSDARFT_EXPORT_SYMBOL SysdarftCompile(std::vector < std::vector < uint8_t > > &,

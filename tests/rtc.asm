@@ -12,7 +12,7 @@ _start:
 
     _inf_loop:
         int <$(0x14)>
-        cmp .8bit <%R0>, <$('q')>
+        cmp .8bit <%r0>, <$('q')>
         jne <%cb>, <_inf_loop>
 
     hlt
@@ -20,12 +20,12 @@ _start:
 _int_kb_abort:
     xor .64bit <%fer2>, <%fer2>
     xor .64bit <%fer0>, <%fer0>
-    mov .64bit <%FER1>, < _message >
+    mov .64bit <%fer1>, < _message >
 
     .loop_message:
-        mov .8bit <%R0>, <*1&8(%FER1, %FER2, $(0))>
-        add .64bit <%FER2>, <$(1)>
-        cmp .8bit <%R0>, <$(0)>
+        mov .8bit <%r0>, <*1&8(%fer1, %fer2, $(0))>
+        inc .64bit <%fer2>,
+        cmp .8bit <%r0>, <$(0)>
         je <%cb>,  < .loop_msg_end >
         int <$(0x10)>
         jmp <%cb>, < .loop_message >
@@ -49,7 +49,7 @@ _int_rtc:
         mov .64bit <%fer0>, <%fer1>
         add .64bit <%fer0>, <$('0')>
         push .64bit <%fer0>
-        add .64bit <%fer2>, <$(1)>
+        inc .64bit <%fer2>
 
         mov .64bit <%fer1>, <%fer4>
         mov .64bit <%fer0>, <%fer3>
@@ -57,12 +57,11 @@ _int_rtc:
         cmp .64bit <%fer0>, <$(0x00)>
         jne <%cb>, <.loop_rtc_start>
 
+    mov .64bit <%fer3>, <%fer2>
     .loop_print:
         pop .64bit <%fer0>
         int <$(0x10)>
-        sub .64bit <%fer2>, <$(1)>
-        cmp .64bit <%fer2>, <$(0)>
-        jne <%cb>, <.loop_print>
+        loop <%cb>, <.loop_print>
     int <$(0x13)>
     iret
 

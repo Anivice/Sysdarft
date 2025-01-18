@@ -315,6 +315,7 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     set_tests_properties("Unit Test: test.preprocessor" PROPERTIES LABELS "NotTestable")
     add_unit_test(test.cpu tests/test.cpu.cpp)
     set_tests_properties("Unit Test: test.cpu" PROPERTIES LABELS "NotTestable")
+    add_unit_test(test.conditional tests/test.conditional.cpp)
 
     add_custom_target(
             COPY_HDA_FILE ALL
@@ -352,6 +353,10 @@ add_executable(sysdarft-system
         src/SysdarftConsole/ConditionalExpression.cpp
         src/SysdarftConsole/ShowContext.cpp
         src/SysdarftConsole/DebugAction.cpp
+        src/SysdarftConsole/CrowLog.cpp
+        src/SysdarftConsole/DebugConsole.cpp
+        src/SysdarftConsole/debugger_operand.h
+        src/SysdarftConsole/debugger_operand.cpp
 )
 target_include_directories(sysdarft-system PUBLIC ${ASIO_INCLUDE_DIR} src/include src/include/crow)
 target_link_libraries(sysdarft-system PUBLIC Sysdarft nlohmann_json::nlohmann_json)

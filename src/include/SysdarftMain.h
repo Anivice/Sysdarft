@@ -87,6 +87,44 @@ std::string show_context(SysdarftCPU &, uint64_t actual_ip, uint8_t, const Sysda
 
 class RemoteDebugServer {
 private:
+    struct ConditionalTargetExpression {
+        std::string TgExp1;
+        std::string TgExp2;
+        std::vector < uint8_t > EncodedTgExp1;
+        std::vector < uint8_t > EncodedTgExp2;
+        std::unique_ptr<ConditionalTargetExpression> ComplexTgExp1;
+        std::unique_ptr<ConditionalTargetExpression> ComplexTgExp2;
+        int ConditionType;  // Codes for different conditions
+    };
+
+    enum ConditionTypes {
+        VAL_EQUAL,
+        AND,
+        OR,
+        NOT,
+        NONE
+    };
+
+    class Parser {
+    public:
+        explicit Parser(const std::string& input) : input(input), pos(0) {}
+        std::unique_ptr<ConditionalTargetExpression> parseExpression();
+
+    private:
+        std::string input;
+        size_t pos;
+
+        void skipWhitespace();
+        bool match(const std::string& keyword);
+        std::unique_ptr<ConditionalTargetExpression> parseValEqual();
+        std::unique_ptr<ConditionalTargetExpression> parseLogical(const int condType);
+
+        // Regex processing remains unchanged
+        std::string processTgExp(const std::string& exp);
+        std::string parseUntilCommaOrParen();
+        std::string parseUntilParen();
+    };
+
     struct SSEConnection {
         std::shared_ptr<crow::response> resPtr;
         bool isOpen;
@@ -98,30 +136,24 @@ private:
 
     std::mutex g_br_list_access_mutex;
     std::map < std::pair < uint64_t /* CB */, uint64_t /* IP */ > /* breakpoint */,
-        std::vector < uint8_t > /* conditional byte code */ > breakpoint_list;
-    std::vector < std::pair < std::vector < uint8_t >, bool > > watch_list;
+        std::string /* condition */ > breakpoint_list;
+    std::vector < std::pair < std::vector < uint8_t > /* target */, uint64_t /* last value */ > > watch_list;
 
     std::atomic < bool > skip_bios_ip_check = false;
     std::atomic < bool > breakpoint_triggered = false;
+    std::atomic < bool > manual_stop = false;
+    std::atomic < bool > stepi = false;
     std::ofstream crow_log;
     std::mutex sseMutex;
     std::vector<SSEConnection> sseClients;
-    std::mutex action_access_mutex;
-    std::vector < uint8_t > debug_action_request;
-    std::mutex action_result_access_mutex;
-    std::string debug_action_result;
+    std::atomic < uint64_t > actual_ip;
+    std::atomic < uint8_t > opcode;
+    std::atomic < const SysdarftCPU::WidthAndOperandsType * > args;
 
-    std::vector < uint8_t > compile_conditional_expression_to_byte_code(const std::string & conditional_expression);
-    bool is_condition_met(std::vector < uint8_t > condition_expression_byte_code);
-    std::vector < uint8_t > compile_action_from_expression_to_byte_code(const std::string & action_expression);
-    std::string invoke_action(const std::vector < uint8_t > & action_code);
-
-    template < typename... Args >
-    std::string invoke_action(const uint8_t action, const Args &... args)
-    {
-        const auto action_code = do_action(action, args...);
-        return invoke_action(action_code);
-    }
+    bool is_condition_met(const std::string &);
+    uint64_t absolute_target_access(const std::vector < uint8_t > &) const;
+    void absolute_target_store(const std::vector < uint8_t > &, uint64_t);
+    bool check_one_level_of_condition(const ConditionalTargetExpression * expr);
 
     class SysdarftLogHandler final : public crow::ILogHandler
     {
@@ -132,25 +164,7 @@ private:
     public:
         explicit SysdarftLogHandler(std::ostream & custom_stream_, const bool log_available_)
             : custom_stream(custom_stream_), log_available(log_available_) { }
-
-        void log(std::string message, crow::LogLevel level) override
-        {
-            if (!log_available) {
-                return;
-            }
-
-            const char* level_text = nullptr;
-            switch (level) {
-            case crow::LogLevel::Debug:     level_text = "[DEBUG]";   break;
-            case crow::LogLevel::Info:      level_text = "[INFO]";    break;
-            case crow::LogLevel::Warning:   level_text = "[WARN]";    break;
-            case crow::LogLevel::Error:     level_text = "[ERROR]";   break;
-            case crow::LogLevel::Critical:  level_text = "[CRITICAL]";break;
-            default:                        level_text = "[LOG]";     break;
-            }
-
-            custom_stream << level_text << " " << message << std::endl;
-        }
+        void log(std::string message, crow::LogLevel level) override;
     } SysdarftLogHandlerInstance;
 
 public:
