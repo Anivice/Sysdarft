@@ -16,14 +16,37 @@ void RemoteDebugServer::crow_setup_intAlertSSE()
             CROW_LOG_INFO << "Websocket connection closed: " << reason;
         })
 
-        .onmessage([&](crow::websocket::connection &conn, const std::string &, bool is_binary)
+        .onmessage([&](crow::websocket::connection &conn, const std::string & request, bool is_binary)
         {
-            const std::string data = breakpoint_triggered ? "Paused" : "Running";
+            if (request == "Status") {
+                const std::string data = breakpoint_triggered ? "Paused" : "Running";
 
-            if (is_binary) {
-                conn.send_binary(data);
+                if (is_binary) {
+                    conn.send_binary(data);
+                } else {
+                    conn.send_text(data);
+                }
+            } else if (request == "VideoMemory") {
+                try {
+                    static char buffer [VIDEO_MEMORY_SIZE + 3] = { 0 };
+                    std::memset(buffer, 0, VIDEO_MEMORY_SIZE + 3);
+                    buffer[0] = '\'';
+                    CPUInstance.read_memory(VIDEO_MEMORY_START, buffer + 1, VIDEO_MEMORY_SIZE);
+                    buffer[VIDEO_MEMORY_SIZE + 1] = '\'';
+                    if (is_binary) {
+                        conn.send_binary(buffer);
+                    } else {
+                        conn.send_text(buffer);
+                    }
+                } catch (const std::exception &e) {
+                    conn.send_text("Error: " + std::string(e.what()));
+                }
             } else {
-                conn.send_text(data);
+                if (is_binary) {
+                    conn.send_binary("Request not recognized");
+                } else {
+                    conn.send_text("Request not recognized");
+                }
             }
         });
 }

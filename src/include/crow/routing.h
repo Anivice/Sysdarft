@@ -461,7 +461,17 @@ namespace crow // NOTE: Already documented in "crow/app.h"
         void handle_upgrade(const request& req, response&, SocketAdaptor&& adaptor) override
         {
             max_payload_ = max_payload_override_ ? max_payload_ : app_->websocket_max_payload();
-            new crow::websocket::Connection<SocketAdaptor, App>(req, std::move(adaptor), app_, max_payload_, open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
+            // TODO: Definitely direct leak when WS is not closed before shutdown
+            new crow::websocket::Connection<SocketAdaptor, App>(
+                req,
+                std::move(adaptor),
+                app_,
+                max_payload_,
+                open_handler_,
+                message_handler_,
+                close_handler_,
+                error_handler_,
+                accept_handler_);
         }
 #ifdef CROW_ENABLE_SSL
         void handle_upgrade(const request& req, response&, SSLAdaptor&& adaptor) override

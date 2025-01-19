@@ -25,5 +25,14 @@ int main()
                 conn.send_text(data);
         });
 
-    app.port(18080).run(); // Run the server on port 18080
+    auto worker = [&]() {
+        app.port(18080).run(); // Run the server on port 18080
+    };
+
+    std::thread worker_thread(worker);
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    app.stop();
+    if (worker_thread.joinable()) {
+        worker_thread.join();
+    }
 }

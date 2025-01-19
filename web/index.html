@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dynamic Colored Text with Vue.js</title>
+    <style>
+        /* Scoped-like styling for simplicity in a single file */
+        label {
+            display: block;
+            margin: 0.5em 0;
+        }
+        button {
+            display: block;
+            margin: 0.5em 0;
+            padding: 0.5em 1em;
+            cursor: pointer;
+        }
+        .colored-text {
+            font-size: 16px;
+            margin-top: 1em;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <!-- Form for user to input text and select a color -->
+    <div>
+        <label>
+            Enter Text:
+            <input type="text" v-model="newText" placeholder="Your text here" />
+        </label>
+        <label>
+            Select Color:
+            <input type="color" v-model="newColor" />
+        </label>
+        <button @click="addColoredText">Add Colored Text</button>
+    </div>
+
+    <!-- Display dynamically generated colored text items -->
+    <div v-for="(item, index) in coloredTexts" :key="index" class="colored-text" :style="{ color: item.color }">
+        {{ item.text }}
+    </div>
+</div>
+
+<!-- Include Vue 3 via CDN -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script>
+    const { createApp } = Vue;
+    createApp({
+        data() {
+            return {
+                newText: '',         // Holds user input text
+                newColor: '#000000', // Holds user-selected color (default black)
+                coloredTexts: []     // Array to store text and associated colors
+            };
+        },
+        methods: {
+            addColoredText() {
+                // Only add if there is non-empty text
+                if (this.newText.trim()) {
+                    this.coloredTexts.push({
+                        text: this.newText,
+                        color: this.newColor
+                    });
+                    // Reset text input after adding
+                    this.newText = '';
+                    // Optionally reset color: this.newColor = '#000000';
+                }
+            }
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
