@@ -149,16 +149,42 @@ void process_equ(const std::string& input, std::map < std::string, std::string >
     }
 }
 
-void sed_equ(std::string& input, std::map < std::string, std::string > & equ_replacement)
+void sed_equ(std::string& input, std::map < std::string, std::string > & equ_replacement, const bool regex)
 {
-    for (const auto & [key, value] : equ_replacement) {
-        replace_all(input, key, value);
+    for (const auto & [key, value] : equ_replacement)
+    {
+        if (regex)
+        {
+            const auto grep = debug::exec_command("/usr/bin/grep", input, "-E", key);
+            if (grep.exit_status == 0)
+            {
+                std::stringstream ss;
+                ss << "s/" << key << "/" << value << "/g";
+                const auto result = debug::exec_command("/usr/bin/sed", input, "-E", ss.str());
+                if (result.exit_status != 0) {
+                    throw SysdarftPreProcessorError("Failed to process .equ using sed: " + result.fd_stderr);
+                }
+
+                input = result.fd_stdout;
+            }
+
+            // we have to warn the user if grep simply cannot be found, NOT because there is NOT a match
+            if (grep.exit_status == 127) {
+                // command not found
+                throw SysdarftPreProcessorError("Regular expression cannot be processed since grep cannot be executed (not found)");
+            }
+        } else {
+            if (input.find(key) != std::string::npos) {
+                replace_all(input, key, value);
+            }
+        }
     }
 }
 
 void CodeProcessing(
     std::vector < uint8_t > & compiled_code,
-    std::vector < std::string > & file)
+    std::vector < std::string > & file,
+    const bool regex)
 {
     uint64_t org;
     defined_line_marker_t defined_line_marker;
@@ -253,7 +279,7 @@ void CodeProcessing(
         }
 
         // not a preprocessor
-        sed_equ(line, equ_replacement);
+        sed_equ(line, equ_replacement, regex);
         // replace_all(line, ":", ":\n"); We revoked this so that line number can count correctly
         code_block << line << std::endl;
         // we don't use pop_front(); since we want to preserve line number offset
@@ -280,7 +306,7 @@ void CodeProcessing(
     }
 }
 
-void CodeProcessing(std::vector <uint8_t> & code, std::basic_istream<char>& file)
+void CodeProcessing(std::vector <uint8_t> & code, std::basic_istream<char>& file, const bool regex)
 {
     std::vector < std::string > lines;
     std::string line;
@@ -288,5 +314,5 @@ void CodeProcessing(std::vector <uint8_t> & code, std::basic_istream<char>& file
         lines.emplace_back(line);
     }
 
-    CodeProcessing(code, lines);
+    CodeProcessing(code, lines, regex);
 }

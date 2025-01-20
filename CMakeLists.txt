@@ -337,7 +337,7 @@ find_package(nlohmann_json REQUIRED)
 find_path(ASIO_INCLUDE_DIR
         NAMES asio.hpp
         PATHS /usr/include /usr/local/include
-        DOC "Path to the standalone Asio headers (asio.hpp)"
+        doc "Path to the standalone Asio headers (asio.hpp)"
 )
 if(NOT ASIO_INCLUDE_DIR)
     message(FATAL_ERROR "Could not find <asio.hpp>.")

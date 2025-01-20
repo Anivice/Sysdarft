@@ -14,7 +14,7 @@ public:
         device_list.emplace_back(std::make_unique<SysdarftHardDisk>("hda.img"));
         std::vector < uint8_t > code;
         std::fstream file("example.asm", std::ios::in);
-        CodeProcessing(code, file);
+        CodeProcessing(code, file, false);
 
         uint64_t off = BIOS_START;
         for (const auto & c : code) {

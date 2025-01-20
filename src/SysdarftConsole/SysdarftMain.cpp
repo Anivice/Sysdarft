@@ -235,8 +235,13 @@ int main(int argc, char** argv)
                     exit_failure_on_error();
                 }
 
+                bool regex = false;
+                if (parsed_options.contains("regex")) {
+                    regex = true;
+                }
+
                 if (format.at(0) == "bin") {
-                    compile_to_binary(src_files, output_file.at(0));
+                    compile_to_binary(src_files, output_file.at(0), regex);
                 } else if (format.at(0) == "exe") {
                     std::cerr << "ERROR: Feature not implemented!" << std::endl;
                     exit_failure_on_error();

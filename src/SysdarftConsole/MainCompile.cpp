@@ -1,6 +1,8 @@
 #include <SysdarftMain.h>
 
-void compile_to_binary(const std::vector< std::string > & source_files, const std::string & binary_filename)
+void compile_to_binary(const std::vector< std::string > & source_files,
+    const std::string & binary_filename,
+    const bool regex)
 {
     std::vector < std::vector < uint8_t > > binary_cct;
     for (const std::string & source_file : source_files)
@@ -13,7 +15,7 @@ void compile_to_binary(const std::vector< std::string > & source_files, const st
             }
 
             std::vector < uint8_t > binary;
-            CodeProcessing(binary, file);
+            CodeProcessing(binary, file, regex);
 
             file.close();
             binary_cct.emplace_back(binary);

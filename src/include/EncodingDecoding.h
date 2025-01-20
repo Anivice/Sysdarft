@@ -662,12 +662,14 @@ SysdarftCompile(
  *
  * @param code Encoded binary code
  * @param file Data stream, can be a file or any other data stream types
+ * @param regex If regular expression is used in .equ preprocessor directive
  * @return Nothing
  *
  * @throw SysdarftPreProcessorError
  */
 void SYSDARFT_EXPORT_SYMBOL CodeProcessing(
     std::vector < uint8_t > & code,
-    std::basic_istream < char > & file);
+    std::basic_istream < char > & file,
+    bool regex);
 
 #endif // INSTRUCTIONS_H

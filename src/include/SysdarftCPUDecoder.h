@@ -170,6 +170,7 @@ protected:
     std::vector < uint64_t > interruption_requests;
     std::atomic < bool > external_device_requested = false;
     std::atomic < uint64_t > current_routine_pop_len = 0;
+    std::atomic < int > input_source = 0;
 
     struct InterruptionPointer {
         uint64_t InterruptionTargetCodeBase;
@@ -251,6 +252,7 @@ private:
 
 public:
     void do_ext_dev_interruption(uint64_t code);
+    bool try_add_input(int input_);
 };
 
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInstructionDecoder : public SysdarftCPUInterruption

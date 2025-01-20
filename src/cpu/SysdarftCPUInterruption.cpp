@@ -134,6 +134,17 @@ void SysdarftCPUInterruption::do_ext_dev_interruption(const uint64_t code)
     }
 }
 
+bool SysdarftCPUInterruption::try_add_input(const int input_)
+{
+    // interruption open and seeking input
+    if (input_source == 0) {
+        input_source = input_;
+        return true;
+    }
+
+    return false;
+}
+
 SysdarftCPUInterruption::InterruptionPointer SysdarftCPUInterruption::do_interruption_lookup(const uint64_t code)
 {
     InterruptionPointer pointer { };
@@ -237,6 +248,12 @@ void SysdarftCPUInterruption::do_interruption_getinput_0x14()
     while (!SystemHalted && !do_abort_int)
         // abort if external halt or device interruption triggered
     {
+        if (input_source != 0) {
+            SysdarftRegister::store<ExtendedRegisterType, 0>(input_source);
+            input_source = 0;
+            return;
+        }
+
         if (const ssize_t n = read(STDIN_FILENO, &ch, 1); n > 0)
         {
             SysdarftRegister::store<ExtendedRegisterType, 0>(ch);
