@@ -14,6 +14,7 @@
       <file path="$PROJECT_DIR$/build-thread" />
       <file path="$PROJECT_DIR$/cmake-build-debug" />
       <file path="$PROJECT_DIR$/cmake-build-debug-coverage" />
+      <file path="$PROJECT_DIR$/documentation" />
     </excludeRoots>
   </component>
 </project>

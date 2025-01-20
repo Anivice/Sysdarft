@@ -68,12 +68,6 @@ struct pushall_data
     uint64_t EB;
     uint64_t EP;
     uint64_t CPS;
-    uint64_t SBS;
-    uint64_t SBSz;
-    uint64_t DBS;
-    uint64_t DBSz;
-    uint64_t CBS;
-    uint64_t CBSz;
 };
 
 void SysdarftCPUInstructionExecutor::pushall(__uint128_t, WidthAndOperandsType &)
@@ -103,12 +97,6 @@ void SysdarftCPUInstructionExecutor::pushall(__uint128_t, WidthAndOperandsType &
         .EB = SysdarftRegister::load<ExtendedBaseType>(),
         .EP = SysdarftRegister::load<ExtendedPointerType>(),
         .CPS = SysdarftRegister::load<CurrentProcedureStackPreservationSpaceType>(),
-        .SBS = SysdarftRegister::load<StackBaseSelector>(),
-        .SBSz = SysdarftRegister::load<StackBaseSelectorSize>(),
-        .DBS = SysdarftRegister::load<DataBaseSelector>(),
-        .DBSz = SysdarftRegister::load<DataBaseSelectorSize>(),
-        .CBS = SysdarftRegister::load<CodeBaseSelector>(),
-        .CBSz = SysdarftRegister::load<CodeBaseSelectorSize>(),
     };
 
     push_stack(data);
@@ -139,13 +127,7 @@ void SysdarftCPUInstructionExecutor::popall(__uint128_t, WidthAndOperandsType &)
         DP,
         EB,
         EP,
-        CPS,
-        SBS,
-        SBSz,
-        DBS,
-        DBSz,
-        CBS,
-        CBSz] = pop_stack<pushall_data>();
+        CPS] = pop_stack<pushall_data>();
 
     SysdarftRegister::store<FullyExtendedRegisterType, 0>(FER0);
     SysdarftRegister::store<FullyExtendedRegisterType, 1>(FER1);
@@ -171,12 +153,6 @@ void SysdarftCPUInstructionExecutor::popall(__uint128_t, WidthAndOperandsType &)
     SysdarftRegister::store<ExtendedBaseType>(EB);
     SysdarftRegister::store<ExtendedPointerType>(EP);
     SysdarftRegister::store<CurrentProcedureStackPreservationSpaceType>(CPS);
-    SysdarftRegister::store<StackBaseSelector>(SBS);
-    SysdarftRegister::store<StackBaseSelectorSize>(SBSz);
-    SysdarftRegister::store<DataBaseSelector>(DBS);
-    SysdarftRegister::store<DataBaseSelectorSize>(DBSz);
-    SysdarftRegister::store<CodeBaseSelector>(CBS);
-    SysdarftRegister::store<CodeBaseSelectorSize>(CBSz);
 }
 
 void SysdarftCPUInstructionExecutor::enter(__uint128_t, WidthAndOperandsType & WidthAndOperands)

@@ -11,6 +11,14 @@ public:
     : SysdarftBaseError("Unknown register " + regName) { }
 };
 
+// struct SelectorType {
+//     uint64_t AddressStart; // not paged, linear, paged, page number
+//     uint64_t AddressLimit; // not paged, linear, paged, page count
+//     uint64_t IsAddressSpaceExpandUpwards:1;
+//     uint64_t IsAddressPaged:1;
+//     uint64_t
+// };
+
 struct alignas(16) sysdarft_register_t
 {
     struct { struct { struct {
@@ -75,7 +83,10 @@ struct alignas(16) sysdarft_register_t
         uint64_t LessThan: 1;
         uint64_t Equal: 1;
         uint64_t InterruptionMask : 1;
-        uint64_t _reserved : 58;
+        uint64_t CurrentPrivilegeLevel:2; // 0 == Real Mode Level, 1 == Protected Kernel Level, 2 == User Mode Level, 3 == Hypervisor Level
+        uint64_t ProtectedModeEnabled:1;
+        uint64_t PagingEnabled:1;
+        uint64_t _reserved : 54;
     } FlagRegister;
 
     uint64_t StackBase;
@@ -89,12 +100,12 @@ struct alignas(16) sysdarft_register_t
     uint64_t CurrentProcedureStackPreservationSpace;
 
     struct {
-        uint64_t CodeBaseSelectorAddress;
-        uint64_t CodeBaseSelectorSize;
-        uint64_t DataBaseSelector;
-        uint64_t DataBaseSelectorSize;
-        uint64_t StackBaseSelector;
-        uint64_t StackBaseSelectorSize;
+        uint64_t SelectorSpaceStart;
+        uint64_t SelectorSPaceSize;
+        uint64_t R_reserved1;
+        uint64_t R_reserved2;
+        uint64_t R_reserved3;
+        uint64_t R_reserved4;
     } ProtectedModeRegisters;
 };
 
@@ -112,12 +123,8 @@ class DataPointerType { };
 class ExtendedBaseType { };
 class ExtendedPointerType { };
 class CurrentProcedureStackPreservationSpaceType { };
-class CodeBaseSelector { };
-class CodeBaseSelectorSize { };
-class DataBaseSelector { };
-class DataBaseSelectorSize { };
-class StackBaseSelector { };
-class StackBaseSelectorSize { };
+class BaseSelector { };
+class BaseSelectorSize { };
 class WholeRegisterType { };
 
 template < typename AccessRegisterType >
@@ -144,32 +151,12 @@ struct RegisterTypeIdentifier<RegisterType> {
 };
 
 template <>
-struct RegisterTypeIdentifier<CodeBaseSelector> {
+struct RegisterTypeIdentifier<BaseSelector> {
     using type = uint64_t;
 };
 
 template <>
-struct RegisterTypeIdentifier<CodeBaseSelectorSize> {
-    using type = uint64_t;
-};
-
-template <>
-struct RegisterTypeIdentifier<DataBaseSelector> {
-    using type = uint64_t;
-};
-
-template <>
-struct RegisterTypeIdentifier<DataBaseSelectorSize> {
-    using type = uint64_t;
-};
-
-template <>
-struct RegisterTypeIdentifier<StackBaseSelector> {
-    using type = uint64_t;
-};
-
-template <>
-struct RegisterTypeIdentifier<StackBaseSelectorSize> {
+struct RegisterTypeIdentifier<BaseSelectorSize> {
     using type = uint64_t;
 };
 
@@ -243,12 +230,8 @@ public:
     || std::is_same_v<AccessRegisterType, HalfExtendedRegisterType>
     || std::is_same_v<AccessRegisterType, ExtendedRegisterType>
     || std::is_same_v<AccessRegisterType, RegisterType>
-    || std::is_same_v<AccessRegisterType, CodeBaseSelector>
-    || std::is_same_v<AccessRegisterType, CodeBaseSelectorSize>
-    || std::is_same_v<AccessRegisterType, DataBaseSelector>
-    || std::is_same_v<AccessRegisterType, DataBaseSelectorSize>
-    || std::is_same_v<AccessRegisterType, StackBaseSelector>
-    || std::is_same_v<AccessRegisterType, StackBaseSelectorSize>
+    || std::is_same_v<AccessRegisterType, BaseSelector>
+    || std::is_same_v<AccessRegisterType, BaseSelectorSize>
     || std::is_same_v<AccessRegisterType, FlagRegisterType>
     || std::is_same_v<AccessRegisterType, StackBaseType>
     || std::is_same_v<AccessRegisterType, StackPointerType>
@@ -363,18 +346,10 @@ public:
             return Registers.FullyExtendedRegister0.HalfExtendedRegister1.ExtendedRegister3.R7;
         }
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        else if constexpr (std::is_same_v<AccessRegisterType, CodeBaseSelector> && AccessRegisterIndex == 0) {
-            return Registers.ProtectedModeRegisters.CodeBaseSelectorAddress;
-        } else if constexpr (std::is_same_v<AccessRegisterType, CodeBaseSelectorSize> && AccessRegisterIndex == 0) {
-            return Registers.ProtectedModeRegisters.CodeBaseSelectorSize;
-        } else if constexpr (std::is_same_v<AccessRegisterType, DataBaseSelector> && AccessRegisterIndex == 0) {
-            return Registers.ProtectedModeRegisters.DataBaseSelector;
-        } else if constexpr (std::is_same_v<AccessRegisterType, DataBaseSelectorSize> && AccessRegisterIndex == 0) {
-            return Registers.ProtectedModeRegisters.DataBaseSelectorSize;
-        } else if constexpr (std::is_same_v<AccessRegisterType, StackBaseSelector> && AccessRegisterIndex == 0) {
-            return Registers.ProtectedModeRegisters.StackBaseSelector;
-        } else if constexpr (std::is_same_v<AccessRegisterType, StackBaseSelectorSize> && AccessRegisterIndex == 0) {
-            return Registers.ProtectedModeRegisters.StackBaseSelectorSize;
+        else if constexpr (std::is_same_v<AccessRegisterType, BaseSelector> && AccessRegisterIndex == 0) {
+            return Registers.ProtectedModeRegisters.SelectorSpaceStart;
+        } else if constexpr (std::is_same_v<AccessRegisterType, BaseSelectorSize> && AccessRegisterIndex == 0) {
+            return Registers.ProtectedModeRegisters.SelectorSPaceSize;
         }
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         else if constexpr (std::is_same_v<AccessRegisterType, FlagRegisterType>) {
@@ -414,12 +389,8 @@ public:
     || std::is_same_v<AccessRegisterType, HalfExtendedRegisterType>
     || std::is_same_v<AccessRegisterType, ExtendedRegisterType>
     || std::is_same_v<AccessRegisterType, RegisterType>
-    || std::is_same_v<AccessRegisterType, CodeBaseSelector>
-    || std::is_same_v<AccessRegisterType, CodeBaseSelectorSize>
-    || std::is_same_v<AccessRegisterType, DataBaseSelector>
-    || std::is_same_v<AccessRegisterType, DataBaseSelectorSize>
-    || std::is_same_v<AccessRegisterType, StackBaseSelector>
-    || std::is_same_v<AccessRegisterType, StackBaseSelectorSize>
+    || std::is_same_v<AccessRegisterType, BaseSelector>
+    || std::is_same_v<AccessRegisterType, BaseSelectorSize>
     || std::is_same_v<AccessRegisterType, FlagRegisterType>
     || std::is_same_v<AccessRegisterType, StackBaseType>
     || std::is_same_v<AccessRegisterType, StackPointerType>
@@ -522,18 +493,10 @@ public:
             Registers.FullyExtendedRegister0.HalfExtendedRegister1.ExtendedRegister3.R7 = Reg;
         }
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        else if constexpr (std::is_same_v<AccessRegisterType, CodeBaseSelector> && AccessRegisterIndex == 0) {
-            Registers.ProtectedModeRegisters.CodeBaseSelectorAddress = Reg;
-        } else if constexpr (std::is_same_v<AccessRegisterType, CodeBaseSelectorSize> && AccessRegisterIndex == 0) {
-            Registers.ProtectedModeRegisters.CodeBaseSelectorSize = Reg;
-        } else if constexpr (std::is_same_v<AccessRegisterType, DataBaseSelector> && AccessRegisterIndex == 0) {
-            Registers.ProtectedModeRegisters.DataBaseSelector = Reg;
-        } else if constexpr (std::is_same_v<AccessRegisterType, DataBaseSelectorSize> && AccessRegisterIndex == 0) {
-            Registers.ProtectedModeRegisters.DataBaseSelectorSize = Reg;
-        } else if constexpr (std::is_same_v<AccessRegisterType, StackBaseSelector> && AccessRegisterIndex == 0) {
-            Registers.ProtectedModeRegisters.StackBaseSelector = Reg;
-        } else if constexpr (std::is_same_v<AccessRegisterType, StackBaseSelectorSize> && AccessRegisterIndex == 0) {
-            Registers.ProtectedModeRegisters.StackBaseSelectorSize = Reg;
+        else if constexpr (std::is_same_v<AccessRegisterType, BaseSelector> && AccessRegisterIndex == 0) {
+            Registers.ProtectedModeRegisters.SelectorSpaceStart = Reg;
+        } else if constexpr (std::is_same_v<AccessRegisterType, BaseSelectorSize> && AccessRegisterIndex == 0) {
+            Registers.ProtectedModeRegisters.SelectorSPaceSize = Reg;
         }
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         else if constexpr (std::is_same_v<AccessRegisterType, FlagRegisterType>) {
