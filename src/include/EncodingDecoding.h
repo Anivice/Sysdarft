@@ -606,7 +606,7 @@ void decode_target(std::vector < std::string > & literal_buffer,
     std::vector < uint8_t > & code_buffer);
 
 /// Regular expression of the operand, captures '<' and '>' as well
-const std::regex target_pattern(R"(<\s*(?:\*\s*(?:1|2|4|8|16)\&(8|16|32|64)\s*\([^,]+,[^,]+,[^,]+\)|%(?:R|EXR|HER)[0-7]|%(FER)([\d]+)|%(SB|SP|CB|DB|DP|EB|EP)|%XMM[0-5]|\$\s*\(\s*(?:0[xX][A-Fa-f0-9]+|\s|[+\-.',*\/^%()xX0-9-])+\s*\))\s*>)");
+const std::regex target_pattern(R"(<\s*(?:\*\s*(?:1|2|4|8|16)\&(8|16|32|64)\s*\([^,]+,[^,]+,[^,]+\)|%(?:R|EXR|HER)[0-7]|%(FER)([\d]+)|%(SB|SP|CB|DB|DP|EB|EP)|\$\s*\(\s*(?:0[xX][A-Fa-f0-9]+|\s|[+\-.',*\/^%()xX0-9-])+\s*\))\s*>)");
 
 /*!
  * @brief Encode an instruction
