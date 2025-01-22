@@ -10,10 +10,13 @@ SysdarftCPU::SysdarftCPU(const uint64_t memory,
         : SysdarftCPUInstructionExecutor(memory)
 {
     // load BIOS to memory
-    uint64_t off = BIOS_START;
-    for (const auto & c : bios) {
-        write_memory(off++, (char*)&c, 1);
+    constexpr uint64_t off = BIOS_START;
+    uint64_t size = bios.size();
+    if (bios.size() > BIOS_SIZE) {
+        size = BIOS_SIZE;
     }
+    write_memory(off, (char*)bios.data(), size);
+
 
     // hard disk
     if (!hdd.empty()) {

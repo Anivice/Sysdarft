@@ -90,12 +90,14 @@ uint64_t SysdarftCPUInstructionExecutor::check_overflow_signed(
     const __uint128_t Value)
 {
     bool overflow;
-    uint64_t ret;
+    int64_t ret;
+    int8_t r;
 
     // 1) figure out how many bits we’re dealing with and the mask
     switch (BCDWidth) {
     case _8bit_prefix:
-        ret = ::check_overflow_signed<0x08>(Value, overflow);
+        r = ::check_overflow_signed<0x08>(Value, overflow);
+        ret = *(uint8_t*)&r;
         break;
     case _16bit_prefix:
         ret = ::check_overflow_signed<0x16>(Value, overflow);
@@ -132,5 +134,5 @@ uint64_t SysdarftCPUInstructionExecutor::check_overflow_signed(
         SysdarftRegister::store<FlagRegisterType>(FG);
     }
 
-    return ret;
+    return *(uint64_t*)&ret;
 }

@@ -115,7 +115,7 @@ without relying on complicated bitwise operations or accessing external memory s
 
 ## Special-Purpose Registers
 
-### Segmented Addressing
+### Segmentation and Segmented Addressing
 
 *A chunk of memory is known as a segment and hence the phrase
 'segmented memory architecture.'
@@ -137,43 +137,69 @@ $\text{Physical Address} = \text{Segment Address} \ll 4 + \text{Segment Offset}$
 
 *where*
 
-- *Physical Address* being the actual location in the computer’s physical memory (Random Access Memory)
-- *Segment Address* being the address of the segment, which is its physical location shifting four bits
-                    to the right.
+- *Physical Address* is an address seen by the memory unit, commonly referred to as a physical address
+                     [@OperatingSystemConcepts].
+- *Segment Address* being the address of the segment, which is its physical address shifting four bits
+                    to the right ($\text{Physical Address} \over 2^{4}$).
 - *Segment Offset* being the length from the current position to the start of the segment.
-- *$\ll$* being the bit left shifting operation, shifting bits towards the left.
+- *$x \ll n$* being the bit left shifting operation, value $x$ shifting $n$ bits towards the left ($x \times 2^n$).
 
 In Sysdarft, it uses a $64\text{-bit}$ wide memory bus.
+A segmented addressing may seem unnecessary,
+but there exists at least one use case where segmentation is relevant,
+and this is program relocation.
 
+### Program Relocation
 
-#### Program Relocation
+Before the discussion of program relocation,
+the concepts of *Absolute Code* and *Position-Independent Code* (PIC) need to be established first.
 
-As a user program, its memory location is arbitrary and should not be predetermined.
+Absolute code, and an absolute object module,
+is code that...runs only at a specific location in memory.
+The Loader loads an absolute object module only into the specific location
+the module must occupy[@iRMX86ApplicationLoaderReferenceManual].
+
+Position-independent code (commonly referred to as PIC) differs from
+absolute code in that PIC can be loaded into any memory location.
+The advantage of PIC over absolute code is that PIC does not require you to
+reserve a specific block of memory[@iRMX86ApplicationLoaderReferenceManual].
+
+If the code is BIOS, then its position and size in the memory is static and known.
+However, As a user program, its memory location is arbitrary and should not be predetermined.
 The operating system loads it wherever it deems appropriate.
-While the start address of the program in memory is unknown,
-its internal structure is known to the programmer.
-The operating system loads the entire program as continuous data,
-which means the structure within the program remains consistent.
+Using absolute code will eliminate the flexibility of user programs;
+thus, position-independent code should be employed instead.
 
-Therefore, two parameters are used to determine the exact memory location of an arbitrary point in a user program:
+Segmentation can easily solve this issue.
+While the segment location remains unclear until a loader like DOS loads it into the memory,
+the segment offset, the length from a position inside the code to the start,
+is known to the programmer.
+Each program is a position independent code segment inside the memory,
+and is managed using special-purpose registers.
 
-- **The start of the program**: Managed by the operating system and unknown to the programmer.
-- **The length from the current point to the start of the program**: Known and manageable by the programmer.
+### Code Segment
 
-#### Segmentation
+The code segment is typically managed by the operating system rather than the user.
+The pointer for this segment, the instruction pointer (`IP`), is inaccessible,
+even to the operating system.
+However, the Code Base (`%CB`) register is accessible and can be used to set up a code segment.
 
-Segment, or segmentation, refers to a continuous block of data within a memory region. Each segment has:
+Directly modifying `%CB` would cause the CPU to perform a wild jump,
+an unintended or erroneous jump in a program's execution flow
+due to attempting to return from a subroutine after the stack pointer or activation record have been corrupted
+or incorrect computation of the destination address of a jump or subroutine call
+[@ComputerOrganization],
+or in this case, damaging the segment address resulting in incorrect computation
+of the next instruction location in memory.
+Therefore, `%CB` is usually not modified directly but rather changed indirectly through operations
+like a long call or long jump.
 
-- A **Base Address**: the start of the segment.
-- A **Pointer** or **Offset**: the distance from the current location to the start point.
+### Data Segment
 
-The exact memory location of the current point can be obtained by:
-
-$\text{Absolute Address} = \text{Base Address} + \text{Offset}$
-
-**where**
-
-**Absolute Address** being the actual, non-segmented address in memory.
+There are four registers that can be used together to reference two data segments:
+Data Base (`%DB`), Data Pointer (`%DP`), Extended Base (`%EB`), and Extended Pointer (`%EP`).
+These registers function in pairs—`%DB` with `%DP` and `%EB` with `%EP`—to address and access
+two data segments.
 
 ### Stack Management
 
@@ -182,8 +208,11 @@ $\text{Absolute Address} = \text{Base Address} + \text{Offset}$
 Stack is mainly used for storing function return addresses in control flow management, local variables,
 temporary data storage and CPU state protection.
 
+![Figure 1.1. Stack](./stack.png){#fig:figure1.1stack}
+
 Stack operates on a Last-In-First-Out basis,
-meaning the last element pushed inside the stack will be popped at first, similar to a gun magazine.
+meaning the last element pushed inside the stack will be popped at first,
+similar to a gun magazine.
 
 #### Stack Base Register
 
@@ -191,7 +220,7 @@ Stack base, or `%SB`, is a $64\text{-bit}$ register that stores the start point 
 
 #### Stack Pointer
 
-Stack pointer, or `%SP`, is a $64\text{-bit}$ register that stores the **end** of the **usable** stack space.
+Stack pointer, or `%SP`, is a $64\text{-bit}$ register that stores the *end* of the *usable* stack space.
 
 The stack grows downwards, meaning data is stored from the end toward the start.
 This design simplifies stack allocation:
@@ -210,7 +239,7 @@ and the value is stored at the new address.
         [ -- 8 Byte Data -- ][ -- Free Space -- ]
         ^                   ^                   ^
         |                   |                   |
-  0xFFFF+0x1000       0xFFFF+0x0FF8       0xFFFF+0x0000
+  0xFFFF:0x1000       0xFFFF:0x0FF8       0xFFFF:0x0000
 ```
 
 When a value is popped from the stack, the `%SP` is increased and the stack grows back up,
@@ -224,171 +253,251 @@ freeing the space in the process.
         [ --- --- ----  8 Byte Data ---- --- --- ][ -- Free Space -- ]
         ^                    ^                   ^                   ^
         |                    |                   |                   |
-  0xFFFF+0x1000        0xFFFF+0x0FF9       0xFFFF+0x0FF8       0xFFFF+0x0000
+  0xFFFF:0x1000        0xFFFF:0x0FF9       0xFFFF:0x0FF8       0xFFFF:0x0000
 ```
 
 #### Stack Overflow
 
-There exists a situation where an operation attempts to store data that is larger than the available stack space.
+Stack overflow is an overflow of the stack pointer that leads to
+losing track of the stack location.
+
+#### Overflow
+
+An overflow occurs when the addition of two numbers results in a number
+larger than can be expressed with the available number of bits[@DigitalLogicDesign],
+or subtraction resulting in negative numbers smaller than the representable range.
+Such overflow triggers a phenomenon called integer wrap-around,
+where the result cycles back within the allowable range and represents an unintended value.
+This is because signed integers are two's complement binary values
+that can be used to represent both positive and negative integer values
+[@Intel64andIA32ArchitecturesSoftwareDevelopersManualVolume1BasicArchitecture],
+and this behavior is caused by such a representation method.
+
+#### Two's Complement
+
+The two's complement of a number,
+or radix complement[^RadixComplement] of a binary number,
+is determined by taking the binary representation of its absolute value,
+inverting the bits by flipping `0` to `1` and `1` to `0`,
+and then adding one to the result.
+For example, to find the representation of `-1` in an $8\text{-bit}$ system,
+start with the binary representation of `1`, which is `0000 0001`.
+Invert the bits to get `1111 1110`, then add one to obtain `1111 1111`.
+This final value, `1111 1111`, represents `-1` in an $8\text{-bit}$ two's complement system.
+
+In the two's complement system, signed integers represent both positive and negative values.
+For each binary number, the radix complement is called the two’s complement
+(since radix is `2` for binary).
+The MSB (Most Significant Bit) of a number in this system serves as the sign bit;
+a number is negative if and only if its MSB is `1`.
+The decimal equivalent for a two’s-complement binary number is computed the same way as for an unsigned number,
+except that the weight of the MSB is $-2^(n-1)$, instead of $+2^(n-1)$.
+The range of representable numbers is $-2^(n-1)$ through $+2^(n-1)$[@DigitalDesignPrinciplesAndPractices]
+
+[^RadixComplement]:
+The base or radix ($r$) is the foundation of a number system.
+For instance, in decimal, the base is 10, in binary it is `2`,
+and in hexadecimal it is `16`.
+For any given number system with base $r$,
+two types of complements can be used:
+the $r$'s complement and the $(r-1)$'s complement.
+The $r$'s complement of a number $N$ is calculated as $r^n - N$,
+where $n$ is the number of digits in the number.
+The $(r-1)$'s complement is computed as $(r^n - 1) - N$.
+This is closely related to the $r$'s complement,
+as adding `1` to the $(r-1)$'s complement gives the $r$'s complement.
+
+Now, there exists a situation where an operation attempts to store data that is
+larger than the available stack space.
 This means `%SP` will be attempted to be set to a negative number.
+And if `%SP` decreases below zero, the register will overflow and wrap-around.
 
-And if `%SP` decreases below zero, the register will overflow.
+Similar wrap-around happens to `%SP` when it is set to `-1`, but $64\text{-bit}$ in width.
+`%SP` will perform a wrap-around to represent `-1`, which is `0xFFFFFFFFFFFFFFFF`,
+or `1111111111111111111111111111111111111111111111111111111111111111`,
+where every bit in the stack pointer is set to `1` which, when assumed as unsigned,
+is the maximum value a $64\text{-bit}$ register can represent ($18446744073709551615_10$).
 
-An overflow occurs when an operation attempts to store data beyond the capacity of a register or memory region.
-This can happen if a value is too large or becomes so small that it goes below zero.
-
-In this context, when `%SP` goes below zero, the binary bits will "wrap around."
-For example, when `%SP` becomes `-1`, it wraps around to `0xFFFFFFFFFFFFFFFF` (`18446744073709551615`),
-where every bit in the register is set to `1`.
-This means the register holds the maximum value a $64\text{-bit}$ register can represent.
-
-As a result, the stack pointer will point to an address that a $64\text{-bit}$ system cannot access.
+As a result, the stack pointer will point to an address that
+even a $64\text{-bit}$ system may not be able to access.
 This occurs because the pointer, when combined with its base address,
-will reference a location almost certainly beyond the $64\text{-bit}$ addressable space.
+will refer to a location that almost certainly goes beyond the $64\text{-bit}$ addressable space,
+let alone when the actual physical memory space is put into consideration,
+which will be far less than $2^{64}-1$.
 
-This situation is called a stack overflow:
-an overflow of the stack pointer that leads to a damaged stack frame (lost stack location).
+This situation is called a stack overflow.
 
-### Code Segment
+### Flag Register
 
-The code segment is typically managed by the operating system rather than the user.
-The pointer for this segment, the instruction pointer (`IP`), is inaccessible,
-even to the operating system.
-However, the Code Base (`%CB`) register is accessible and can be used to set up alternative code spaces.
+Flag register is a user-inaccessible register containing the following flags:
 
-Directly modifying `%CB` would cause the CPU to perform an unpredictable jump (a "wild jump").
-Therefore, `%CB` is usually not modified directly but rather changed indirectly through operations
-like a long call or long jump.
+| Flag                     | Explanation                                                                                                           |
+|--------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| *Carry*, *CF*            | Overflow in unsigned arithmetic operations                                                                            |
+| *Overflow*, *OF*         | Overflow in signed arithmetic operations                                                                              |
+| *LargerThan*, *BG*       | Set by `CMP`, when $\text{Operand1} > \text{Operand2}$                                                                |
+| *LessThan*, *LE*         | Set by `CMP`, when $\text{Operand1} < \text{Operand2}$                                                                |
+| *Equal*, *EQ*            | Set by `CMP`, when $\text{Operand1} = \text{Operand2}$                                                                |
+| *InterruptionMask*, *IM* | Set and cleared by CPU automatically when an interruption triggered, can manually set by `ALWI` and cleared by `IGNI` |
 
-### Data Segment
+### Current Procedure Stack Preservation Space
 
-There are four registers that can be used together to reference two data segments:
-Data Base (`%DB`), Data Pointer (`%DP`), Extended Base (`%EB`), and Extended Pointer (`%EP`).
-These registers function in pairs—`%DB` with `%DP` and `%EB` with `%EP`—to address and access
-two data segments.
+Current procedure stack preservation space is a user-inaccessible register,
+preservable only through `PUSHALL`[^PUSHALL] and recoverable by `POPALL`[^POPALL] indirectly,
+that is modified by instruction `ENTER`[^Enter] and `LEAVE`[^Leave] to store
+current allocated stack space for local variables.
+
+[^PUSHALL]:
+Push all preservable registers into the stack in the following order
+(Higher in order means register being pushed earlier):
+```asm
+    %FER[0-15], %FG, %SB, %SP, %DB, %DP, %EB, %EP, %CPS
+```
+Code segment registers `%CB` and `%IP` are not preserved by `PUSHALL`.
+Refer to *Assembler Syntax* and *Appendix A* for more information.
+
+[^POPALL]:
+Pop all preservable registers from stack to CPU corresponding registers.
+Refer to *Assembler Syntax* and *Appendix A* for more information.
+
+[^Enter]:
+`ENTER [Width] [Number]` preserves a stack space to allocate spaces for local variables.
+Procedure of `ENTER` can be described as:
+```c++
+    CBS = Number;   // CBS is Current Procedure Stack Preservation Space
+    SP = SP - CPS;  // SP is stack pointer
+```
+Refer to *Assembler Syntax* and *Appendix A* for more information.
+
+[^Leave]:
+`LEAVE` tears down a stack space allocated through `ENTER`
+Procedure of `LEAVE` can be described as:
+```c++
+    SP = SP + CPS;  // SP is stack pointer
+    CBS = 0;        // CBS is Current Procedure Stack Preservation Space  
+```
+Refer to *Assembler Syntax* and *Appendix A* for more information.
 
 # **Assembler Syntax**
 
 An assembler is a compiler that translates human-readable machine instructions into machine-readable binary.
 
-Sysdarft assembler, like other assemblers, is case-insensitive.
+Sysdarft assembler, like many other assemblers, is case-insensitive.
 
 ## Preprocessor directives
 
+Preprocessor directives are not program statements but directives for the preprocessor.
+The preprocessor examines the code before actual compilation of code begins
+and resolves all these directives before any code is actually generated by regular statements[@CPPPrimer].
+
 There are three preprocessor directives for Sysdarft Assembly Language.
 
-### .org
+#### .org
 
-#### Syntax
+`.org`, or origin, defines the starting offset for code in memory.
+While the default origin is `0x00`, some absolute code (like BIOS) loads at specific addresses such as `0xC1800`.
+If the assembler assumed an origin of `0x00`,
+all line markers will start at `0x00` and would be inconsistent with the actual location of the code
+(like `0xC1800`).
+`.org` can manually specify the correct starting address,
+ensuring proper offset calculations for absolute code.
+
+#### Syntax and Example
 
 ```asm
     .org [Decimal or Hexadecimal]
-```
-
-#### Explanation
-
-`.org`, or origin, defines the code line offset in the whole memory.
-Normally origin starts from `0x00`, but some code, like BIOS, for example,
-loads at `0xC1800`, thus all line markers will be incorrect when offset 
-calculation starts from `0x00`.
-Thus, using `.org` as a way to define the origin of the code.
-
-#### Usage Example
-
-```asm
     .org 0xC1800
 ```
 
-### .equ
+#### .equ
 
-#### Syntax
+In assembly or low-level programming, the `.equ` directive is used to
+*replace occurrences of a string* with another, similar to how macros work in C.
+It's essentially a way to define *symbolic constants* or *aliases* for values or strings.
+
+- *Regular expression support disabled*
+
+  If the assembler doesn't enable regular expressions (option `-R, --regular`)
+  for the `.equ` directive, it will simply perform a literal string replacement.
+  In this case, it will search for occurrences of a specific string
+  (*Search Target*) and replace them with the *Replacement*
+  exactly as they appear, without any special pattern matching or modifications.
+
+- *Regular expression support enabled*
+
+  If the assembler enabled regular expressions,
+  the `.equ` directive can behave like a regular expression search-and-replace.
+  This means it can capture string groups and modify them using regular expression.
+
+#### Syntax and Example
 
 ```asm
     .equ '[Search Target]', '[Replacement]'
-```
-
-#### Explanation
-
-In assembly or low-level programming, the `.equ` directive is used to
-**replace occurrences of a string** with another, similar to how macros work in C.
-It's essentially a way to define **symbolic constants** or **aliases** for values
-or strings.
-
-- **When compiler disable the regular expression support**
-
-  If the **compiler or assembler doesn't enable regular expressions**
-  for the `.equ` directive, it will simply perform a **literal string replacement**.
-  In this case, it will search for occurrences of a specific string
-  (**Search Target**) and replace them with the **Replacement**
-  exactly as they appear, without any special pattern matching or modifications.
-
-- **When compiler enable the regular expression support**
-
-  If the **compiler or assembler enabled regular expressions**,
-  the `.equ` directive can behave like a **regular expression search-and-replace**.
-  This means it can **capture groups** (just like `sed -E`),
-  and more complex patterns can be used in replacements.
-  This allows for more flexible and powerful string matching.
-
-#### Usage Example
-
-```asm
+    
+    ; regular expression not enabled
     .equ 'HDD_IO', '0x1234'
-    .equ 'add\s*\((.*), (.*)\)', 'add .32bit \1, \2'
+    ; regular expression enabled
+    ; this will replace occurrances like add(%fer0, %fer1) to add .64bit <%fer0>, <%fer1>
+    .equ 'add\s*\((.*), (.*)\)', 'add .64bit <\1>, <\2>'
 ```
 
-### .lab (*deprecated*)
-
-#### Syntax
-
-```asm
-    .lab marker1, [marker2, ...]
-```
-
-#### Explanation
+#### .lab (*deprecated*)
 
 Define one or more line markers.
 This directive is deprecated.
 Line markers can be auto scanned and defined without relying on this directive.
 
-#### Usage Example
+#### Syntax and Example
 
 ```asm
+    .lab marker1, [marker2, ...]
     .lab _start, _end
 ```
 
-## Instruction Expression
+## Instruction Statements
 
-For all instruction expressions, it follows this syntax:
+Instruction statements are actions performed by processor.
+
+For all instruction statements, it follows this syntax:
 
 ```asm
-    Mnemonic [Operation Width] <Operand1> [, <Operand2>]
+    Mnemonic [Width] <Operand1> [, <Operand2>]
 ```
 
+*where*
+
+  - *Mnemonic* is name for the instruction
+  - *Width* is data width for *Operand1*, and *Operand2* as well, if *Operand2* is present.
+  - *Operand1* and *Operand2* specifies what data is to be manipulated or operated on by instruction,
+     while at the same time representing the data itself[@ComputerScienceIlluminated].
+
 Operation width is enforced by many data-modifying instructions.
-It refers to the data width of one or two of the instruction's operands.
-When two operands are provided, both must have the same data width.
+It refers to the data width of one or both of the instruction's operands.
+When two operands are provided, both must have the same data width consistent to the width provided
+by instruction statement.
 
 The following is the breakdown of each part of the instruction expression.
 
-### Mnemonic
+#### Mnemonic
 
-Mnemonic is a symbolic name for a single executable machine language instruction.
-Refer to the **Instruction Set** for the whole instruction mnemonic table.
+Mnemonic is a symbolic name represents each of the machine-language instructions[@ComputerScienceIlluminated][^MnemonicTable].
 
-### Operation Width
+[^MnemonicTable]: Refer to Appendix A for the whole instruction mnemonic table.
+
+#### Operation Width
 
 Operation width can be `.8bit`, `.16bit`, `.32bit`, or `.64bit`,
-representing $8\text{-bit}$, $16\text{-bit}$, $32\text{-bit}$ and $64\text{-bit}$ data width respectively.
+representing $8\text{-bit}$, $16\text{-bit}$, $32\text{-bit}$ and $64\text{-bit}$ data width
+for operands respectively.
 
 ### Operands
 
 Operands need to be enclosed within `<` and `>`.
 There are three possible operand types: registers, constants, or memory references.
 
-#### Registers
+#### Register Operands
 
-Register operands are internal CPU registers: general-purpose or special-purpose.
+Register operands are accessible internal CPU registers: general-purpose or special-purpose.
 
 Registers must start with `%`, with no space between `%` and register name.
 For example: `%EXR2` is valid, but `"% EXR2"` is not and will not be detected as an operand.
@@ -467,7 +576,7 @@ If `.org` is specified, the offset is calculated from the given address.
 
 Interrupt, or interruption, 
 
-# **Instructions Set**
+# **Appendix A: Instructions Set**
 
 ## Miscellaneous
 
@@ -481,7 +590,7 @@ and the default value used for peddling[^2].
 
 [^1]: opcode: The field that denotes the operation and format of an instruction [@ComputerOrganizationAndDesign].
 
-[^2]: When a field following another field will not fit into a partially-filled storage unit,
+[^2]: When a field following another field will not fit into a partially filled storage unit,
 it may be split between units, or the unit may be padded.
 An unnamed field with width 0 forces this padding,
 so that the next field will begin at the edge of the next allocation unit.

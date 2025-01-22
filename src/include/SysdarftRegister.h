@@ -83,6 +83,7 @@ struct alignas(16) sysdarft_register_t
         uint64_t LessThan: 1;
         uint64_t Equal: 1;
         uint64_t InterruptionMask : 1;
+        // unused:
         uint64_t CurrentPrivilegeLevel:2; // 0 == Real Mode Level, 1 == Protected Kernel Level, 2 == User Mode Level, 3 == Hypervisor Level
         uint64_t ProtectedModeEnabled:1;
         uint64_t PagingEnabled:1;
