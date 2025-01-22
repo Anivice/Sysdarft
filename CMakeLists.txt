@@ -380,3 +380,18 @@ if (NOT "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
             DEPENDS sysdarft-system Sysdarft
             COMMENT "Stripping symbols...")
 endif ()
+
+# Documentation
+function(add_pdf_target TARGET FILE)
+    add_custom_target(
+            ${TARGET}
+            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/convert.py
+                    ${CMAKE_CURRENT_SOURCE_DIR}/${FILE}
+                    ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc
+            COMMENT "Generating pdf for ${FILE}..."
+            DEPENDS ${FILE}
+    )
+endfunction()
+
+add_pdf_target(Sysdarft.pdf doc/Sysdarft.md)

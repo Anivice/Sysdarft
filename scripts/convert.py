@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
-import markdown2
-import pdfkit
-import sys
 import threading
 import time
 import os
-import subprocess
+import pypandoc
+import sys
+from pandocfilters import toJSONFilter, RawBlock, Header
 
 
 def my_thread_function():
@@ -16,34 +15,17 @@ def my_thread_function():
         time.sleep(0.1)
 
 
-def convert_markdown_to_pdf(md_file_path, output_pdf_path, css_file):
-    """Convert a Markdown file to PDF with custom layout using pdfkit."""
-
-    # Read the markdown file
-    with open(md_file_path, 'r', encoding='utf-8') as md_file:
-        markdown_content = md_file.read()
-
-    # Convert markdown to HTML
-    html_content = markdown2.markdown(markdown_content)
-
-    # Temporary HTML file for conversion
-    temp_html_file = md_file_path.replace(".md", "_temp.html")
-
-    # Save the HTML content to a temporary file
-    with open(temp_html_file, 'w', encoding='utf-8') as f:
-        f.write(html_content)
-
-    # Convert HTML to PDF using pdfkit and custom CSS
-    pdfkit.from_file(temp_html_file, output_pdf_path, css=css_file)
-
-    # Clean up the temporary HTML file
-    os.remove(temp_html_file)
+def add_pagebreak(key, value, format, meta):
+    if key == 'Header':
+        level, _, _ = value
+        # Check if header level is 1
+        if level == 1:
+            # Insert raw LaTeX newpage before the header
+            return [RawBlock('latex', '\\newpage'), Header(*value)]
 
 
 def main():
     """Main function to manage file conversion."""
-    my_thread = threading.Thread(target=my_thread_function, daemon=True)
-    my_thread.start()
 
     # Check if the right number of arguments were provided
     if len(sys.argv) < 3:
@@ -54,13 +36,31 @@ def main():
     input_file = sys.argv[1]
     output_file = sys.argv[2]
 
-    # Path to the CSS file
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    css_file = script_dir + "/styles.css"  # Ensure the CSS file is in the same directory
+    print(f"Converting {input_file} to {output_file}")
 
-    # Convert Markdown to PDF with custom layout
-    convert_markdown_to_pdf(input_file, output_file, css_file)
+    script_path = os.path.abspath(__file__)
+
+    # Extract the directory from the script path
+    script_dir = os.path.dirname(script_path)
+    docfilter = "--filter=" + script_dir + '/pagebreak_filter.py'
+    reference = "--bibliography=" + script_dir + "/../doc/references.bib"
+    csl = "--csl=" + script_dir + "/chicago-fullnote-bibliography.csl"
+    my_thread = threading.Thread(target=my_thread_function, daemon=True)
+    my_thread.start()
+
+    pypandoc.convert_file(
+        input_file,
+        'pdf',
+        outputfile=output_file,
+        extra_args=[docfilter,
+                    "-V", "geometry:margin=0.5in",
+                    "-f", "markdown+smart",
+                    reference,
+                    csl,
+                    "--citeproc"]
+    )
 
 
 if __name__ == "__main__":
     main()
+    print("done")

@@ -238,7 +238,17 @@ void encode_constant(std::vector<uint8_t> & buffer, const parsed_target_t & inpu
     const auto result_from_bc = execute_bc(tmp);
 
     code_buffer_push8(buffer, _64bit_prefix);
-    const __int128_t result = strtoull(result_from_bc.c_str(), nullptr, 10);
+    char * endptr;
+    const __int128_t result = strtoull(result_from_bc.c_str(), &endptr, 10);
+    if (result == ULLONG_MAX && errno == ERANGE) {
+        std::cout << "Expression `" << input.ConstantExpression << "` caused an overflow and will be set to "
+                  << ULLONG_MAX << std::endl;
+    }
+
+    if (endptr == result_from_bc.c_str()) {
+        throw SysdarftCodeExpressionError("Not a valid constant: " + input.ConstantExpression);
+    }
+
     code_buffer_push<64>(buffer, &result);
 }
 
