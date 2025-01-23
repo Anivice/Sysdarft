@@ -70,7 +70,7 @@ void SysdarftCursesUI::start_again()
 void SysdarftCursesUI::ringbell()
 {
     running = true;
-    sound_thread_pool.emplace_back(std::thread(play_bell_sound, std::ref(running)));
+    sound_thread_pool.emplace_back(play_bell_sound, std::ref(running));
 }
 
 void SysdarftCursesUI::cleanup()

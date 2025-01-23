@@ -4,6 +4,8 @@
 #include <SysdarftMain.h>
 #include <SysdarftDebug.h>
 
+extern "C" void printLogo();
+
 void print_help(const char *program_name)
 {
     std::stringstream ss;
@@ -60,6 +62,7 @@ void print_help(const char *program_name)
 
 void print_version()
 {
+    printLogo();
     std::cout
         << "Sysdarft 64bit Hypothetical Architecture Version " << SYSDARFT_VERSION << std::endl
         << SYSDARFT_INFORMATION << std::endl;

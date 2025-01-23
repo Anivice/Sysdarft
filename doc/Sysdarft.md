@@ -13,12 +13,13 @@ This notation is described below.
 
 In illustrations of data structures in memory,
 unlike Intel architecture manuals,
-smaller addresses appear toward the top of the figure;
-addresses increase toward the bottom.
-Bit positions are numbered from right to left,
-with the leftest one being LSB (Least Significant Bit) and the rightest one being MSB (Most Significant Bit).
-The numerical value of a set bit is equal to two raised to the power of the bit position.
-This is similar to the illustration of all Intel Architectures as well as that of most ARM and RISC.
+smaller addresses appear toward the *top* of the figure;
+addresses increase toward the *bottom*.
+Similarly, however,
+bit positions are numbered from right to left,
+with the leftmost bit being LSB (Least Significant Bit) and the rightmost bit being MSB (Most Significant Bit),
+and the numerical value of a set bit is equal to two raised to the power of the bit position,
+same ways identical to Intel architectures as well as that of most ARM and RISC.
 
 ![Bit and Byte Order](BitAndByteOrder.png)
 
@@ -42,7 +43,18 @@ Danny Cohen adopted the term endianness from Jonathan Swift's Gulliver's Travels
 where Swift described a conflict between sects of Lilliputians
 divided into those breaking the shell of a boiled egg from the big end or from the little end.
 Little-endian system recognizes that the least significant byte is the byte whose address is the smallest in memory,
-and data is traversed from the smallest address towards bigger ones.
+and data is traversed from the smallest address towards larger ones.
+
+## Hexadecimal and Binary Numbers
+
+Base 16 (hexadecimal) numbers are represented by a string of hexadecimal digits
+which are characters from the following set:
+`0`, `1`, `2`, `3`, `4`, `5`, `6`, `7`, `8`, `9`, `A`, `B`, `C`, `D`, `E`, `F`,
+preceded by `0x` as an indication (for example, `0xFBCA23`).
+Base 2 (binary) numbers are represented by a string of `1`s and `0`s, followed by a binary suffix $n_2$
+(for example, $1010_2$).
+The $n_2$ designation is only used in situations where confusion as to the type of number might arise
+[@Intel64AndIA32ArchitecturesSoftwareDevelopersManualCombinedVolumes].
 
 ## Processor
 
@@ -50,7 +62,7 @@ Central Processing Unit, or CPU,
 is a processor that performs operations on an external data source,
 usually memory or some other data stream[@OxfordEnglishDictionary].
 
-## Registers and Memory
+## Registers 
 
 *Registers are primitives used in hardware design that
 are also visible to the programmer when the computer is completed,
@@ -58,11 +70,27 @@ so you can think of registers as the bricks of computer construction.*
 [@ComputerOrganizationAndDesign]
 
 CPU relies on registers to perform most of the tasks.
-Registers are fix-sized data storages inside the CPU
+Registers are fix-sized data storages inside the CPU.
 
-## Reserved Bits
+## Memory
 
-Part of the CPU Register
+Memory is accessible space outside the CPU.
+The amount of memory a system can access is called *Accessible Memory*.
+The maximum memory space a typical $64$-bit system can access is named *Addressable Memory*.
+The minimum memory unit is called *byte*.
+A typical single byte consists of $8$ binary bits.
+Each byte is assigned an address in memory space,
+from `0x0000000000000000` to the maximum value `0xFFFFFFFFFFFFFFFF`.
+
+## Exceptions
+
+An exception is an event that typically occurs when an instruction causes an error
+[@Intel64AndIA32ArchitecturesSoftwareDevelopersManualCombinedVolumes].
+An exception is a specific error type.
+For example, an attempt to divide by zero causes an exception.
+Reporting an exception is called *throw*,
+or *an exception of `DIV/0` (divided by `0`) being thrown*,
+which typically aborts any process followed by the position where exception occurs.
 
 # **CPU Registers**
 
@@ -89,7 +117,7 @@ mentioned above, named `%FER0`, `%FER1`, ..., `%FER15`.
 Half-extended registers, or HERs, are $32\text{-bit}$ registers for general purposes.
 There are eight HERs, named `HER0`, `HER1`, ..., `HER7`.
 
-The eight $32\text{-bit}$ registers are actually derived from the first four $64\text{-bit}$ registers,
+The eight $32\text{-bit}$ registers are actually split from the first four $64\text{-bit}$ registers,
 specifically `FER0` through `FER3`.
 This means that modifying the contents of *either* of the $32\text{-bit}$ or $64\text{-bit}$
 versions of these registers will affect content of *both* of the $32\text{-bit}$ and $64\text{-bit}$ registers,
@@ -100,14 +128,17 @@ as they share the same underlying space.
 Extended registers[^EXR], or EXRs, are $16\text{-bit}$ registers used for general purposes.
 There are 8 EXRs, named `EXR0`, `EXR1`, ..., `EXR7`.
 Similar to *Half-Extended Registers*,
-these $16\text{-bit}$ registers are derived from the first four $32\text{-bit}$ registers,
+these $16\text{-bit}$ registers are split from the first four $32\text{-bit}$ registers,
 specifically `HER0` through `HER3`.
 
 [^EXR]:
-The reason why $16\text{-bit}$ registers are called *Extended Registers*
-is that they extend the original $8\text{-bit}$ registers.
-In contrast, $32\text{-bit}$ registers are referred to as *Half-Extended Registers*
-is because they are half the size of *Fully Extended Registers*, which are $64\text{-bit}$ in width.
+The reason why $16\text{-bit}$ registers are referred to as *Extended Registers*
+while $32\text{-bit}$ registers are *Half-Extended Registers*
+is that Extended Registers extend the original $8\text{-bit}$ registers
+while the *Half* in Half-Extended Registers is an indication of their sizes being
+half the size of *Fully Extended Registers*, which are $64\text{-bit}$ in width.
+This naming crisis arises due to the lack of communication during the development,
+and the scope of the project has grown so enormous that revising the code base is painful and seemingly unnecessary.
 
 Similarly,
 this means that modifying the contents of either type of registers will affect content inside
@@ -150,10 +181,9 @@ $\text{Physical Address} = \text{Segment Address} \ll 4 + \text{Segment Offset}$
 
 *where*
 
-- *Physical Address* is an address seen by the memory unit, commonly referred to as a physical address
-                     [@OperatingSystemConcepts].
+- *Physical Address* is an address seen by the memory unit[@OperatingSystemConcepts].
 - *Segment Address* being the address of the segment, which is its physical address shifting four bits
-                    to the right ($\text{Physical Address} \over 2^{4}$).
+                    to the right ($\text{Physical Address} \over 2^{4}$)[@INTEL80386PROGRAMMERSREFERENCEMANUAL].
 - *Segment Offset* being the length from the current position to the start of the segment.
 - *$x \ll n$* being the bit left shifting operation, value $x$ shifting $n$ bits towards the left ($x \times 2^n$).
 
@@ -167,18 +197,21 @@ and this is program relocation.
 Before the discussion of program relocation,
 the concepts of *Absolute Code* and *Position-Independent Code* (PIC) need to be established first.
 
+#### Absolute Code
 Absolute code, and an absolute object module,
 is code that...runs only at a specific location in memory.
 The Loader loads an absolute object module only into the specific location
 the module must occupy[@iRMX86ApplicationLoaderReferenceManual].
 
+#### Position-Independent Code
 Position-independent code (commonly referred to as PIC) differs from
 absolute code in that PIC can be loaded into any memory location.
 The advantage of PIC over absolute code is that PIC does not require you to
 reserve a specific block of memory[@iRMX86ApplicationLoaderReferenceManual].
 
-If the code is BIOS, then its position and size in the memory is static and known.
-However, As a user program, its memory location is arbitrary and should not be predetermined.
+If the code is PIC, like BIOS, then its position and size in the memory is static and known.
+However, As a user program, which would not be able to and should not assume which specific part of memory is free,
+as its location in memory is arbitrary and should not be predetermined.
 The operating system loads it wherever it deems appropriate.
 Using absolute code will eliminate the flexibility of user programs;
 thus, position-independent code should be employed instead.
@@ -202,7 +235,7 @@ an unintended or erroneous jump in a program's execution flow
 due to attempting to return from a subroutine after the stack pointer or activation record have been corrupted
 or incorrect computation of the destination address of a jump or subroutine call
 [@ComputerOrganization],
-or in this case, damaging the segment address resulting in incorrect computation
+or in this case, altering and possibly damaging the segment address resulting in incorrect computation
 of the next instruction location in memory.
 Therefore, `%CB` is usually not modified directly but rather changed indirectly through operations
 like a long call or long jump.
@@ -211,8 +244,8 @@ like a long call or long jump.
 
 There are four registers that can be used together to reference two data segments:
 Data Base (`%DB`), Data Pointer (`%DP`), Extended Base (`%EB`), and Extended Pointer (`%EP`).
-These registers function in pairs—`%DB` with `%DP` and `%EB` with `%EP`—to address and access
-two data segments.
+These registers function in pairs, i.e., `%DB` with `%DP` and `%EB` with `%EP`, to address and access
+two data segments simultaneously.
 
 ### Stack Management
 
@@ -877,7 +910,7 @@ until an internal interrupt wake itself.
 
 # **Appendix B: Examples**
 
-## Example A, Disk I/O
+## **Example A, Disk I/O**
 
 ```
 00000000000C1800: 30 01 64 A2 02 64 E3 18    JMP <%CB>, <$(0xC18E3)>
@@ -974,7 +1007,11 @@ until an internal interrupt wake itself.
 00000000000C1A35: 00                         NOP
 ```
 
-## Example B, Real Time Clock
+# Result of Example A
+
+![Disk I/O, Disk Being an ASCII Text File of a Disassembled BIOS Code](diskio.png)
+
+# Example B, Real Time Clock
 
 ```
 00000000000C1800: 20 64 01 64 A1 02 64 FF    MOV .64bit <%SP>, <$(0xFFF)>
@@ -1058,5 +1095,9 @@ until an internal interrupt wake itself.
                   .8bit_data < 'c', 'a', 'l', 'l', 'e', 'd', '!', 0x00, >
 00000000000C1A1D: 00                         NOP
 ```
+
+# Result of Example B
+
+![Real Time Clock, Number Being UNIX Timestamp, With Keyboard Interrupt Invoked Deliberately](rtc.png)
 
 # References
