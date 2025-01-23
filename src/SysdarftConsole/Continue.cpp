@@ -21,6 +21,7 @@ void RemoteDebugServer::crow_setup_continue()
             }
 
             breakpoint_triggered = false;
+            manual_stop = false;
             response["Result"] = "Success";
             return crow::response{response.dump()};
         });

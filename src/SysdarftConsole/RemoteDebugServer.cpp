@@ -46,6 +46,7 @@ RemoteDebugServer::RemoteDebugServer(
     crow_setup_showBreakpoint();
     crow_setup_stepi();
     crow_setup_watcher();
+    crow_setup_disassemble_an_area();
 
     server_thread = std::thread ([this](
         // DO NOT capture the current context, since it will cause `stack-use-after-return`

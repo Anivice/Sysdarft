@@ -65,8 +65,7 @@ void RemoteDebugServer::crow_setup_action()
                 if (expression.front() == 'B') {
                     manual_stop = true;
                 }
-
-                if (expression.front() == 'S')
+                else if (expression.front() == 'S')
                 {
                     if (!breakpoint_triggered) {
                         response["Result"] = "Still running";
@@ -83,8 +82,7 @@ void RemoteDebugServer::crow_setup_action()
                     operand1.set_val(operand2.get_val());
                     response["Result"] = "Success";
                 }
-
-                if (expression.front() == 'G')
+                else if (expression.front() == 'G')
                 {
                     if (!breakpoint_triggered) {
                         response["Result"] = "Still running";
@@ -100,6 +98,8 @@ void RemoteDebugServer::crow_setup_action()
                     std::stringstream ss;
                     ss << "0x" << std::uppercase << std::hex << operand1.get_val();
                     response["Result"] = ss.str();
+                } else {
+                    response["Result"] = "Unknown Expression";
                 }
             } catch (const std::exception & e) {
                 response["Result"] = "Actionable Expression Error: " + std::string(e.what());

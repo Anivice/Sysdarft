@@ -371,6 +371,7 @@ add_executable(sysdarft-system
         src/SysdarftConsole/Stepi.cpp
         src/SysdarftConsole/Watcher.cpp
         src/SysdarftConsole/logo.c
+        src/SysdarftConsole/DisassembleAnArea.cpp
 )
 target_include_directories(sysdarft-system PUBLIC ${ASIO_INCLUDE_DIR} src/include src/include/crow)
 target_link_libraries(sysdarft-system PUBLIC Sysdarft nlohmann_json::nlohmann_json)

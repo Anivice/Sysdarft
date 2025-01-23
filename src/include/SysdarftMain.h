@@ -177,6 +177,8 @@ private:
     void crow_setup_showBreakpoint();
     void crow_setup_stepi();
     void crow_setup_watcher();
+    void crow_setup_disassemble_an_area();
+
 public:
     RemoteDebugServer(const std::string &,
         uint16_t,
@@ -197,5 +199,7 @@ inline void remove_spaces(std::string &input)
 {
     input.erase(std::ranges::remove_if(input, ::isspace).begin(), input.end());
 }
+
+std::string disassemble_code(std::vector < uint8_t > assembled_code, uint64_t org);
 
 #endif //SYSDARFTMAIN_H

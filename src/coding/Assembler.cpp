@@ -4,15 +4,15 @@
 #include <EncodingDecoding.h>
 
 void replace_all(
-    std::string & input,
+    std::string & original,
     const std::string & target,
     const std::string & replacement)
 {
     if (target.empty()) return; // Avoid infinite loop if target is empty
 
     size_t pos = 0;
-    while ((pos = input.find(target, pos)) != std::string::npos) {
-        input.replace(pos, target.length(), replacement);
+    while ((pos = original.find(target, pos)) != std::string::npos) {
+        original.replace(pos, target.length(), replacement);
         pos += replacement.length(); // Move past the replacement to avoid infinite loop
     }
 }
@@ -98,7 +98,7 @@ uint64_t code_size_now(const std::vector < std::vector <uint8_t> > & code)
     return size;
 }
 
-bool process_resvb(std::string& input, std::vector <uint8_t> & code)
+bool process_resvb(const std::string& input, std::vector <uint8_t> & code)
 {
     const std::regex resvb_pattern(R"(\s*\.resvb\s+<(.*)>\s*)", std::regex_constants::icase); // .org 0x123
     if (std::smatch match;
@@ -212,10 +212,10 @@ bool process_data(const std::string& input, std::vector < data_expression_identi
 }
 
 void SysdarftCompile(
-    std::vector < std::vector <uint8_t> > & code,
+    std::vector < std::vector <uint8_t> > & instruction_buffer_set,
     std::basic_iostream < char > & file,
-    const uint64_t org,
-    defined_line_marker_t & defined_line_marker,
+    const uint64_t origin,
+    defined_line_marker_t & appeared_line_markers,
     uint64_t line_number)
 {
     std::vector < data_expression_identifier > data_processors;
@@ -240,29 +240,29 @@ void SysdarftCompile(
                 auto marker = match[1].str();
 
                 // register current offset
-                defined_line_marker[marker].first = code_size_now(code) + org;
+                appeared_line_markers[marker].first = code_size_now(instruction_buffer_set) + origin;
                 continue;
             }
 
             // preprocessor .string expression
             if (process_string(line, code_for_this_instruction)) {
-                code.emplace_back(code_for_this_instruction);
+                instruction_buffer_set.emplace_back(code_for_this_instruction);
                 continue; // preprocessor that does not need to be compiled
             }
 
             // preprocessor @@ (org)
             if (line.find("@@") != std::string::npos) {
-                replace_all(line, "@@", std::to_string(org));
+                replace_all(line, "@@", std::to_string(origin));
             }
 
             // preprocessor @ (current offset)
             if (line.find('@') != std::string::npos) {
-                replace_all(line, "@", std::to_string(code_size_now(code) + org));
+                replace_all(line, "@", std::to_string(code_size_now(instruction_buffer_set) + origin));
             }
 
             // preprocessor .resvb expression
             if (process_resvb(line, code_for_this_instruction)) {
-                code.emplace_back(code_for_this_instruction);
+                instruction_buffer_set.emplace_back(code_for_this_instruction);
                 continue; // preprocessor that does not need to be compiled
             }
 
@@ -272,14 +272,14 @@ void SysdarftCompile(
             // process data
             if (process_data(line, data_processors))
             {
-                code.emplace_back(data_processors.back().data_byte_count);
-                data_processors.back().data_appearance = code.size() - 1;
+                instruction_buffer_set.emplace_back(data_processors.back().data_byte_count);
+                data_processors.back().data_appearance = instruction_buffer_set.size() - 1;
                 continue; // this preprocessor is the most complicated.
                 // it needs to handle @ and @@ and all line markers, turn them into actual offsets,
                 // then calculate the processed expression using bc
             }
 
-            for (const auto & line_marker : defined_line_marker)
+            for (const auto & line_marker : appeared_line_markers)
             {
                 std::smatch matches;
                 if (std::regex marker(R"((.*)(<\s*)" + line_marker.first + R"(\s*>)(.*))");
@@ -289,13 +289,13 @@ void SysdarftCompile(
                         throw SysdarftAssemblerError("Error encountered while parsing line marker: " + line);
                     }
                     replace_all(line, matches[2], "<$(0xFFFFFFFFFFFFFFFF)>");
-                    defined_line_marker[line_marker.first].second.emplace_back(code.size()); // This address usage appeared here
+                    appeared_line_markers[line_marker.first].second.emplace_back(instruction_buffer_set.size()); // This address usage appeared here
                     break;
                 }
             }
 
             encode_instruction(code_for_this_instruction, line);
-            code.emplace_back(code_for_this_instruction);
+            instruction_buffer_set.emplace_back(code_for_this_instruction);
         } catch (std::exception & e) {
             throw SysdarftAssemblerError(std::string("Line: ") + std::to_string(line_number)
                 + ": Error occurred when compiling: " + std::string(e.what()));
@@ -303,13 +303,13 @@ void SysdarftCompile(
     }
 
     // process line numbers
-    for (const auto & line_marker : defined_line_marker)
+    for (const auto & line_marker : appeared_line_markers)
     {
         std::vector < uint8_t > replacement;
         encode_constant_from_uint64_t(replacement, line_marker.second.first);
         for (const auto & each_instruction : line_marker.second.second)
         {
-            replaceSequence(code[each_instruction], tmp_address_hex, replacement);
+            replaceSequence(instruction_buffer_set[each_instruction], tmp_address_hex, replacement);
         }
     }
 
@@ -318,7 +318,7 @@ void SysdarftCompile(
     {
         auto expression = data_string;
         // handle all line markers, turn them into actual offsets,
-        for (const auto &[fst, snd] : defined_line_marker) {
+        for (const auto &[fst, snd] : appeared_line_markers) {
             replace_all(expression, fst,
                 std::to_string(snd.first));
         }
@@ -340,6 +340,6 @@ void SysdarftCompile(
             data_sequence.emplace_back(((uint8_t*)&raw_data)[i]);
         }
 
-        code[data_appearance] = data_sequence;
+        instruction_buffer_set[data_appearance] = data_sequence;
     }
 }
