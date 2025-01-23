@@ -46,6 +46,10 @@ SysdarftCPUInterruption::SysdarftCPUInterruption(const uint64_t memory) :
 
 void SysdarftCPUInterruption::do_interruption(const uint64_t code)
 {
+    if (code > MAX_INTERRUPTION_ENTRY) {
+        throw SysdarftBadInterruption("Interruption out of range");
+    }
+
     auto fg = SysdarftRegister::load<FlagRegisterType>();
 
     auto mask_fg = [&]()
@@ -119,7 +123,7 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
 
 void SysdarftCPUInterruption::do_ext_dev_interruption(const uint64_t code)
 {
-    if (code > 0x1F && code < 512)
+    if (code > 0x1F && code < MAX_INTERRUPTION_ENTRY)
     {
         if (!protector.try_lock()) {
             return; // ignore this interruption, the system is currently masked
@@ -244,10 +248,17 @@ void SysdarftCPUInterruption::do_interruption_newline_0x13()
 
 void SysdarftCPUInterruption::do_interruption_getinput_0x14()
 {
-    char ch;
-    while (!SystemHalted && !do_abort_int)
+    char ch = 0;
+    while (!SystemHalted)
         // abort if external halt or device interruption triggered
     {
+        if (do_abort_int)
+        {
+            // revert ip to int <$(0x14)>
+            SysdarftRegister::store<InstructionPointerType>(ip_before_pop);
+            return;
+        }
+
         if (input_source != 0) {
             SysdarftRegister::store<ExtendedRegisterType, 0>(input_source);
             input_source = 0;

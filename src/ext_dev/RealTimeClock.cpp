@@ -72,7 +72,7 @@ void SysdarftRealTimeClock::update_time(std::atomic < bool > & running)
             } else {
                 scale_count = interruption_scale;
                 try {
-                    if (interruption_number > 0x1F && interruption_number < 512) {
+                    if (interruption_number > 0x1F && interruption_number < MAX_INTERRUPTION_ENTRY) {
                         m_cpu.do_ext_dev_interruption(interruption_number);
                     }
                 } catch (...) {

@@ -2,56 +2,69 @@
 
 # **Content**
 
-* 1. CPU Registers
-  + i. General-Purpose Registers
-    - Fully Extended Registers
-    - Half-Extended Registers
-    - Extended Registers
-    - Registers
-  + ii. Special-Purpose Registers
-    - Segmented Addressing
-      - Program Relocation
-      - Segmentation
-    - Stack Management
-      - Definition of Stack
-      - Stack Base Register
-      - Stack Pointer
-      - Stack Overflow
-    - Code Segment
-    - Data Segment
+# **Notation Conventions**
 
-* 2. Assembler Syntax
-  - Preprocessor directives
-    - .org
-      - Syntax
-      - Explanation
-      - Usage Example
-    - .equ
-      - Syntax
-      - Explanation
-      - Usage Example
-    - .lab (*deprecated*)
-      - Syntax
-      - Explanation
-      - Usage Example
-  - Instructions
-    - Operation Width
-    - Operands
-      - Registers
-      - Constants
-      - Memory References
-      - Line Markers
+This manual uses specific notation for data-structure formats,
+for symbolic representation of instructions,
+and for hexadecimal and binary numbers.
+This notation is described below.
 
-3. Interruption
-4. Instructions Set
-5. Byte Code Format
+## Bit and Byte Order
 
-# **CPU Registers**
+In illustrations of data structures in memory,
+unlike Intel architecture manuals,
+smaller addresses appear toward the top of the figure;
+addresses increase toward the bottom.
+Bit positions are numbered from right to left,
+with the leftest one being LSB (Least Significant Bit) and the rightest one being MSB (Most Significant Bit).
+The numerical value of a set bit is equal to two raised to the power of the bit position.
+This is similar to the illustration of all Intel Architectures as well as that of most ARM and RISC.
+
+![Bit and Byte Order](BitAndByteOrder.png)
+
+Exactly identical to Intel 64 and IA-32 processors,
+who are "little endian"[^LittleEndian] machines,
+that is, the bytes of a word are numbered starting from the least significant byte (byte with the smallest address),
+Sysdarft operates in a same way without a complicated protected mode and multitask support.
+
+[^LittleEndian]:
+Endianness is the order
+in which bytes within a word
+(a given computer architecture's native unit of data,
+a $64\text{-bit}$ system typically has $64\text{-bit}$ words (8-byte),
+which is called the native word size in which a computer executes many operations rather than a byte at a time,
+[@Intel64AndIA32ArchitecturesSoftwareDevelopersManualCombinedVolumes]
+though not the case for Sysdarft who operates in an $8\text{-bit}$ data stream)
+of digital data are transmitted over a data communication medium or addressed in computer memory,
+counting only byte significance compared to earliness[@OnHolyWarsAndAPleaForPeace].
+Danny Cohen adopted the term endianness from Jonathan Swift's Gulliver's Travels
+[@GulliversTravels],
+where Swift described a conflict between sects of Lilliputians
+divided into those breaking the shell of a boiled egg from the big end or from the little end.
+Little-endian system recognizes that the least significant byte is the byte whose address is the smallest in memory,
+and data is traversed from the smallest address towards bigger ones.
+
+## Processor
+
+Central Processing Unit, or CPU,
+is a processor that performs operations on an external data source,
+usually memory or some other data stream[@OxfordEnglishDictionary].
+
+## Registers and Memory
 
 *Registers are primitives used in hardware design that
 are also visible to the programmer when the computer is completed,
 so you can think of registers as the bricks of computer construction.*
 [@ComputerOrganizationAndDesign]
+
+CPU relies on registers to perform most of the tasks.
+Registers are fix-sized data storages inside the CPU
+
+## Reserved Bits
+
+Part of the CPU Register
+
+# **CPU Registers**
 
 Registers are generally preferred compared to accessing memory directly,
 since the average time of reading/writing to registers is much lower than that
@@ -208,8 +221,6 @@ two data segments.
 Stack is mainly used for storing function return addresses in control flow management, local variables,
 temporary data storage and CPU state protection.
 
-![Figure 1.1. Stack](./stack.png){#fig:figure1.1stack}
-
 Stack operates on a Last-In-First-Out basis,
 meaning the last element pushed inside the stack will be popped at first,
 similar to a gun magazine.
@@ -228,6 +239,8 @@ by setting the pointer to a specific size, the stack is automatically sized acco
 
 The following is a demonstration illustrating how a stack is managed
 (Push and Pop Data onto the Stack):
+
+![Stack](stack.png)
 
 Suppose the stack pointer `%SP` initially points to address `0x1000` and `%SB` points to `0xFFFF`.
 
@@ -348,12 +361,7 @@ that is modified by instruction `ENTER`[^Enter] and `LEAVE`[^Leave] to store
 current allocated stack space for local variables.
 
 [^PUSHALL]:
-Push all preservable registers into the stack in the following order
-(Higher in order means register being pushed earlier):
-```
-    %FER[0-15], %FG, %SB, %SP, %DB, %DP, %EB, %EP, %CPS
-```
-Code segment registers `%CB` and `%IP` are not preserved by `PUSHALL`.
+Push all preservable registers (registers except  `%CB` and `%IP`) into the stack in the following order
 Refer to *Assembler Syntax* and *Appendix A* for more information.
 
 [^POPALL]:
@@ -486,6 +494,41 @@ It supports mathematical expressions like `+, -, * ,/, %, etc.`.
     .resvb < 16 - ( (@ - @@) % 16 ) > ; ensure 16 byte alignment
 ```
 
+#### .string
+
+`.string` is an easy way to insert a continuous string of ASCII code.
+It is useful if one were to store data in the code area, especially by BIOS code.
+`.string` can process the following C style escape sequences[^EscapeSequences]:
+`\n`, `\t`, `\r`, `\\`, `\'`, and `\"`.
+
+[^EscapeSequences]:
+An escape sequence like `\n` provides a general and extensible mechanism
+for representing hard-to-type or invisible characters.
+Among the others that C provides are
+`\t` for tab,
+`\r` for carriage return,
+`\'` for the single quote,
+`\"` for the double quote,
+and `\\` for the backslash itself[@TheCProgrammingLanguage].
+
+#### Syntax and Example
+
+```
+    .string < "ASCII String" >
+    .string < "Hello World!!\n" > 
+```
+
+#### .8bit_data, .16bit_data, .32bit_data, and .64bit_data
+
+`.8bit_data`, `.16bit_data`, `.32bit_data`, and `.64bit_data`
+are preprocessor directives used to insert width-specific data into the code region.
+Unlike what's shown by the disassembler, where `.[N]bit_data` can accept continuous data expressions,
+`.[N]bit_data` can accept one and only one expression for each `.[N]bit_data` preprocessor directive.
+
+`.[N]bit_data` preprocessor directive can accept *line markers* and process them as a constant holding the
+value of the segment offset of the corresponding instructions following them.
+It also accepts `@` and `@@` directives, as well as normal mathematical expressions.
+  
 ## Instruction Statements
 
 Instruction statements are actions performed by processor.
@@ -605,21 +648,135 @@ Only spaces and tabs may appear after the colon, any other elements like instruc
 If `.org` is not specified, line markers are calculated as offsets from the beginning of the file, starting at `0`.
 If `.org` is specified, the offset is calculated from $\text{the offset within the file} + \text{specified origin}$.
 
+# **Memory Layout**
+
+Sysdarft reserves memory from `0xA0000` to `0xFFFFF`.
+This part contains the crucial code that ensures the functionality of the system.
+
+#### `0xA0000` - `0xA0FFF`
+
+Memory from `0xA0000` to `0xA0FFF` is *interruption vector*,
+or *interruption jump table*[^InterruptionVector].
+`0xA0000` to `0xA0FFF` contains `4 KB` memory space,
+and one vector entry is 16 bytes (8 byte code segment base and 8 byte code segment offset) in size,
+meaning there exists at most 256 different interruptions.
+Specifics about interruptions will be discussed in the section [**Interruption**](#interruption).
+
+[^InterruptionVector]:
+*...A table of pointers to interrupt routines can be used instead to provide the necessary speed.
+The interrupt routine is called indirectly through the table, with no intermediate routine needed.
+Generally, the table of pointers is stored in low memory (the first hundred or so locations).
+These locations hold the addresses of the interrupt service routines for the various devices.
+This array, or interrupt vector, of addresses is then indexed by a unique number,
+given with the interrupt request, to provide the address of the interrupt service routine for the interrupting device.
+Operating systems as different as Windows and UNIX dispatch interrupts in this manner[@OperatingSystemConcepts]*.
+Some prefer *interrupt vector*, some prefer *jump table*.
+Interrupt is a historical design that can be backtracked to `Whirlwind I`,
+which was a Cold War-era vacuum-tube computer
+developed by the MIT Servomechanisms Laboratory for the U.S. Navy back in 1951.
+Through the years these terms are intertwined and in many cases unused interchangeably.
+If there is a requirement to be specific, *interrupt vector* is preferred.
+But it is not a strict requirement in most cases,
+since *jump table* is very much as self-explanatory, if not more, as *interrupt vector*.
+
+#### `0xB8000` - `0xB87CF`
+
+From `0xB8000` to `0xB87CF` is a `2000` bytes linear memory used as video memory.
+Sysdarft offers a `80x25` screen, which can hold up to `2000` characters in total.
+Modifying this region will directly affect the content on the screen.
+
+#### `0xC1800` - `0xFFFFF`
+
+This `250 KB` region is used to hold system firmware, which is what we know as Basic Input Output System (BIOS).
+Modifying this region is always discouraged, since this region contains crucial code for specific use cases.
+
+
+The lower `640 KB` and any memory goes beyond `1 MB` can be used by the Operating System or user.
+In a typical structure, lower `640 KB` is reserved for Operating System,
+and beyond `1 MB` boundary is for designed user uses.
+
 # **Interruption**
 
-Interrupt, or interruption, 
+Interrupt, or interruption, usually caused by some exceptional situations[@TheJargonFile].
+An interrupt is simply a signal that the hardware or software can send when it wants the processor's attention
+[@LinuxDeviceDriversThirdEdition].
+Interruption is a way to inform CPU that a specific request is sent and needs to be processed.
+
+#### Interruption Routine
+
+Before the CPU enters an interruption routine, it preserves all registers,
+including `%CB` (Code Base) and `%IP` (Instruction Pointer), by pushing them onto the stack.
+Following this, the *Interruption Mask* (`IM`) is set to `1`,
+indicating that the CPU is currently handling an interruption and will not accept additional interruptions.
+Next, the CPU retrieves the new `%CB` and `%IP` values from the *interruption jump table*,
+which resides in the memory region `0xA0000` - `0xA0FFF`.
+These new values are then assigned to `%CB` and `%IP`,
+enabling the CPU to execute code from the specified address in the *interruption jump table*.
+This is effectively a `CALL` from CPU interruption handler, and the destination routine,
+or function in `C` sense, is an **interruption routine**.
+
+#### Non-maskable Interruptions
+
+Interruptions with its code under or equals to `0x1F`, i.e., `31`, are not maskable,
+meaning that CPU will accept interruptions with code under or equals to `0x1F` regardless of the state of `IM`.
+
+The following is a table describing each non-maskable interruption:
+
+| Interruption Code | Interruption Description                                                                                                                                                                                                                                                                                                                                                                                           |
+|-------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `0x00 `           | Fatal Error                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `0x01 `           | Divided by `0`                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `0x02`            | I/O Error                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `0x03`            | debug, indicating breakpoint reached                                                                                                                                                                                                                                                                                                                                                                               |
+| `0x04`            | Bad interruption                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `0x05`            | Keyboard interruption caused by `Ctrl+C`, usually indicating aborting current program                                                                                                                                                                                                                                                                                                                              |
+| `0x06`            | Illegal Instruction                                                                                                                                                                                                                                                                                                                                                                                                |
+| `0x07`            | Stack Overflow                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `0x10`            | Teletype (show character at cursor position, then move cursor to the position of next character, with `%EXR0` being the ASCII code)                                                                                                                                                                                                                                                                                |
+| `0x11`            | Set cursor position, with `%EXR0` being the linear position ($\text{\%EXR0} \in [0, 1999]$, `2000` characters)                                                                                                                                                                                                                                                                                                     | 
+| `0x12`            | Set Cursor Visibility, with `%EXR0` $= 1$ means visible and `%EXR0` $= 0$ means invisible                                                                                                                                                                                                                                                                                                                          |
+| `0x13`            | New line (Move cursor to the start of the next line, and scroll the content on the screen upwards one line if cursor is already at the bottom                                                                                                                                                                                                                                                                      |
+| `0x14`            | Get input. This interruption will not return unless: *a.* A valid user input from keyboard is captured, and `%EXR0` will record the key pressed on keyboard. *b.* System halt captured from keyboard, which is `Ctrl+Z` *c.* Keyboard interruption invoked by `Ctrl+C` *d.* Can be stopped by an interruption sent from an external device, and resumed to waiting for user input when interruption routine ended. |
+| `0x15`            | Get current cursor position, `%EXR0` will be cursor's linear offset ($\text{\%EXR0} \in [0, 1999]$)                                                                                                                                                                                                                                                                                                                |
+| `0x16`            | Get current physical memory size (`%FER0` being the total memory)                                                                                                                                                                                                                                                                                                                                                  |
+| `0x17`            | Ring the bell. There is a bell in Sysdarft and can be ringed by this interruption                                                                                                                                                                                                                                                                                                                                  |
+| `0x18`            | Refresh the screen with the video memory. Useful when modifying the video directly without using teletype                                                                                                                                                                                                                                                                                                          |
+
+As is shown above, $\text{interruptions code} \in [\text{0x00}, \text{0x0F}]$ are used to handle system errors,
+with `8` major hardware errors and possible `8` unassigned errors for the operating system to use.
+$\text{Interruptions code} \in [\text{0x10}, \text{0x1F}]$ are utility interruption used to perform certain actions,
+with `9` major hardware functions and possible `7` unassigned ones for the operating system to use as system calls.
+
+#### Maskable Interruptions
+
+For interruptions code larger than `0x1F`, lower than `0xFF`,
+it's usually used by users to set up specific interruptions for many use cases.
+This type of interruption can be ignored if `IM` is set to `0`.
+This is either because currently CPU is in an interruption routine,
+which will set `IM` to `1` automatically,
+or `IM` is specifically set to `0` using `ALWI` (Allow Interruption) instruction.
 
 # **Appendix A: Instructions Set**
 
-## Miscellaneous
+## Width Encoding
 
-### **NOP**     
+## Operand Encoding
 
-`NOP` means No Operation. Do nothing.
+## Instruction Set and Instruction Encoding
+
+### Miscellaneous
+
+#### **NOP**
+
+| Opcode    | Instruction | Acceptable Type for First Operand  | Acceptable Type for First Operand | Description                |
+|-----------|-------------|------------------------------------|-----------------------------------|----------------------------|
+| `0x00`    | `NOP`       | None                               | None                              | No Operation. Do nothing   |
 
 The opcode[^1] for `NOP` is `0x00`,
 which is the default value when memory initialized
 and the default value used for peddling[^2].
+This is the reason why there is an instruction `NOP` with its opcode being the default value.
+Should CPU mistakenly execute an uninitialized area, there won't be serious consequences.
 
 [^1]: opcode: The field that denotes the operation and format of an instruction [@ComputerOrganizationAndDesign].
 
@@ -629,7 +786,14 @@ An unnamed field with width 0 forces this padding,
 so that the next field will begin at the edge of the next allocation unit.
 [@TheCProgrammingLanguage]
 
-| **HLT**     | Halt the CPU, then shutdown     | `HLT`  |
+#### **HLT**
+
+Halt the CPU, then shutdown.
+
+This is different from almost any other CPUs where `hlt` enters a power-saving state
+until an internal interrupt wake itself.
+
+| **HLT**     |      | `HLT`  |
 | **IGNI**    | Set IM (Interruption Mask) to 1 | `IGNI` |
 | **ALWI**    | Set IM (Interruption Mask) to 0 | `ALWI` |
 

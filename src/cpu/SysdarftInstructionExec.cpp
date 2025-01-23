@@ -78,7 +78,7 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
     try {
         try
         {
-            const auto ip_before_pop = SysdarftRegister::load<InstructionPointerType>();
+            ip_before_pop = SysdarftRegister::load<InstructionPointerType>();
             const bool breakpoint_reached = is_break_here(timestamp);
 
             const auto &[opcode, width, operands, literal]
