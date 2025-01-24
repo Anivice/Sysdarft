@@ -199,6 +199,7 @@ private:
     void crow_setup_watcher();
     void crow_setup_disassemble_an_area();
     void crow_setup_kbint();
+    void crow_setup_pull_data();
 
 public:
     RemoteDebugServer(const std::string &,
@@ -222,5 +223,6 @@ inline void remove_spaces(std::string &input)
 }
 
 std::string disassemble_code(std::vector < uint8_t > assembled_code, uint64_t org);
+std::string xxd_like_dump(const uint64_t offset, const std::vector<uint8_t>& data);
 
 #endif //SYSDARFTMAIN_H

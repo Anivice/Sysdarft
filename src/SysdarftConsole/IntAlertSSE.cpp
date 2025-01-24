@@ -50,6 +50,7 @@ void RemoteDebugServer::crow_setup_intAlertSSE()
             if (request == "Status") {
                 const std::string data = breakpoint_triggered ? "Paused" : "Running";
                 send_data(data);
+            // for remote UI:
             } else if (request == "VideoMemory") {
                 try {
                     static char buffer [VIDEO_MEMORY_SIZE + 3] = { 0 };
@@ -61,7 +62,7 @@ void RemoteDebugServer::crow_setup_intAlertSSE()
                 } catch (const std::exception &e) {
                     conn.send_text("Error: " + std::string(e.what()));
                 }
-            } else if (!request.empty() && request.front() == 'I') {
+            } else if (!request.empty() && request.front() == 'I') { // I(input ASCII code)
                 std::string data = request;
                 data.erase(data.begin());
                 const int ch = static_cast<int>(std::strtol(data.c_str(), nullptr, 10));

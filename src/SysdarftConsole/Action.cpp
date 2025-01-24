@@ -84,6 +84,8 @@ void RemoteDebugServer::crow_setup_action()
 
                 if (expression.front() == 'B') {
                     manual_stop = true;
+                    CPUInstance.debugger_pause_0x14(); // abort int 0x14
+                    response["Result"] = "Break next";
                 }
                 else if (expression.front() == 'S')
                 {

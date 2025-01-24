@@ -272,8 +272,9 @@ void SysdarftCPUInterruption::do_interruption_getinput_0x14()
     while (!SystemHalted)
         // abort if external halt or device interruption triggered
     {
-        if (do_abort_int)
+        if (do_abort_int || debugger_pause_blocked_int_0x14)
         {
+            debugger_pause_blocked_int_0x14 = false;
             // revert ip to int <$(0x14)>
             SysdarftRegister::store<InstructionPointerType>(ip_before_pop);
             return;

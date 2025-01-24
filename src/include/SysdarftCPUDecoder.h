@@ -186,6 +186,7 @@ protected:
     // External halt is handled at upper level
     std::atomic<bool> SystemHalted = false;
     std::atomic < bool > do_abort_int = false;
+    std::atomic < bool > debugger_pause_blocked_int_0x14 = false;
     std::mutex protector;
     std::vector < uint64_t > interruption_requests;
     std::atomic < bool > external_device_requested = false;
@@ -274,6 +275,7 @@ private:
 public:
     void do_ext_dev_interruption(uint64_t code);
     bool try_add_input(int input_);
+    void debugger_pause_0x14() { debugger_pause_blocked_int_0x14 = true;}
 };
 
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInstructionDecoder : public SysdarftCPUInterruption
