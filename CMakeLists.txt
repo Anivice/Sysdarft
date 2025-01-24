@@ -124,6 +124,7 @@ set(optimization_flags
         -fstrict-aliasing
         -fdata-sections
         -ffunction-sections
+        -D_FORTIFY_SOURCE=2
         -s
 )
 
@@ -138,6 +139,7 @@ set(optimization_link_flags
         -fdata-sections
         -ffunction-sections
         -Wl,--gc-sections
+        -D_FORTIFY_SOURCE=2
         -s
 )
 
@@ -175,7 +177,7 @@ add_library(SysdarftDebug OBJECT
         src/SysdarftDebug.cpp
         src/include/SysdarftDebug.h
         src/include/SysdarftDebug.inl
-        src/ProprocessingFlagChecker.cpp
+        src/PreProcessingFlagChecker.cpp
 )
 target_include_directories(SysdarftDebug PUBLIC src/include)
 
@@ -262,7 +264,7 @@ target_include_directories(SysdarftICH PUBLIC src/include)
 # Sysdarft Shared Library:
 add_library(Sysdarft SHARED src/include/WorkerThread.h)
 target_include_directories(Sysdarft PUBLIC src/include)
-target_link_libraries(Sysdarft PUBLIC
+target_link_libraries(Sysdarft PRIVATE
         SysdarftDebug
         SysdarftMessageMap
         SysdarftModule
@@ -374,11 +376,12 @@ add_executable(sysdarft-system
         src/SysdarftConsole/DisassembleAnArea.cpp
 )
 target_include_directories(sysdarft-system PUBLIC ${ASIO_INCLUDE_DIR} src/include src/include/crow)
-target_link_libraries(sysdarft-system PUBLIC Sysdarft nlohmann_json::nlohmann_json)
+target_link_libraries(sysdarft-system PRIVATE Sysdarft nlohmann_json::nlohmann_json)
 
 if (NOT "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     add_custom_target(STRIP_ALL ALL
-            COMMAND strip sysdarft-system libSysdarft.so
+            COMMAND strip sysdarft-system
+            COMMAND strip libSysdarft.so
             DEPENDS sysdarft-system Sysdarft
             COMMENT "Stripping symbols...")
 endif ()

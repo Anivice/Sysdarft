@@ -1,29 +1,21 @@
-/***
+/* logo.c
  *
- *                                                                             dddddddd
- *       SSSSSSSSSSSSSSS                                                       d::::::d                                          ffffffffffffffff           tttt
- *     SS:::::::::::::::S                                                      d::::::d                                         f::::::::::::::::f       ttt:::t
- *    S:::::SSSSSS::::::S                                                      d::::::d                                        f::::::::::::::::::f      t:::::t
- *    S:::::S     SSSSSSS                                                      d:::::d                                         f::::::fffffff:::::f      t:::::t
- *    S:::::S            yyyyyyy           yyyyyyy    ssssssssss       ddddddddd:::::d   aaaaaaaaaaaaa   rrrrr   rrrrrrrrr     f:::::f       ffffffttttttt:::::ttttttt
- *    S:::::S             y:::::y         y:::::y   ss::::::::::s    dd::::::::::::::d   a::::::::::::a  r::::rrr:::::::::r    f:::::f             t:::::::::::::::::t
- *     S::::SSSS           y:::::y       y:::::y  ss:::::::::::::s  d::::::::::::::::d   aaaaaaaaa:::::a r:::::::::::::::::r  f:::::::ffffff       t:::::::::::::::::t
- *      SS::::::SSSSS       y:::::y     y:::::y   s::::::ssss:::::sd:::::::ddddd:::::d            a::::a rr::::::rrrrr::::::r f::::::::::::f       tttttt:::::::tttttt
- *        SSS::::::::SS      y:::::y   y:::::y     s:::::s  ssssss d::::::d    d:::::d     aaaaaaa:::::a  r:::::r     r:::::r f::::::::::::f             t:::::t
- *           SSSSSS::::S      y:::::y y:::::y        s::::::s      d:::::d     d:::::d   aa::::::::::::a  r:::::r     rrrrrrr f:::::::ffffff             t:::::t
- *                S:::::S      y:::::y:::::y            s::::::s   d:::::d     d:::::d  a::::aaaa::::::a  r:::::r              f:::::f                   t:::::t
- *                S:::::S       y:::::::::y       ssssss   s:::::s d:::::d     d:::::d a::::a    a:::::a  r:::::r              f:::::f                   t:::::t    tttttt
- *    SSSSSSS     S:::::S        y:::::::y        s:::::ssss::::::sd::::::ddddd::::::dda::::a    a:::::a  r:::::r             f:::::::f                  t::::::tttt:::::t
- *    S::::::SSSSSS:::::S         y:::::y         s::::::::::::::s  d:::::::::::::::::da:::::aaaa::::::a  r:::::r             f:::::::f                  tt::::::::::::::t
- *    S:::::::::::::::SS         y:::::y           s:::::::::::ss    d:::::::::ddd::::d a::::::::::aa:::a r:::::r             f:::::::f                    tt:::::::::::tt
- *     SSSSSSSSSSSSSSS          y:::::y             sssssssssss       ddddddddd   ddddd  aaaaaaaaaa  aaaa rrrrrrr             fffffffff                      ttttttttttt
- *                             y:::::y
- *                            y:::::y
- *                           y:::::y
- *                          y:::::y
- *                         yyyyyyy
+ * Copyright 2025 Anivice Ives
  *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 #include <stdio.h>
