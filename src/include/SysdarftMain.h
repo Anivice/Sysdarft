@@ -198,6 +198,7 @@ private:
     void crow_setup_stepi();
     void crow_setup_watcher();
     void crow_setup_disassemble_an_area();
+    void crow_setup_kbint();
 
 public:
     RemoteDebugServer(const std::string &,

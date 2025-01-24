@@ -351,7 +351,6 @@ add_compile_definitions(ASIO_STANDALONE)
 
 add_executable(sysdarft-system
         src/SysdarftConsole/SysdarftMain.cpp
-        src/include/SysdarftConsole.h
         src/include/SysdarftMain.h
         src/SysdarftConsole/MainArgProcessor.cpp
         src/SysdarftConsole/MainCompile.cpp
@@ -374,6 +373,7 @@ add_executable(sysdarft-system
         src/SysdarftConsole/Watcher.cpp
         src/SysdarftConsole/logo.c
         src/SysdarftConsole/DisassembleAnArea.cpp
+        src/SysdarftConsole/CrowSendAbort.cpp
 )
 target_include_directories(sysdarft-system PUBLIC ${ASIO_INCLUDE_DIR} src/include src/include/crow)
 target_link_libraries(sysdarft-system PRIVATE Sysdarft nlohmann_json::nlohmann_json)
