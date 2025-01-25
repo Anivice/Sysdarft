@@ -61,6 +61,7 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
         std::vector < std::vector< uint8_t > > code;
         std::vector < std::string > file;
         object_t object;
+        std::string filename;
     };
 
     uint64_t org = 0;
@@ -81,6 +82,8 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
                 file.file.push_back(line);
             }
 
+            file.filename = source_file;
+
             files.emplace_back(file);
         } catch (const std::exception & e) {
             throw SysdarftAssemblerError("Error when processing file " + source_file + ": " + e.what());
@@ -89,12 +92,20 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
 
     // preprocessing
     for (file_attr_t & file : files) {
-        PreProcess(file.file, file.symbol_table, org, regex);
+        try {
+            PreProcess(file.file, file.symbol_table, org, regex);
+        } catch (const std::exception & err) {
+            throw std::runtime_error("Error when processing file " + file.filename + ": " + err.what());
+        }
     }
 
     // compiling
     for (file_attr_t & file : files) {
-        file.object = SysdarftAssemble(file.code, file.file, org, file.symbol_table);
+        try {
+            file.object = SysdarftAssemble(file.code, file.file, org, file.symbol_table);
+        } catch (const std::exception & err) {
+            throw std::runtime_error("Error when processing file " + file.filename + ": " + err.what());
+        }
     }
 
     std::vector <object_t> objects;
@@ -151,13 +162,12 @@ std::string pop_str_from_vec(std::vector < uint8_t > & vec)
 {
     const auto len = pop_num_from_vec<uint16_t>(vec);
     std::string ret;
-    ret.resize(len + 1);
+    ret.resize(len);
     if (vec.size() < len) {
         throw SysdarftDisassemblerError("Invalid vector size");
     }
     std::memcpy(ret.data(), vec.data(), len);
     vec.erase(vec.begin(), vec.begin() + len);
-    ret[len] = '\0';
     return ret;
 }
 
@@ -192,7 +202,7 @@ void disassemble(const std::string & binary_filename, const uint64_t org, COMPIL
         compile_mode = EXE;
     }
 
-    if (assembled_code.size() >= 3 && assembled_code[0] == 'S' && assembled_code[1] == 'Y' && assembled_code[2] == 'Y') {
+    if (assembled_code.size() >= 3 && assembled_code[0] == 'S' && assembled_code[1] == 'Y' && assembled_code[2] == 'S') {
         compile_mode = SYS;
     }
 

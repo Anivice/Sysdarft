@@ -247,6 +247,7 @@ add_library(SysdarftCoding OBJECT
         src/coding/Assembler.cpp
         src/coding/PreProcessor.cpp
         src/coding/Linker.cpp
+        src/coding/OperandSanity.cpp
 )
 target_include_directories(SysdarftCoding PUBLIC src/include)
 

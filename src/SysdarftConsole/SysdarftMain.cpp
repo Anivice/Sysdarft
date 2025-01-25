@@ -276,7 +276,7 @@ int main(int argc, char** argv)
                 std::cerr << "ERROR: missing format, input file, or output file!" << std::endl;
                 exit_failure_on_error();
             } catch (std::exception & e) {
-                std::cerr << "ERROR: Error when compiling source files:\n" << e.what() << std::endl;
+                std::cerr << e.what() << std::endl;
                 return EXIT_FAILURE;
             }
 

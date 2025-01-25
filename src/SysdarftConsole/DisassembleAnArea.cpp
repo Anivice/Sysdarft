@@ -61,6 +61,10 @@ std::string disassemble_code(std::vector < uint8_t > assembled_code,
         std::stringstream ss;
         std::stringstream dat;
 
+        if (symbol_table.contains(bad_data.front().first)) {
+            ss << "\n<" << symbol_table.at(bad_data.front().first) << ">:\n";
+        }
+
         ss << std::hex << std::setfill('0') << std::setw(16) << std::uppercase
            << bad_data.front().first;
         ss << ": ";

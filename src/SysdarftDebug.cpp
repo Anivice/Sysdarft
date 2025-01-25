@@ -497,7 +497,7 @@ SysdarftBaseError::SysdarftBaseError(
 #ifdef __DEBUG__
     : runtime_error(initialize_error_msg(msg, errno))
 #else
-    : runtime_error(msg + (debug::verbose ? "errno: " + std::to_string(errno) : ""))
+    : runtime_error(msg + (debug::verbose ? " errno: " + std::to_string(errno) + ": " + std::strerror(errno) : ""))
 #endif
     , cur_errno(errno)
 {

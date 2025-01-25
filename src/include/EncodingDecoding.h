@@ -701,4 +701,6 @@ SysdarftAssemble(
 
 object_t SYSDARFT_EXPORT_SYMBOL SysdarftLink(std::vector < object_t > & objects);
 
+void OperandSanityCheck(uint8_t opcode, const std::vector < parsed_target_t > & operands);
+
 #endif // INSTRUCTIONS_H

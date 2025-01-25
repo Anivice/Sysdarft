@@ -103,6 +103,8 @@ void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> & buffer, co
         operand_index_begin++;
     }
 
+    std::vector < parsed_target_t > SanityCheckOperandVector;
+
     for (uint64_t i = 0; i  < argument_count; i++)
     {
         const auto & provided_args = cleaned_line.size() - operand_index_begin;
@@ -129,6 +131,7 @@ void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> & buffer, co
 
         try {
             parsed_target = encode_target(buffer, tmp);
+            SanityCheckOperandVector.emplace_back(parsed_target);
         } catch (const SysdarftCodeExpressionError & Err) {
             throw InstructionExpressionError("Illegal Target operand expression for " + instruction +
                 "\n>>>\n" + Err.what() + "<<<\n");
@@ -178,5 +181,7 @@ void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> & buffer, co
                 }
             }
         }
+
+        OperandSanityCheck(instruction_map.at(instruction_name).at(ENTRY_OPCODE), SanityCheckOperandVector);
     }
 }

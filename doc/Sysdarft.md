@@ -793,9 +793,27 @@ or `IM` is specifically set to `0` using `ALWI` (Allow Interruption) instruction
 
 ## Width Encoding
 
+Sysdarft supports four data width,
+namely $8$-bit, $16$-bit, $32$-bit, and $64$-bit.
+All of which are encoded in packed BCD code,
+which are `0x08`, `0x16`, `0x32`, `0x64` respectively.
+
 ## Operand Encoding
 
-## Instruction Set and Instruction Encoding
+All operands start with an operand prefix that can determine the type of the operand,
+following that is operand width, which is a BCD code mentioned above.
+After this is operand-specific code area.
+Operand has three different types:
+
+- Register
+- Constant
+- Memory Reference
+
+
+
+## Instruction Encoding
+
+## Instruction Set
 
 ### Miscellaneous
 

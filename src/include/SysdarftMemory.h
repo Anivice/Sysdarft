@@ -58,7 +58,7 @@ public:
 
 class StackOverflow final : public SysdarftBaseError {
 public:
-    StackOverflow() : SysdarftBaseError("STack overflow") { }
+    StackOverflow() : SysdarftBaseError("Stack overflow") { }
 };
 
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPUMemoryAccess

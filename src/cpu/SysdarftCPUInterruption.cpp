@@ -115,7 +115,11 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
 
     if (code <= 0x1F)
     {
-        // hardware interruptions, unmaskable
+        if (debug::verbose && code < 0x10) {
+            std::cerr << "Exception invoked with code " << code << std::endl;
+        }
+
+        // hardware interruptions, un-maskable
         switch (code) {
         case 0x00: do_interruption_fatal_0x00();            return;
         case 0x03: do_interruption_debug_0x03();            return;
