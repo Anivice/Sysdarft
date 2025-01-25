@@ -120,7 +120,7 @@ There are eight HERs, named `HER0`, `HER1`, ..., `HER7`.
 The eight $32\text{-bit}$ registers are actually split from the first four $64\text{-bit}$ registers,
 specifically `FER0` through `FER3`.
 This means that modifying the contents of *either* of the $32\text{-bit}$ or $64\text{-bit}$
-versions of these registers will affect content of *both* of the $32\text{-bit}$ and $64\text{-bit}$ registers,
+versions of these registers affects content of *both* of the $32\text{-bit}$ and $64\text{-bit}$ registers,
 as they share the same underlying space.
 
 ### Extended Registers
@@ -141,7 +141,7 @@ This naming crisis arises due to the lack of communication during the developmen
 and the scope of the project has grown so enormous that revising the code base is painful and seemingly unnecessary.
 
 Similarly,
-this means that modifying the contents of either type of registers will affect content inside
+this means that modifying the contents of either type of registers affects content inside
 all types of registers.
 
 ### Registers
@@ -150,7 +150,7 @@ Registers are $8\text{-bit}$ CPU registers used for general purposes.
 There are eight Registers, named `R0`, `R1`, ..., `R7`.
 These $8\text{-bit}$ registers are derived from the first four $16\text{-bit}$ registers,
 specifically `EXR0` through `EXR3`.
-And modifying *any* of the $8\text{-bit}$ registers will affect *all* types of registers sharing
+And modifying *any* of the $8\text{-bit}$ registers affects *all* types of registers sharing
 the same space.
 
 *The reason behind designing different width types of registers sharing the same area is that
@@ -213,7 +213,7 @@ If the code is PIC, like BIOS, then its position and size in the memory is stati
 However, As a user program, which would not be able to and should not assume which specific part of memory is free,
 as its location in memory is arbitrary and should not be predetermined.
 The operating system loads it wherever it deems appropriate.
-Using absolute code will eliminate the flexibility of user programs;
+Using absolute code eliminates the flexibility of user programs;
 thus, position-independent code should be employed instead.
 
 Segmentation can easily solve this issue.
@@ -255,7 +255,7 @@ Stack is mainly used for storing function return addresses in control flow manag
 temporary data storage and CPU state protection.
 
 Stack operates on a Last-In-First-Out basis,
-meaning the last element pushed inside the stack will be popped at first,
+meaning the last element pushed inside the stack is popped at first,
 similar to a gun magazine.
 
 #### Stack Base Register
@@ -316,7 +316,7 @@ Such overflow triggers a phenomenon called integer wrap-around,
 where the result cycles back within the allowable range and represents an unintended value.
 This is because signed integers are two's complement binary values
 that can be used to represent both positive and negative integer values
-[@Intel64andIA32ArchitecturesSoftwareDevelopersManualVolume1BasicArchitecture],
+[@Intel64AndIA32ArchitecturesSoftwareDevelopersManualCombinedVolumes],
 and this behavior is caused by such a representation method.
 
 #### Two's Complement
@@ -355,21 +355,21 @@ as adding `1` to the $(r-1)$'s complement gives the $r$'s complement.
 
 Now, there exists a situation where an operation attempts to store data that is
 larger than the available stack space.
-This means `%SP` will be attempted to be set to a negative number.
-And if `%SP` decreases below zero, the register will overflow and wrap-around.
+This means `%SP` is attempted to be set to a negative number.
+And if `%SP` decreases below zero, the register overflows and wrap-around.
 
-Similar wrap-around happens to `%SP` when it is set to `-1`, but $64\text{-bit}$ in width.
-`%SP` will perform a wrap-around to represent `-1`, which is `0xFFFFFFFFFFFFFFFF`,
+Similar wrap-around happens to `%SP` when `%SP` is set to `-1`, but $64\text{-bit}$ in width.
+`%SP` performs a wrap-around to represent `-1`, which is `0xFFFFFFFFFFFFFFFF`,
 or `1111111111111111111111111111111111111111111111111111111111111111`,
 where every bit in the stack pointer is set to `1` which, when assumed as unsigned,
 is the maximum value a $64\text{-bit}$ register can represent ($18446744073709551615_10$).
 
-As a result, the stack pointer will point to an address that
+As a result, the stack pointer points to an address that
 even a $64\text{-bit}$ system may not be able to access.
 This occurs because the pointer, when combined with its base address,
-will refer to a location that almost certainly goes beyond the $64\text{-bit}$ addressable space,
+refers to a location that almost certainly goes beyond the $64\text{-bit}$ addressable space,
 let alone when the actual physical memory space is put into consideration,
-which will be far less than $2^{64}-1$.
+which would be far less than $2^{64}-1$.
 
 This situation is called a stack overflow.
 
@@ -394,7 +394,7 @@ that is modified by instruction `ENTER`[^Enter] and `LEAVE`[^Leave] to store
 current allocated stack space for local variables.
 
 [^PUSHALL]:
-Push all preservable registers (registers except  `%CB` and `%IP`) into the stack in the following order
+Push all preservable registers (registers except  `%CB` and `%IP`) onto the stack in the following order
 Refer to *Assembler Syntax* and *Appendix A* for more information.
 
 [^POPALL]:
@@ -436,7 +436,7 @@ and resolves all these directives before any code is actually generated by regul
 `.org`, or origin, defines the starting offset for code in memory.
 While the default origin is `0x00`, some absolute code (like BIOS) loads at specific addresses such as `0xC1800`.
 If the assembler assumed an origin of `0x00`,
-all line markers will start at `0x00` and would be inconsistent with the actual location of the code
+all line markers starts at `0x00` and would be inconsistent with the actual location of the code
 (like `0xC1800`).
 `.org` can manually specify the correct starting address,
 ensuring proper offset calculations for absolute code.
@@ -452,21 +452,21 @@ ensuring proper offset calculations for absolute code.
 
 In assembly or low-level programming, the `.equ` directive is used to
 *replace occurrences of a string* with another, similar to how macros work in C.
-It's essentially a way to define *symbolic constants* or *aliases* for values or strings.
+It is essentially a way to define *symbolic constants* or *aliases* for values or strings.
 
 - *Regular expression support disabled*
 
-  If the assembler doesn't enable regular expressions (option `-R, --regular`)
-  for the `.equ` directive, it will simply perform a literal string replacement.
-  In this case, it will search for occurrences of a specific string
-  (*Search Target*) and replace them with the *Replacement*
+  If the assembler does not enable regular expressions (option `-R, --regular`)
+  for the `.equ` directive, it simply performs a literal string replacement.
+  In this case, assembler searches for occurrences of a specific string
+  (*Search Target*) and replaces them with the *Replacement*
   exactly as they appear, without any special pattern matching or modifications.
 
 - *Regular expression support enabled*
 
   If the assembler enabled regular expressions,
   the `.equ` directive can behave like a regular expression search-and-replace.
-  This means it can capture string groups and modify them using regular expression.
+  This means assembler can capture string groups and modify them using regular expression.
 
 #### Syntax and Example
 
@@ -476,7 +476,7 @@ It's essentially a way to define *symbolic constants* or *aliases* for values or
     ; regular expression not enabled
     .equ 'HDD_IO', '0x1234'
     ; regular expression enabled
-    ; this will replace occurrances like ADD(%FER0, %FER1) to ADD .64bit <%FER0>, <%FER1>
+    ; this replaces occurrances like ADD(%FER0, %FER1) to ADD .64bit <%FER0>, <%FER1>
     .equ 'ADD\s*\((.*), (.*)\)', 'ADD .64bit <\1>, <\2>'
 ```
 
@@ -485,6 +485,8 @@ It's essentially a way to define *symbolic constants* or *aliases* for values or
 Define one or more line markers.
 This directive is deprecated.
 Line markers can be auto scanned and defined without relying on this directive.
+This directive has no effect unless it is meant to serve as a pre-definition
+for a cross-referencing symbol for multiple files.
 
 #### Syntax and Example
 
@@ -497,7 +499,7 @@ Line markers can be auto scanned and defined without relying on this directive.
 > which can and only can be processed if they are at the beginning of the file.
 > Any occurrences of declarative preprocessor directives within the code region,
 > that is, appearing after an instruction or valid line marker,
-> the assembler will refuse to process these directives
+> the assembler refuses to process these directives
 > and an exception (error) will be thrown.
 
 #### `@` and `@@`
@@ -555,7 +557,7 @@ and `\\` for the backslash itself[@TheCProgrammingLanguage].
 
 `.8bit_data`, `.16bit_data`, `.32bit_data`, and `.64bit_data`
 are preprocessor directives used to insert width-specific data into the code region.
-Unlike what's shown by the disassembler, where `.[N]bit_data` can accept continuous data expressions,
+Unlike what is shown by the disassembler, where `.[N]bit_data` can accept continuous data expressions,
 `.[N]bit_data` can accept one and only one expression for each `.[N]bit_data` preprocessor directive.
 
 `.[N]bit_data` preprocessor directive can accept *line markers* and process them as a constant holding the
@@ -566,7 +568,7 @@ It also accepts `@` and `@@` directives, as well as normal mathematical expressi
 
 Instruction statements are actions performed by processor.
 
-For all instruction statements, it follows this syntax:
+For all instruction statements, this syntax is followed:
 
 ```
     Mnemonic [Width] <Operand1> [, <Operand2>]
@@ -608,7 +610,7 @@ There are three possible operand types: registers, constants, or memory referenc
 Register operands are accessible internal CPU registers of general-purpose or special-purpose.
 
 Registers must start with `%`, with no space between `%` and register name.
-For example: `%EXR2` is valid, but `"% EXR2"` is not and will not be detected as an operand.
+For example: `%EXR2` is valid, but `"% EXR2"` is not and will not be detected as a valid operand.
 
 #### Constants
 
@@ -628,7 +630,7 @@ For example, a constant in an instruction expression can look like this:
 ```
 
 Constant expressions are always 64 bits wide.
-Any value exceeding 64 bits will trigger an overflow report but is not considered an error.
+Any value exceeding $64$ bits triggers an overflow report but is not considered an error.
 In the event of an overflow, the result is set to `ULLONG_MAX` (`18446744073709551615`).
 
 #### Memory References
@@ -676,7 +678,7 @@ For example:
 ```
 
 `_start` is identified as a line marker by its tailing `":."`
-Only spaces and tabs may appear after the colon, any other elements like instructions will be considered as errors.
+Only spaces and tabs may appear after the colon, any other elements like instructions are considered as errors.
 
 If `.org` is not specified, line markers are calculated as offsets from the beginning of the file, starting at `0`.
 If `.org` is specified, the offset is calculated from $\text{the offset within the file} + \text{specified origin}$.
@@ -693,7 +695,7 @@ or *interruption jump table*[^InterruptionVector].
 `0xA0000` to `0xA0FFF` contains `4 KB` memory space,
 and one vector entry is 16 bytes (8 byte code segment base and 8 byte code segment offset) in size,
 meaning there exists at most 256 different interruptions.
-Specifics about interruptions will be discussed in the section [**Interruption**](#interruption).
+Specifics about interruptions are discussed in the section [**Interruption**](#interruption).
 
 [^InterruptionVector]:
 *...A table of pointers to interrupt routines can be used instead to provide the necessary speed.
@@ -716,7 +718,7 @@ since *jump table* is very much as self-explanatory, if not more, as *interrupt 
 
 From `0xB8000` to `0xB87CF` is a `2000` bytes linear memory used as video memory.
 Sysdarft offers a `80x25` screen, which can hold up to `2000` characters in total.
-Modifying this region will directly affect the content on the screen.
+Modifying this region directly affects the content on the screen.
 
 #### `0xC1800` - `0xFFFFF`
 
@@ -737,7 +739,7 @@ Interruption is a way to inform CPU that a specific request is sent and needs to
 
 #### Interruption Routine
 
-Before the CPU enters an interruption routine, it preserves all registers,
+Before the CPU enters an interruption routine, CPU preserves all registers,
 including `%CB` (Code Base) and `%IP` (Instruction Pointer), by pushing them onto the stack.
 Following this, the *Interruption Mask* (`IM`) is set to `1`,
 indicating that the CPU is currently handling an interruption and will not accept additional interruptions.
@@ -769,8 +771,8 @@ The following is a table describing each non-maskable interruption:
 | `0x11`            | Set cursor position, with `%EXR0` being the linear position ($\text{\%EXR0} \in [0, 1999]$, `2000` characters)                                                                                                                                                                                                                                                                                                     | 
 | `0x12`            | Set Cursor Visibility, with `%EXR0` $= 1$ means visible and `%EXR0` $= 0$ means invisible                                                                                                                                                                                                                                                                                                                          |
 | `0x13`            | New line (Move cursor to the start of the next line, and scroll the content on the screen upwards one line if cursor is already at the bottom                                                                                                                                                                                                                                                                      |
-| `0x14`            | Get input. This interruption will not return unless: *a.* A valid user input from keyboard is captured, and `%EXR0` will record the key pressed on keyboard. *b.* System halt captured from keyboard, which is `Ctrl+Z` *c.* Keyboard interruption invoked by `Ctrl+C` *d.* Can be stopped by an interruption sent from an external device, and resumed to waiting for user input when interruption routine ended. |
-| `0x15`            | Get current cursor position, `%EXR0` will be cursor's linear offset ($\text{\%EXR0} \in [0, 1999]$)                                                                                                                                                                                                                                                                                                                |
+| `0x14`            | Get input. This interruption does not return unless: *a.* A valid user input from keyboard is captured, and `%EXR0` will record the key pressed on keyboard. *b.* System halt captured from keyboard, which is `Ctrl+Z` *c.* Keyboard interruption invoked by `Ctrl+C` *d.* Can be stopped by an interruption sent from an external device, and resumed to waiting for user input when interruption routine ended. |
+| `0x15`            | Get current cursor position, with `%EXR0` being cursor's linear offset ($\text{\%EXR0} \in [0, 1999]$)                                                                                                                                                                                                                                                                                                             |
 | `0x16`            | Get current physical memory size (`%FER0` being the total memory)                                                                                                                                                                                                                                                                                                                                                  |
 | `0x17`            | Ring the bell. There is a bell in Sysdarft and can be ringed by this interruption                                                                                                                                                                                                                                                                                                                                  |
 | `0x18`            | Refresh the screen with the video memory. Useful when modifying the video directly without using teletype                                                                                                                                                                                                                                                                                                          |
@@ -783,35 +785,104 @@ with `9` major hardware functions and possible `7` unassigned ones for the opera
 #### Maskable Interruptions
 
 For interruptions code larger than `0x1F`, lower than `0xFF`,
-it's usually used by users to set up specific interruptions for many use cases.
+they are usually used by users to set up specific interruptions for many use cases.
 This type of interruption can be ignored if `IM` is set to `0`.
 This is either because currently CPU is in an interruption routine,
-which will set `IM` to `1` automatically,
+which sets `IM` to `1` automatically,
 or `IM` is specifically set to `0` using `ALWI` (Allow Interruption) instruction.
 
 # **Appendix A: Instructions Set**
 
 ## Width Encoding
 
-Sysdarft supports four data width,
+Sysdarft supports four types of data width,
 namely $8$-bit, $16$-bit, $32$-bit, and $64$-bit.
-All of which are encoded in packed BCD code,
+All of which are encoded in packed BCD[^BCD] code,
 which are `0x08`, `0x16`, `0x32`, `0x64` respectively.
+
+[^BCD]:
+Binary Coded Decimal data, or BCD data,
+is self-explanatory binary data compared to raw binary numbers.
+BCD has two major data types: packed and unpacked.
+The term unpacked BCD usually implies a full byte for each digit (often including a sign),
+whereas packed BCD typically encodes two digits within a single byte
+by taking advantage of the fact that four bits are enough to represent the range 0 to 9
+[@Intel64AndIA32ArchitecturesSoftwareDevelopersManualCombinedVolumes].
+The precise four-bit encoding, however, may vary for technical reasons.
+The BCD code used by Sysdarft is a plain packed BCD code for positive numbers with no signs,
+i.e., decimal expressions like `32` or `64` are simply packed as `0x32` and `0x64`
+with no additional modifications.
 
 ## Operand Encoding
 
 All operands start with an operand prefix that can determine the type of the operand,
 following that is operand width, which is a BCD code mentioned above.
 After this is operand-specific code area.
-Operand has three different types:
+Operand has three different types: *Register*, *Constant* and *Memory Reference*.
 
-- Register
-- Constant
-- Memory Reference
+### Register
 
+Register starts with prefix `0x01`.
+Width specification tells the system which register type is being referenced,
+which is the BCD code mentioned above.
+Following width BCD code is register index, which is a single-byte binary number.
+For non-$64$-bit registers, index ranges from `0` to `7`,
+representing their corresponding registers.
+$64$-bit registers takes index of `0` to `15`,
+representing a total `16` registers as designed.
+
+| Byte 0, Register Identification  | Byte 1, Width Specification | Byte 2         |
+|----------------------------------|-----------------------------|----------------|
+| `0x01`                           | `0x08`/`0x16`/`0x32`/`0x64` | Register Index |
+
+### Constant
+
+Constants are always $64$-bit in width with `0x02` as its indication,
+since constant does not enforce a data width in its expression.
+However, constants are confined by operation data width still,
+and data beyond specified operation data width is capped and discarded.
+
+| Byte 0, Constant Identification | Byte 1, Data Width, Always `64` | Byte 2-9, Binary Number |
+|---------------------------------|---------------------------------|-------------------------|
+| `0x02`                          | `0x64`                          | Constant Binary Number  |
+
+### Memory Reference
+
+Memory reference is used to point to an address inside the memory.
+Memory reference is identified with prefix `0x03`.
+Encoding of memory reference is complicated and is encoded from
+
+*Memory Reference Syntax*
+
+```
+    *[Ratio]&[Width](Base, Offset1, Offset2)
+```
+
+to its
+
+*Encoded Format*
+
+| Byte 0, Memory Identification | Byte 1, Width Specification  | *Base*, *Offset1*, *Offset2* | Single-Byte Suffix |
+|-------------------------------|------------------------------|------------------------------|--------------------|
+| `0x03`                        | `0x08`/`0x16`/`0x32`/`0x64`  | Encoded Binary Code          | Ratio BCD Code     |
+
+*where*
+
+- *Base*, *Offset1*, and *Offset2* can be either constants or registers of different types.
+- *Single-Byte Ratio Suffix* is a BCD code which can be `0x01`, `0x02`, `0x04`, `0x08`, and `0x16`,
+corresponding to the memory reference ratio syntax mentioned earlier.
 
 
 ## Instruction Encoding
+
+Instruction is an $8$-bit wide byte code.
+There are far less than $256$ instructions in Sysdarft CPU, so a single byte is sufficient.
+Instruction is encoded as the following format:
+
+| Byte 0, Instruction Opcode | Operands (If Implied by Instruction)                                                            | 
+|----------------------------|-------------------------------------------------------------------------------------------------|
+| Opcode                     | Acceptable operands implied by Instruction Opcode. $0$, $1$ or $2$ operands are all acceptable. | 
+
 
 ## Instruction Set
 
@@ -819,59 +890,423 @@ Operand has three different types:
 
 #### **NOP**
 
-| Opcode    | Instruction | Acceptable Type for First Operand  | Acceptable Type for First Operand | Description                |
-|-----------|-------------|------------------------------------|-----------------------------------|----------------------------|
-| `0x00`    | `NOP`       | None                               | None                              | No Operation. Do nothing   |
+| Opcode    | Instruction | Acceptable Type for First Operand  | Acceptable Type for First Operand | 
+|-----------|-------------|------------------------------------|-----------------------------------|
+| `0x00`    | `NOP`       | None                               | None                              | 
+
 
 The opcode[^1] for `NOP` is `0x00`,
 which is the default value when memory initialized
 and the default value used for peddling[^2].
 This is the reason why there is an instruction `NOP` with its opcode being the default value.
-Should CPU mistakenly execute an uninitialized area, there won't be serious consequences.
+Should CPU mistakenly execute an uninitialized area, there would not be serious consequences.
 
 [^1]: opcode: The field that denotes the operation and format of an instruction [@ComputerOrganizationAndDesign].
 
-[^2]: When a field following another field will not fit into a partially filled storage unit,
+[^2]: When a field following another field does not fit into a partially filled storage unit,
 it may be split between units, or the unit may be padded.
 An unnamed field with width 0 forces this padding,
-so that the next field will begin at the edge of the next allocation unit.
+so that the next field begins at the edge of the next allocation unit.
 [@TheCProgrammingLanguage]
 
 #### **HLT**
 
-Halt the CPU, then shutdown.
+Halt the CPU, then *shutdown*.
 
-This is different from almost any other CPUs where `hlt` enters a power-saving state
-until an internal interrupt wake itself.
+| Opcode    | Instruction | Acceptable Type for First Operand  | Acceptable Type for First Operand | 
+|-----------|-------------|------------------------------------|-----------------------------------|
+| `0x40`    | `HLT`       | None                               | None                              |
 
-| **HLT**     |      | `HLT`  |
-| **IGNI**    | Set IM (Interruption Mask) to 1 | `IGNI` |
-| **ALWI**    | Set IM (Interruption Mask) to 0 | `ALWI` |
+
+`HLT` is different from almost any other CPUs where `hlt` enters a power-saving state
+until an external interrupt wakes itself.
+
+#### **IGNI** 
+
+Set IM (Interruption Mask) to `1`.
+
+| Opcode    | Instruction | Acceptable Type for First Operand  | Acceptable Type for First Operand |
+|-----------|-------------|------------------------------------|-----------------------------------|
+| `0x41`    | `IGNI`      | None                               | None                              |
+
+
+`IGNI` masks all maskable interruptions.
+
+#### **ALWI**
+
+Set IM (Interruption Mask) to `0`.
+
+| Opcode    | Instruction | Acceptable Type for First Operand  | Acceptable Type for First Operand |
+|-----------|-------------|------------------------------------|-----------------------------------|
+| `0x42`    | `ALWI`      | None                               | None                              |
+
+
+`ALWI` enables interruption response from all interruption types,
+either from maskable or un-maskable interruptions.
 
 ## Arithmetic
 
-| Instruction | Explanation                                                      | Syntax                       |
-|-------------|------------------------------------------------------------------|------------------------------|
-| **ADD**     | `OPR1` $=$ `OPR1` + `OPR2`                                       | `ADD [Width] <OPR1>, <OPR2>` |
-| **ADC**     | `OPR1` $=$ `OPR1` + `OPR2` + `CF`                                | `ADC [Width] <OPR1>, <OPR2>` |
-| **SUB**     | `OPR1` $=$ `OPR1` - `OPR2`                                       | `SUB [Width] <OPR1>, <OPR2>` |
-| **SBB**     | `OPR1` $=$ `OPR1` - `OPR2` - `CF`                                | `SBB [Width] <OPR1>, <OPR2>` |
-| **IMUL**    | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $\times$ (signed) `OPR1`   | `IMUL [Width] <OPR1>`        |
-| **MUL**     | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $\times$ (unsigned) `OPR1` | `MUL [Width] <OPR1>`         |
-| **IDIV**    | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` / (signed) `OPR1`          | `IDIV [Width] <OPR1>`        |
-| **DIV**     | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` / (unsigned) `OPR1`        | `DIV [Width] <OPR1>`         |
-| **NEG**     | `OPR1` $=$ $-$`OPR1`                                             | `NEG [Width] <OPR1>`         |
-| **CMP**     | Compare `OPR1` with `OPR2`, and set corresponding flags          | `CMP [Width] <OPR1>, <OPR2>` |
-| **INC**     | `OPR1` $=$ `OPR1` $+ 1$                                          | `INC [Width] <OPR1>`         |
-| **DEC**     | `OPR1` $=$ `OPR1` $- 1$                                          | `DEC [Width] <OPR1>`         |
+#### **ADD**
+
+Add two numbers and store the result to the first operand.
+(`Operand1 = Operand1 + Operand2`)
+
+| Opcode    | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
+|-----------|-------------|-----------------------------------|-----------------------------------------|
+| `0x01`    | `ADD`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+
+
+`ADD` adds two numbers and store the result to the first operand.
+`ADD` assumes unsigned operands, and when overflowing,
+`CF` (Carry Flag) will be set to `1`.
+
+
+#### **ADC**
+
+Add two numbers and `CF`, then store the result to the first operand.
+(`Operand1 = Operand1 + Operand2 + CF`)
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
+|--------|-------------|-----------------------------------|-----------------------------------------|
+| `0x02` | `ADC`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+
+
+`ADD` adds two numbers and `CF`, then store the result to the first operand.
+`ADD` assumes unsigned operands, and when overflowing,
+`CF` (Carry Flag) will be set to `1`.
+
+`ADC` is crucial when calculating numbers beyond register capability.
+
+#### Usage Example
+
+```
+    ; first number 0xA0FF
+    MOV .8bit <%R0>, <$(0xFF)>
+    MOV .8bit <%R1>, <$(0xA0)>
+
+    ; second number 0xD3AC
+    MOV .8bit <%R2>, <$(0xAC)>
+    MOV .8bit <%R3>, <$(0xD3)>
+
+    ; calculate the addition of the given two numbers
+    ; higher 8 bits are stored in %R1
+    ; lower 8 bits are stored in %R0
+    ADD .8bit <%R0>, <%R2>
+    ADC .8bit <%R1>, <%R3>
+```
+
+
+#### **SUB**
+
+Subtract two numbers and store the result to the first operand.
+(`Operand1 = Operand1 - Operand2`)
+
+| Opcode    | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
+|-----------|-------------|-----------------------------------|-----------------------------------------|
+| `0x03`    | `SUB`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+
+
+`SUB` subtracts two numbers and store the result to the first operand.
+`SUB` assumes unsigned operands, and when overflowing,
+`CF` (Carry Flag) will be set to `1`.
+
+
+#### **SBB**
+
+Subtract two numbers and `CF`, then store the result to the first operand.
+(`Operand1 = Operand1 - Operand2 - CF`)
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
+|--------|-------------|-----------------------------------|-----------------------------------------|
+| `0x04` | `SBB`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+
+
+`SBB` subtracts two numbers and `CF`, then store the result to the first operand.
+`SBB` assumes unsigned operands, and when overflowing,
+`CF` (Carry Flag) will be set to `1`.
+
+`SBB` is crucial when calculating numbers beyond register capability.
+
+#### Usage Example
+
+```
+    ; first number 0xA0FF
+    MOV .8bit <%R0>, <$(0xFF)>
+    MOV .8bit <%R1>, <$(0xA0)>
+
+    ; second number 0xD3AC
+    MOV .8bit <%R2>, <$(0xAC)>
+    MOV .8bit <%R3>, <$(0xD3)>
+
+    ; calculate the subtraction of the given two numbers
+    ; higher 8 bits are stored in %R1
+    ; lower 8 bits are stored in %R0
+    SUB .8bit <%R0>, <%R2>
+    SBB .8bit <%R1>, <%R3>
+```
+
+#### **IMUL**
+
+Signed multiplication of first referenced register[^FRR] and `Operand1`,
+then store the result to first referenced register.
+(`R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $\times$ (Assume Signed) `Operand1`)
+`OF` will be set to `1` when an overflow is detected.
+
+[^FRR]:
+`Nth`-Referenced Register is the register with index being `N`
+and its width being any valid width.
+
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------------|-----------------------------------|
+| `0x05` | `IMUL`      | Register, Constant, or Memory Reference | None                              |
+
+
+#### **MUL**
+
+Unsigned multiplication of first referenced register and `Operand1`,
+then store the result to first referenced register.
+(`R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $\times$ (Assume Unsigned) `Operand1`)
+
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------------|-----------------------------------|
+| `0x06` | `MUL`       | Register, Constant, or Memory Reference | None                              |
+
+
+#### **IDIV**
+
+Signed division of first referenced register and `Operand1`,
+then store the *quotient* to first referenced register,
+and the *remainder* to the second referenced register.
+(`R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $/$ (Assume Signed) `Operand1`,
+`R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $\%$ (Assume Signed) `Operand1`)
+`OF` will be set to `1` when an overflow is detected.
+
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------------|-----------------------------------|
+| `0x07` | `IDIV`      | Register, Constant, or Memory Reference | None                              |
+
+
+#### **DIV**
+
+Unsigned division of first referenced register and `Operand1`,
+then store the *quotient* to first referenced register,
+and the *remainder* to the second referenced register.
+(`R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $/$ (Assume Unsigned) `Operand1`,
+`R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $\%$ (Assume Unsigned) `Operand1`)
+
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------------|-----------------------------------|
+| `0x08` | `DIV`       | Register, Constant, or Memory Reference | None                              |
+
+
+#### **NEG**
+
+Negation of `Operand1`, and store the result to `Operand1`.
+(`Operand1 = -Operand1`)
+
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------|-----------------------------------|
+| `0x09` | `NEG`       | Register, Memory Reference        | None                              |
+
+
+
+#### **CMP**
+
+Compare `Operand1` to `Operand2`, and set corresponding flags.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
+|--------|-------------|-----------------------------------------|------------------------------------------|
+| `0x0A` | `CMP`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+
+
+| Flag               | Condition                           |
+|--------------------|-------------------------------------|
+| *LargerThan*, *BG* | $\text{Operand1} > \text{Operand2}$ |
+| *LessThan*, *LE*   | $\text{Operand1} < \text{Operand2}$ |
+| *Equal*, *EQ*      | $\text{Operand1} = \text{Operand2}$ |
+
+
+#### **INC**
+
+Increase the value in `Operand1` by `1`.
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------|-----------------------------------|
+| `0x0B` | `INC`       | Register, Memory Reference        | None                              |
+
+
+#### **DEC**
+
+Decrease the value in `Operand1` by `1`.
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------|-----------------------------------|
+| `0x0C` | `DEC`       | Register, Memory Reference        | None                              |
+
+## Logic and Bitwise
+
+#### **AND**
+
+Perform bitwise `AND` for `Operand1` and `Operand2`,
+and store the result in `Operand1`.
+(`Operand1 = Operand1 & Operand2`)
+
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
+|--------|-------------|-----------------------------------|-----------------------------------------|
+| `0x10` | `AND`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+
+
+#### **OR**
+
+Perform bitwise `OR` for `Operand1` and `Operand2`,
+and store the result in `Operand1`.
+(`Operand1 = Operand1 | Operand2`)
+
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
+|--------|-------------|-----------------------------------|-----------------------------------------|
+| `0x11` | `OR`        | Register, Memory Reference        | Register, Constant, or Memory Reference |
+
+
+#### **XOR**
+
+Perform bitwise `XOR` (Exclusive OR) for `Operand1` and `Operand2`,
+and store the result in `Operand1`.
+(`Operand1 = Operand1 ^ Operand2`)
+
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
+|--------|-------------|-----------------------------------|-----------------------------------------|
+| `0x12` | `XOR`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+
+
+#### **NOT**
+
+Perform bitwise `NOT` for `Operand1`,
+and store the result in `Operand1`.
+(`Operand1 = ~Operand1`)
+
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------|-----------------------------------|
+| `0x13` | `NOT`       | Register, Memory Reference        | None                              |
+
+
+#### **SHL**
+
+Shift bits in `Operand1` towards the left by `Operand2`,
+and store the result in `Operand1`.
+(`Operand1 = Operand1 << Operand2`)
+
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
+|--------|-------------|-----------------------------------|-----------------------------------------|
+| `0x14` | `SHL`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+
+
+#### **SHR**
+
+Shift bits in `Operand1` towards the right by `Operand2`,
+and store the result in `Operand1`.
+(`Operand1 = Operand1 >> Operand2`)
+
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
+|--------|-------------|-----------------------------------|-----------------------------------------|
+| `0x15` | `SHR`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+
+
+#### **ROL**
+
+Rotate bits in `Operand1` towards the left by `Operand2`,
+and store the result in `Operand1`.
+
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
+|--------|-------------|-----------------------------------|-----------------------------------------|
+| `0x16` | `ROL`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+
+
+#### **ROR**
+
+Rotate bits in `Operand1` towards the right by `Operand2`,
+and store the result in `Operand1`.
+
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
+|--------|-------------|-----------------------------------|-----------------------------------------|
+| `0x17` | `ROR`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+
+
+#### **RCL**
+
+Rotate bits in `Operand1` towards the left through `CF` by `Operand2`,
+and store the result in `Operand1`.
+
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
+|--------|-------------|-----------------------------------|-----------------------------------------|
+| `0x18` | `RCL`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+
+
+#### **RCR**
+
+Rotate bits in `Operand1` towards the right through `CF` by `Operand2`,
+and store the result in `Operand1`.
+
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
+|--------|-------------|-----------------------------------|-----------------------------------------|
+| `0x19` | `RCR`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
 
 ## Data Transfer
 
+#### **MOV**
+
+Copy value in `Operand2` to `Operand1`.
+
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand        |
+|--------|-------------|-----------------------------------|------------------------------------------|
+| `0x20` | `MOV`       | Register, Memory Reference        | Register, Constant, or Memory Reference  |
+
+#### **XCHG**
+
+Exchange values in `Operand1` and `Operand2`.
+
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------|-----------------------------------|
+| `0x21` | `XCHG`      | Register, Memory Reference        | Register, Memory Reference        |
+
+
+#### **PUSH**
+
+Push `Operand1` onto the stack.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------------|-----------------------------------|
+| `0x22` | `PUSH`      | Register, Constant, or Memory Reference | None                              |
+
+
+#### **POP**
+
+Pop a value the same size as `Operand1` from the stack into `Operand1`.
+
+| Opcode | Instruction | Acceptable Type for First Operand  | Acceptable Type for First Operand |
+|--------|-------------|------------------------------------|-----------------------------------|
+| `0x23` | `POP`       | Register, Memory Reference         | None                              |
+
+
+
 | Instruction | Explanation                                                      | Syntax                       |
 |-------------|------------------------------------------------------------------|------------------------------|
-| **MOV**     | `OPR1` $=$ `OPR1` + `OPR2`                                       | `ADD [Width] <OPR1>, <OPR2>` |
-| **XCHG**    | `OPR1` $=$ `OPR1` + `OPR2` + `CF`                                | `ADC [Width] <OPR1>, <OPR2>` |
-| **PUSH**    | `OPR1` $=$ `OPR1` - `OPR2`                                       | `SUB [Width] <OPR1>, <OPR2>` |
 | **POP**     | `OPR1` $=$ `OPR1` - `OPR2` - `CF`                                | `SBB [Width] <OPR1>, <OPR2>` |
 | **PUSHALL** | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $\times$ (signed) `OPR1`   | `IMUL [Width] <OPR1>`        |
 | **POPALL**  | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $\times$ (unsigned) `OPR1` | `MUL [Width] <OPR1>`         |
@@ -880,20 +1315,6 @@ until an internal interrupt wake itself.
 | **MOVS**    | `OPR1` $=$ $-$`OPR1`                                             | `NEG [Width] <OPR1>`         |
 | **LEA**     | Compare `OPR1` with `OPR2`, and set corresponding flags          | `CMP [Width] <OPR1>, <OPR2>` |
 
-## Logic and Bitwise
-
-| Instruction | Explanation                                                      | Syntax                       |
-|-------------|------------------------------------------------------------------|------------------------------|
-| **AND**     | `OPR1` $=$ `OPR1` + `OPR2`                                       | `ADD [Width] <OPR1>, <OPR2>` |
-| **OR**      | `OPR1` $=$ `OPR1` + `OPR2` + `CF`                                | `ADC [Width] <OPR1>, <OPR2>` |
-| **XOR**     | `OPR1` $=$ `OPR1` - `OPR2`                                       | `SUB [Width] <OPR1>, <OPR2>` |
-| **NOT**     | `OPR1` $=$ `OPR1` - `OPR2` - `CF`                                | `SBB [Width] <OPR1>, <OPR2>` |
-| **SHL**     | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $\times$ (signed) `OPR1`   | `IMUL [Width] <OPR1>`        |
-| **SHR**     | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $\times$ (unsigned) `OPR1` | `MUL [Width] <OPR1>`         |
-| **ROL**     | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` / (signed) `OPR1`          | `IDIV [Width] <OPR1>`        |
-| **ROR**     | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` / (unsigned) `OPR1`        | `DIV [Width] <OPR1>`         |
-| **RCL**     | `OPR1` $=$ $-$`OPR1`                                             | `NEG [Width] <OPR1>`         |
-| **RCR**     | Compare `OPR1` with `OPR2`, and set corresponding flags          | `CMP [Width] <OPR1>, <OPR2>` |
 
 ## Control Flow
 
