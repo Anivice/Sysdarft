@@ -47,7 +47,8 @@ std::string insert_newlines_every_24(const std::string& input)
     return result;
 }
 
-std::string disassemble_code(std::vector < uint8_t > assembled_code, const uint64_t org)
+std::string disassemble_code(std::vector < uint8_t > assembled_code,
+    const uint64_t org, const std::map < uint64_t, std::string >& symbol_table)
 {
     auto assembled_code_backup = assembled_code;
     std::stringstream ret;
@@ -93,6 +94,10 @@ std::string disassemble_code(std::vector < uint8_t > assembled_code, const uint6
         std::stringstream off;
         std::vector < std::string > line;
         auto current_pos = space - assembled_code.size() + org;
+        if (symbol_table.contains(current_pos)) {
+            off << "\n<" << symbol_table.at(current_pos) << ">:\n";
+        }
+
         off << std::hex << std::setfill('0') << std::setw(16) << std::uppercase
             << current_pos;
 

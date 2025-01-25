@@ -266,11 +266,9 @@ int main(int argc, char** argv)
                 if (format.at(0) == "bin") {
                     compile_to_binary(src_files, output_file.at(0), regex, BIN);
                 } else if (format.at(0) == "exe") {
-                    std::cerr << "ERROR: Feature not implemented!" << std::endl;
-                    exit_failure_on_error();
+                    compile_to_binary(src_files, output_file.at(0), regex, EXE);
                 } else if (format.at(0) == "sys") {
-                    std::cerr << "ERROR: Feature not implemented!" << std::endl;
-                    exit_failure_on_error();
+                    compile_to_binary(src_files, output_file.at(0), regex, SYS);
                 } else {
                     exit_failure_on_error();
                 }
@@ -302,22 +300,26 @@ int main(int argc, char** argv)
                     origin = std::strtoull(expression.c_str(), nullptr, 10);
                 }
 
-                const std::string line = "================================================================";
+                std::string format;
+
+                if (parsed_options.contains("format")) {
+                    format = parsed_options["format"].at(0);
+                } else {
+                    format = "bin";
+                }
 
                 for (const auto & src_file : src_files)
                 {
-                    const auto len = (line.length() - (src_file.length() + 4)) / 2;
-                    const auto space_after = line.length() - len * 2 - 2 - src_file.length();
-                    const std::string line_before_n_after(len, '=');
-                    const std::string string_space_after(space_after, ' ');
-                    std::cout << ";" << line << std::endl;
-                    std::cout << ";" << line_before_n_after << "  "
-                              << src_file << string_space_after << line_before_n_after << std::endl;
-                    std::cout << ";" << line << std::endl;
-
-                    disassemble(src_file, origin);
-
-                    std::cout << ";" << line << std::endl;
+                    if (format == "bin") {
+                        disassemble(src_file, origin, BIN);
+                    } else if (format == "exe") {
+                        disassemble(src_file, origin, EXE);
+                    } else if (format == "sys") {
+                        disassemble(src_file, origin, SYS);
+                    } else {
+                        std::cerr << "ERROR: Unknown format!" << std::endl;
+                        exit_failure_on_error();
+                    }
                 }
 
             } catch (std::out_of_range &) {

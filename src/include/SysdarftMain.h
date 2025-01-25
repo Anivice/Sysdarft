@@ -105,7 +105,8 @@ ParsedArgs get_args(int argc, char** argv, option long_options[]);
 
 enum COMPILATION_MODE { BIN, EXE, SYS };
 void compile_to_binary(const std::vector<std::string> &, const std::string &, bool, COMPILATION_MODE compile_mode);
-void disassemble(const std::string &, uint64_t);
+void disassemble(const std::string & binary_filename, uint64_t org, COMPILATION_MODE compile_mode);
+std::string disassemble_code(std::vector < uint8_t >, uint64_t, const std::map < uint64_t, std::string >& symbol_table = {});
 std::string show_context(SysdarftCPU &, uint64_t actual_ip, uint8_t, const SysdarftCPU::WidthAndOperandsType &);
 
 class RemoteDebugServer {
@@ -224,7 +225,6 @@ inline void remove_spaces(std::string &input)
     input.erase(std::ranges::remove_if(input, ::isspace).begin(), input.end());
 }
 
-std::string disassemble_code(std::vector < uint8_t > assembled_code, uint64_t org);
 std::string xxd_like_dump(const uint64_t offset, const std::vector<uint8_t>& data);
 
 #endif //SYSDARFTMAIN_H
