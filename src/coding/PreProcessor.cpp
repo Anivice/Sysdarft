@@ -55,20 +55,21 @@ std::string truncateAfterSemicolonOrHash(const std::string& input)
     return input;
 }
 
-std::vector < std::string > line_marker_register(std::vector<std::string> & file)
+std::map < std::string, std::string >
+line_marker_register(std::vector<std::string> & file)
 {
     std::string upper_line_marker;
-    std::vector < std::string > result;
+    std::map < std::string, std::string > result;
 
     for (auto & line : file)
     {
-        if (line.find(":") != std::string::npos)
+        if (std::regex_match(line, line_mark_pattern))
         {
             // discard spaces and tab
             replace_all(line, " ", "");
             replace_all(line, "\t", "");
 
-            std::string before = line;
+            const std::string before = line;
 
             // being a submarker
             if (line.find(".") != std::string::npos)
@@ -83,18 +84,18 @@ std::vector < std::string > line_marker_register(std::vector<std::string> & file
                 // process
                 line = tmp + line;
 
-                if (std::ranges::contains(result, line)) {
+                if (result.contains(line)) {
                     throw SysdarftPreProcessorError("Multiple definition of line markers for " + line);
                 }
 
-                result.emplace_back(line);
+                result.emplace(before, line);
             } else {
                 upper_line_marker = line;
 
-                if (std::ranges::contains(result, line)) {
+                if (result.contains(line)) {
                     throw SysdarftPreProcessorError("Multiple definition of line markers for " + line);
                 }
-                result.emplace_back(line);
+                result.emplace(before, line);
             }
         }
     }
@@ -264,13 +265,24 @@ void PreProcess(std::vector < std::string > & file,
     // register all symbols
     auto markers = line_marker_register(file);
 
+    // replace submarkers with fullnames
+    for (auto & line : file) {
+        for (const auto & marker : markers) {
+            std::string before = marker.first;
+            std::string after = marker.second;
+            replace_all(before, ":", "");
+            replace_all(after, ":", "");
+            replace_all(line, before, after);
+        }
+    }
+
     // define symbols
     for (auto & marker : markers)
     {
-        replace_all(marker, ":", "");
-        if (!is_line_marker_present(marker)) {
+        replace_all(marker.second, ":", "");
+        if (!is_line_marker_present(marker.second)) {
             defined_line_marker.emplace_back(line_marker_t {
-                .line_marker_name = marker,
+                .line_marker_name = marker.second,
                 .marker_position = 0,
                 .is_defined = false,
                 .referenced = false,

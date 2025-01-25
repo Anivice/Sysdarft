@@ -187,8 +187,6 @@ bool process_data(const std::string& input, std::vector < data_expression_identi
     return false;
 }
 
-const std::regex line_mark_pattern(R"(\s*([A-Za-z_]\w*)(?=)\s*:\s*)");
-
 object_t SysdarftAssemble(
     std::vector < std::vector <uint8_t> > & instruction_buffer_set,
     std::vector < std::string > & file,
