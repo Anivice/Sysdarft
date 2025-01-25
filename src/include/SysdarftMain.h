@@ -102,7 +102,9 @@ const option_complicated long_options[] = {
 using ParsedOptions = std::map<std::string, std::vector<std::string>>;
 using ParsedArgs = std::pair<ParsedOptions, std::vector<std::string>>;
 ParsedArgs get_args(int argc, char** argv, option long_options[]);
-void compile_to_binary(const std::vector< std::string > &, const std::string &, bool);
+
+enum COMPILATION_MODE { BIN, EXE, SYS };
+void compile_to_binary(const std::vector<std::string> &, const std::string &, bool, COMPILATION_MODE compile_mode);
 void disassemble(const std::string &, uint64_t);
 std::string show_context(SysdarftCPU &, uint64_t actual_ip, uint8_t, const SysdarftCPU::WidthAndOperandsType &);
 

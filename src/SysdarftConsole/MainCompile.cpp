@@ -20,29 +20,58 @@
 
 #include <SysdarftMain.h>
 
-void compile_to_binary(const std::vector< std::string > & source_files,
-    const std::string & binary_filename,
-    const bool regex)
+void compile_to_binary(const std::vector<std::string> &source_files, const std::string &binary_filename, const bool regex,
+                       const COMPILATION_MODE compile_mode)
 {
-    std::vector < std::vector < uint8_t > > binary_cct;
+    struct file_attr_t {
+        defined_line_marker_t symbol_table;
+        std::vector < std::vector< uint8_t > > code;
+        std::vector < std::string > file;
+        object_t object;
+    };
+
+    uint64_t org = 0;
+    std::vector < file_attr_t > files;
+
+    // reading
     for (const std::string & source_file : source_files)
     {
         try {
-
-            std::fstream file(source_file, std::ios::in | std::ios::out);
-            if (!file.is_open()) {
+            file_attr_t file;
+            std::fstream filestream(source_file, std::ios::in | std::ios::out);
+            if (!filestream.is_open()) {
                 throw SysdarftAssemblerError("Could not open file " + source_file);
             }
 
-            std::vector < uint8_t > binary;
-            CodeProcessing(binary, file, regex);
+            std::string line;
+            while (std::getline(filestream, line)) {
+                file.file.push_back(line);
+            }
 
-            file.close();
-            binary_cct.emplace_back(binary);
+            files.emplace_back(file);
         } catch (const std::exception & e) {
             throw SysdarftAssemblerError("Error when processing file " + source_file + ": " + e.what());
         }
     }
+
+    // preprocessing
+    for (file_attr_t & file : files) {
+        PreProcess(file.file, file.symbol_table, org, regex);
+    }
+
+    // compiling
+    for (file_attr_t & file : files) {
+        file.object = SysdarftAssemble(file.code, file.file, org, file.symbol_table);
+    }
+
+    std::vector <object_t> objects;
+
+    // archiving
+    for (file_attr_t & file : files) {
+        objects.push_back(file.object);
+    }
+
+    object_t linked_object = SysdarftLink(objects);
 
     try {
         std::ofstream file(binary_filename, std::ios::out | std::ios::binary);
@@ -50,8 +79,12 @@ void compile_to_binary(const std::vector< std::string > & source_files,
             throw SysdarftAssemblerError("Could not open file " + binary_filename);
         }
 
-        for (const auto & cct : binary_cct) {
-            file.write(reinterpret_cast<const char*>(cct.data()), static_cast<ssize_t>(cct.size()));
+        if (compile_mode == BIN) {
+            for (const auto & cct : linked_object.code) {
+                file.write(reinterpret_cast<const char*>(cct.data()), static_cast<ssize_t>(cct.size()));
+            }
+        } else {
+            throw SysdarftAssemblerError("Feature not implemented");
         }
 
         file.close();

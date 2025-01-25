@@ -156,6 +156,25 @@ public:
         SysdarftBaseError("Assembler cannot parse the code expression: " + message) { }
 };
 
+class SysdarftLinkerError final : public SysdarftBaseError
+{
+public:
+    /*!
+     * @brief Create a SysdarftAssemblerError object
+     *
+     * Used by higher level assembler to indicate that an unrecognized and unrecoverable error found in source code
+     *
+     * @callergraph
+     * @callgraph
+     *
+     * @param message Error description
+     * @return None
+     *
+     */
+    explicit SysdarftLinkerError(const std::string & message) :
+        SysdarftBaseError("Error encountered when linking: " + message) { }
+};
+
 /*!
  * @brief Generic invalid argument:
  *
@@ -566,12 +585,14 @@ std::string bad_nbit(const Type & data)
 }
 
 /// @brief Type that defines line marker, can have more than one
-///
-/// < <line marker name>, < <marker position>, <location it appeared> > >
-typedef std::map < std::string, /* line marker name */
-    std::pair < uint64_t /* marker position */,
-    std::vector < uint64_t > /* location it appeared */ >
-> defined_line_marker_t;
+struct line_marker_t {
+    std::string line_marker_name;
+    uint64_t marker_position;
+    bool is_defined;
+    bool referenced;
+    std::vector < uint64_t > loc_it_appeared_in_cur_blk;
+};
+typedef std::vector < line_marker_t > defined_line_marker_t;
 
 /*!
  * @brief process hexadecimal numbers appeared in a string, replace them with decimals
@@ -650,46 +671,32 @@ void encode_instruction(std::vector < uint8_t > & buffer,
 void SYSDARFT_EXPORT_SYMBOL decode_instruction(std::vector < std::string > & literal_buffer,
     std::vector<uint8_t> & code_buffer);
 
-/*!
- * @brief Compile a sets of instructions from data stream
- *
- * @param instruction_buffer_set Reference of a std::vector < std::vector < uint8_t > > buffer.
- * Each element (std::vector < uint8_t >) of the outer vector is an encoded instruction
- * @param file Input data stream for compiling
- * @param origin Origin used for the compilation process (code offset of the current line markers)
- * @param appeared_line_markers All appearances of line markers, name is required, appearances and
- * its own location can be (and should be) left blank
- * @param line_number Starting of the line number of the file, since file might be part of a larger stream
- * @return Nothing
- *
- * @throw SysdarftAssemblerError
- *
- */
-void
-#ifdef __DEBUG__
-    SYSDARFT_EXPORT_SYMBOL
-#endif
-SysdarftCompile(
-    std::vector < std::vector < uint8_t > > & instruction_buffer_set,
-    std::basic_iostream < char > & file,
-    uint64_t origin,
-    defined_line_marker_t & appeared_line_markers,
-    uint64_t line_number = 0);
-
-/**
- * @brief Compile a file from data stream.
- * This serves as a preprocessor of the assembly file
- *
- * @param code Encoded binary code
- * @param file Data stream, can be a file or any other data stream types
- * @param regex If regular expression is used in .equ preprocessor directive
- * @return Nothing
- *
- * @throw SysdarftPreProcessorError
- */
-void SYSDARFT_EXPORT_SYMBOL CodeProcessing(
-    std::vector < uint8_t > & code,
-    std::basic_istream < char > & file,
+void SYSDARFT_EXPORT_SYMBOL PreProcess(std::vector < std::string > & file,
+    defined_line_marker_t & defined_line_marker,
+    uint64_t & org,
     bool regex);
+
+struct data_expression_identifier
+{
+    uint64_t data_appearance;
+    uint64_t data_byte_count;
+    std::string data_string;
+};
+
+struct object_t
+{
+    std::vector < std::vector <uint8_t> > code;
+    defined_line_marker_t symbol_table;
+    std::vector < data_expression_identifier > data_expression_identifiers;
+};
+
+[[nodiscard]] object_t SYSDARFT_EXPORT_SYMBOL
+SysdarftAssemble(
+    std::vector < std::vector <uint8_t> > & instruction_buffer_set,
+    std::vector < std::string > & file,
+    uint64_t & origin,
+    defined_line_marker_t & appeared_line_markers);
+
+object_t SYSDARFT_EXPORT_SYMBOL SysdarftLink(std::vector < object_t > & objects);
 
 #endif // INSTRUCTIONS_H

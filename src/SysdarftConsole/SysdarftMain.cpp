@@ -264,7 +264,7 @@ int main(int argc, char** argv)
                 }
 
                 if (format.at(0) == "bin") {
-                    compile_to_binary(src_files, output_file.at(0), regex);
+                    compile_to_binary(src_files, output_file.at(0), regex, BIN);
                 } else if (format.at(0) == "exe") {
                     std::cerr << "ERROR: Feature not implemented!" << std::endl;
                     exit_failure_on_error();

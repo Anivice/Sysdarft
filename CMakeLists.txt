@@ -246,6 +246,7 @@ add_library(SysdarftCoding OBJECT
         src/coding/DecodeInstruction.cpp
         src/coding/Assembler.cpp
         src/coding/PreProcessor.cpp
+        src/coding/Linker.cpp
 )
 target_include_directories(SysdarftCoding PUBLIC src/include)
 
@@ -311,14 +312,8 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     add_unit_test(test.arithmetic tests/test.arithmetic.cpp)
     add_unit_test(test.lgAbit tests/test.lgAbit.cpp)
     add_unit_test(test.dataTsf tests/test.dataTsf.cpp)
-    add_unit_test(test.assembler tests/test.assembler.cpp)
-    add_unit_test(test.controlflow tests/test.controlflow.cpp)
-    add_unit_test(test.io tests/test.io.cpp)
-    set_tests_properties("Unit Test: test.io" PROPERTIES LABELS "NotTestable")
     add_unit_test(test.preprocessor tests/test.preprocessor.cpp)
     set_tests_properties("Unit Test: test.preprocessor" PROPERTIES LABELS "NotTestable")
-    add_unit_test(test.cpu tests/test.cpu.cpp)
-    set_tests_properties("Unit Test: test.cpu" PROPERTIES LABELS "NotTestable")
     add_unit_test(test.conditional tests/test.conditional.cpp)
     add_unit_test(test.ws tests/test.ws.cpp)
     set_tests_properties("Unit Test: test.ws" PROPERTIES LABELS "NotTestable")

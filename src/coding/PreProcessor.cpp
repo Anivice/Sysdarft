@@ -21,6 +21,7 @@
 #include <regex>
 #include <string>
 #include <iomanip>
+#include <ranges>
 #include <EncodingDecoding.h>
 
 const std::regex org_pattern(R"(\s*\.org\s+((?:0x[0-9A-Fa-f]+)|(?:\d+))\s*)", std::regex_constants::icase); // .org 0x123
@@ -54,37 +55,46 @@ std::string truncateAfterSemicolonOrHash(const std::string& input)
     return input;
 }
 
-std::vector < std::pair < std::string, std::string > > line_marker_register(std::vector<std::string> & input)
+std::vector < std::string > line_marker_register(std::vector<std::string> & file)
 {
     std::string upper_line_marker;
-    std::vector < std::pair < std::string, std::string > > result;
-    for (auto & line : input)
+    std::vector < std::string > result;
+
+    for (auto & line : file)
     {
-        line = truncateAfterSemicolonOrHash(line);
         if (line.find(":") != std::string::npos)
         {
+            // discard spaces and tab
             replace_all(line, " ", "");
             replace_all(line, "\t", "");
 
             std::string before = line;
 
+            // being a submarker
             if (line.find(".") != std::string::npos)
             {
-                std::string prefix;
-                if (line.front() != '.') {
-                    prefix = "_";
-                }
-
                 // attach line marker
                 replace_all(line, ".", "_");
+
+                // delete ':' in upper level
                 auto tmp = upper_line_marker;
                 replace_all(tmp, ":", "");
-                line = tmp + prefix + line;
 
-                result.emplace_back(before, line);
+                // process
+                line = tmp + line;
+
+                if (std::ranges::contains(result, line)) {
+                    throw SysdarftPreProcessorError("Multiple definition of line markers for " + line);
+                }
+
+                result.emplace_back(line);
             } else {
                 upper_line_marker = line;
-                result.emplace_back(before, line);
+
+                if (std::ranges::contains(result, line)) {
+                    throw SysdarftPreProcessorError("Multiple definition of line markers for " + line);
+                }
+                result.emplace_back(line);
             }
         }
     }
@@ -144,6 +154,17 @@ void process_org(const std::string& input, uint64_t & org)
 
 void process_lab(const std::string& input, defined_line_marker_t & defined_line_marker)
 {
+    auto is_line_marker_present = [&](const std::string & marker)->bool
+    {
+        for (const auto & line_marker : defined_line_marker) {
+            if (line_marker.line_marker_name == marker) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
     // .lab marker1, [marker2, ...]
     if (std::smatch matches; std::regex_search(input, matches, lab_pattern))
     {
@@ -152,8 +173,15 @@ void process_lab(const std::string& input, defined_line_marker_t & defined_line_
         for (const auto line_markers = splitString(marker_literal);
             const auto & line_marker : line_markers)
         {
-            defined_line_marker.emplace(line_marker,
-                std::pair < uint64_t, std::vector < uint64_t > > (0, { }));
+            if (!is_line_marker_present(line_marker)) {
+                defined_line_marker.emplace_back(line_marker_t {
+                    .line_marker_name = line_marker,
+                    .marker_position = 0,
+                    .is_defined = false,
+                    .referenced = false,
+                    .loc_it_appeared_in_cur_blk = {}
+                });
+            }
         }
     }
 }
@@ -201,61 +229,62 @@ void sed_equ(std::string& input, std::map < std::string, std::string > & equ_rep
     }
 }
 
-void CodeProcessing(
-    std::vector < uint8_t > & compiled_code,
-    std::vector < std::string > & file,
+// declarative preprocessing directives and symbol extraction
+void PreProcess(std::vector < std::string > & file,
+    defined_line_marker_t & defined_line_marker,
+    uint64_t & org,
     const bool regex)
 {
-    uint64_t org;
-    defined_line_marker_t defined_line_marker;
     std::map < std::string, std::string > equ_replacement;
     uint64_t line_numer = 0;
 
-    auto getline = [](std::vector < std::string > & file_, std::string & line)->bool
-    {
-        if (file_.empty()) {
-            return false;
-        }
-
-        line = file_.front();
-        return true;
+    auto is_line_empty = [](std::string line)->bool {
+        replace_all(line, " ", "");
+        return line.empty();
     };
 
-    auto pop_front = [&file, &line_numer]()
+    auto is_line_marker_present = [&](const std::string & marker)->bool
     {
-        line_numer++;
-        file.erase(file.begin());
+        for (const auto & line_marker : defined_line_marker) {
+            if (line_marker.line_marker_name == marker) {
+                return true;
+            }
+        }
+
+        return false;
     };
 
-    auto markers = line_marker_register(file);
-
-    for (auto & marker : markers)
-    {
-        replace_all(marker.first, ":", "");
-        replace_all(marker.second, ":", "");
-        defined_line_marker.emplace(marker.second,
-            std::pair < uint64_t, std::vector < uint64_t > > (0, { }));
-    }
-
-    for (auto & line : file)
-    {
-        for (auto & marker : markers) {
-            replace_all(line, marker.first, marker.second);
-        }
-    }
-
-    std::string line;
-    while (getline(file, line))
-    {
-        // remove comments
+    // discard all comments
+    for (auto & line : file) {
         line = truncateAfterSemicolonOrHash(line);
         // remove '\t'
         replace_all(line, "\t", "    ");
+    }
 
-        auto tmp = line;
-        replace_all(tmp, " ", "");
-        if (tmp.empty()) {
-            pop_front();
+    // register all symbols
+    auto markers = line_marker_register(file);
+
+    // define symbols
+    for (auto & marker : markers)
+    {
+        replace_all(marker, ":", "");
+        if (!is_line_marker_present(marker)) {
+            defined_line_marker.emplace_back(line_marker_t {
+                .line_marker_name = marker,
+                .marker_position = 0,
+                .is_defined = false,
+                .referenced = false,
+                .loc_it_appeared_in_cur_blk = {}
+            });
+        }
+    }
+
+    // process declarative directives
+    for (auto & line : file)
+    {
+        line_numer++;
+        line = truncateAfterSemicolonOrHash(line);
+        if (is_line_empty(line)) {
             continue;
         }
 
@@ -270,69 +299,16 @@ void CodeProcessing(
             } else {
                 break;
             }
+
+            line.clear(); // clear preprocessor directives
         } catch (const std::exception & e) {
             throw SysdarftPreProcessorError("Line: " + std::to_string(line_numer)
                 + ": Error occurred when processing " + line + ": " + e.what());
         }
-
-        pop_front();
     }
 
-    std::vector < std::vector <uint8_t> > code_for_this_block;
-    code_for_this_block.emplace_back(compiled_code);
-    std::stringstream code_block;
-
-    while (getline(file, line))
-    {
-        // remove comments
-        line = truncateAfterSemicolonOrHash(line);
-        // remove '\t'
-        replace_all(line, "\t", "    ");
-        // search for each preprocessor pattern
-
-        if (std::regex_match(line, org_pattern)             ||
-            std::regex_match(line, lab_pattern)             ||
-            std::regex_match(line, equ_pattern))
-        {
-            throw SysdarftPreProcessorError("Line: " + std::to_string(line_numer)
-                + ": PreProcessing indicator found after declaration space: " + line);
-        }
-
-        // not a preprocessor
+    // equal replace
+    for (auto & line : file) {
         sed_equ(line, equ_replacement, regex);
-        // replace_all(line, ":", ":\n"); We revoked this so that line number can count correctly
-        code_block << line << std::endl;
-        // we don't use pop_front(); since we want to preserve line number offset
-        file.erase(file.begin());
     }
-
-    auto str = code_block.str();
-    SysdarftCompile(code_for_this_block, code_block, org, defined_line_marker, line_numer);
-
-    // no additional processing from line marker should be performed after this block
-    for (auto marker : defined_line_marker) {
-        marker.second.second.clear();
-    }
-
-    if (code_for_this_block.size() > 1)
-    {
-        code_for_this_block.erase(code_for_this_block.begin());
-        for (const auto & cl : code_for_this_block)
-        {
-            for (const auto & c : cl) {
-                compiled_code.emplace_back(c);
-            }
-        }
-    }
-}
-
-void CodeProcessing(std::vector <uint8_t> & code, std::basic_istream<char>& file, const bool regex)
-{
-    std::vector < std::string > lines;
-    std::string line;
-    while (std::getline(file, line)) {
-        lines.emplace_back(line);
-    }
-
-    CodeProcessing(code, lines, regex);
 }

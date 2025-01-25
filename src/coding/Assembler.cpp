@@ -71,43 +71,6 @@ void process_ascii_value(std::string& input)
     }
 }
 
-// TODO: Sanity check to prevent line marker and max uint64 value appear at the same line
-const std::vector < uint8_t > tmp_address_hex = {
-        0x02, 0x64, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-}; // 33 bytes
-
-void replaceSequence(
-    std::vector<uint8_t>& original,
-    const std::vector<uint8_t>& target,
-    const std::vector<uint8_t>& replacement)
-{
-    if (target.empty()) {
-        return;
-    }
-
-    // Use std::search to find the first occurrence of target in original
-
-    if (auto it = std::ranges::search(original, target).begin();
-        it != original.end())
-    {
-        // Erase the target sequence
-        it = original.erase(it, it + static_cast<long>(target.size()));
-
-        // Insert the replacement sequence
-        original.insert(it, replacement.begin(), replacement.end());
-    }
-}
-
-void encode_constant_from_uint64_t(std::vector < uint8_t > & code, uint64_t val)
-{
-    // always 10 bytes
-    code.push_back(CONSTANT_PREFIX);
-    code.push_back(_64bit_prefix);
-    for (uint64_t i = 0; i < sizeof(uint64_t); i++) {
-        code.push_back(((uint8_t*)&val)[i]);
-    }
-}
-
 uint64_t code_size_now(const std::vector < std::vector <uint8_t> > & code)
 {
     uint64_t size = 0;
@@ -209,13 +172,6 @@ bool process_string(std::string& input, std::vector <uint8_t> & code)
     return false;
 }
 
-struct data_expression_identifier
-{
-    uint64_t data_appearance;
-    uint64_t data_byte_count;
-    std::string data_string;
-};
-
 bool process_data(const std::string& input, std::vector < data_expression_identifier > & data_processors)
 {
     const std::regex data_pattern(R"(\s*\.(8|16|32|64)bit_data\s+<(.*)>\s*)", std::regex_constants::icase);
@@ -231,38 +187,89 @@ bool process_data(const std::string& input, std::vector < data_expression_identi
     return false;
 }
 
-void SysdarftCompile(
+const std::regex line_mark_pattern(R"(\s*([A-Za-z_]\w*)(?=)\s*:\s*)");
+
+object_t SysdarftAssemble(
     std::vector < std::vector <uint8_t> > & instruction_buffer_set,
-    std::basic_iostream < char > & file,
-    const uint64_t origin,
-    defined_line_marker_t & appeared_line_markers,
-    uint64_t line_number)
+    std::vector < std::string > & file,
+    uint64_t & origin,
+    defined_line_marker_t & appeared_line_markers)
 {
+    // add an empty entry to eliminate null referencing
+    instruction_buffer_set.emplace_back();
+
+    auto is_line_empty = [](std::string line)->bool {
+        replace_all(line, " ", "");
+        return line.empty();
+    };
+
+    auto emplace_marker = [&](const std::string & marker, const uint64_t offset)
+    {
+        for (auto & defined_marker : appeared_line_markers)
+        {
+            if (defined_marker.line_marker_name == marker)
+            {
+                if (defined_marker.is_defined) {
+                    throw SysdarftAssemblerError("Multiple definition of " + defined_marker.line_marker_name);
+                }
+
+                defined_marker.is_defined = true;
+                defined_marker.marker_position = offset;
+                return;
+            }
+        }
+
+        appeared_line_markers.emplace_back( line_marker_t {
+            .line_marker_name = marker,
+            .marker_position = offset,
+            .is_defined = true,
+            .referenced = false,
+            .loc_it_appeared_in_cur_blk = {}
+        } );
+    };
+
+    auto add_marker_reference = [&](const std::string & marker, const uint64_t offset)
+    {
+        for (auto & defined_marker : appeared_line_markers)
+        {
+            if (defined_marker.line_marker_name == marker) {
+                defined_marker.loc_it_appeared_in_cur_blk.emplace_back(offset);
+                defined_marker.referenced = true;
+                return;
+            }
+        }
+
+        appeared_line_markers.emplace_back(line_marker_t {
+            .line_marker_name = marker,
+            .marker_position = 0,
+            .is_defined = false,
+            .referenced = true,
+            .loc_it_appeared_in_cur_blk = { offset } });
+    };
+
     std::vector < data_expression_identifier > data_processors;
-    const std::regex line_mark_pattern(R"(\s*([A-Za-z_]\w*)(?=)\s*:\s*)");
-    std::string line;
-    while (std::getline(file, line))
+    uint64_t line_number = 0;
+
+    for (auto & line : file)
     {
         line_number++;
 
+        if (is_line_empty(line)) {
+            continue;
+        }
+
+        if (std::smatch match; std::regex_match(line, match, line_mark_pattern))
+        {
+            // found a line marker in this line
+            auto marker = match[1].str();
+
+            // register current offset
+            emplace_marker(marker, code_size_now(instruction_buffer_set) + origin);
+            continue;
+        }
+
         try {
-            // discard empty lines
-            auto tmp = line;
-            replace_all(tmp, " ", "");
-            if (tmp.empty()) {
-                continue;
-            }
-
             std::vector <uint8_t> code_for_this_instruction;
-            if (std::smatch match; std::regex_match(tmp, match, line_mark_pattern))
-            {
-                // found a line marker in this line
-                auto marker = match[1].str();
-
-                // register current offset
-                appeared_line_markers[marker].first = code_size_now(instruction_buffer_set) + origin;
-                continue;
-            }
 
             // preprocessor .string expression
             if (process_string(line, code_for_this_instruction)) {
@@ -277,7 +284,9 @@ void SysdarftCompile(
 
             // preprocessor @ (current offset)
             if (line.find('@') != std::string::npos) {
-                replace_all(line, "@", std::to_string(code_size_now(instruction_buffer_set) + origin));
+                replace_all(line,
+                    "@",
+                    std::to_string(code_size_now(instruction_buffer_set) + origin));
             }
 
             // preprocessor .resvb expression
@@ -292,24 +301,26 @@ void SysdarftCompile(
             // process data
             if (process_data(line, data_processors))
             {
+                data_processors.back().data_appearance = instruction_buffer_set.size() - 1; // mark its location
                 instruction_buffer_set.emplace_back(data_processors.back().data_byte_count);
-                data_processors.back().data_appearance = instruction_buffer_set.size() - 1;
                 continue; // this preprocessor is the most complicated.
                 // it needs to handle @ and @@ and all line markers, turn them into actual offsets,
                 // then calculate the processed expression using bc
             }
 
+            // match appearances of marker operand
             for (const auto & line_marker : appeared_line_markers)
             {
                 std::smatch matches;
-                if (std::regex marker(R"((.*)(<\s*)" + line_marker.first + R"(\s*>)(.*))");
+                if (std::regex marker(R"((.*)(<\s*)" + line_marker.line_marker_name + R"(\s*>)(.*))");
                     std::regex_search(line, matches, marker))
                 {
                     if (matches.size() != 4) {
                         throw SysdarftAssemblerError("Error encountered while parsing line marker: " + line);
                     }
+
                     replace_all(line, matches[2], "<$(0xFFFFFFFFFFFFFFFF)>");
-                    appeared_line_markers[line_marker.first].second.emplace_back(instruction_buffer_set.size()); // This address usage appeared here
+                    add_marker_reference(line_marker.line_marker_name, instruction_buffer_set.size() - 1);
                     break;
                 }
             }
@@ -322,44 +333,21 @@ void SysdarftCompile(
         }
     }
 
-    // process line numbers
-    for (const auto & line_marker : appeared_line_markers)
-    {
-        std::vector < uint8_t > replacement;
-        encode_constant_from_uint64_t(replacement, line_marker.second.first);
-        for (const auto & each_instruction : line_marker.second.second)
-        {
-            replaceSequence(instruction_buffer_set[each_instruction], tmp_address_hex, replacement);
-        }
+    // pop empty entry
+    instruction_buffer_set.erase(instruction_buffer_set.begin());
+
+    // add offset to origin
+    origin += code_size_now(instruction_buffer_set);
+
+    auto ret = object_t {
+        .code = instruction_buffer_set,
+        .symbol_table = appeared_line_markers,
+        .data_expression_identifiers = data_processors };
+
+    // strip line marker processor identifications
+    for (auto & marker : appeared_line_markers) {
+        marker.loc_it_appeared_in_cur_blk.clear();
     }
 
-    // process data
-    for (const auto & [ data_appearance, data_byte_count, data_string ]: data_processors)
-    {
-        auto expression = data_string;
-        // handle all line markers, turn them into actual offsets,
-        for (const auto &[fst, snd] : appeared_line_markers) {
-            replace_all(expression, fst,
-                std::to_string(snd.first));
-        }
-
-        // then calculate the processed expression using bc
-        process_base16(expression);
-        auto processed_expression = execute_bc(expression);
-
-        // actual number, signed
-        auto data = strtoll(processed_expression.c_str(), nullptr, 10);
-        uint64_t compliment = 0xFFFFFFFFFFFFFFFF;
-        compliment = compliment >> (64 - (data_byte_count * 8));
-        uint64_t raw_data = *(uint64_t*)&data;
-        raw_data = raw_data & compliment;
-
-        // emplace data
-        std::vector < uint8_t > data_sequence;
-        for (uint64_t i = 0; i < data_byte_count; i++) {
-            data_sequence.emplace_back(((uint8_t*)&raw_data)[i]);
-        }
-
-        instruction_buffer_set[data_appearance] = data_sequence;
-    }
+    return ret;
 }
