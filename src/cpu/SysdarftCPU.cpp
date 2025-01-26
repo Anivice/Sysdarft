@@ -40,7 +40,7 @@ SysdarftCPU::SysdarftCPU(const uint64_t memory,
 
     // hard disk
     if (!hdd.empty()) {
-        add_device<SysdarftHardDisk>(hdd);
+        add_device<SysdarftBlockDevices>(hdd);
     }
 
     // floppy disk a

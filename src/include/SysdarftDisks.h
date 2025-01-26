@@ -21,7 +21,6 @@
 #ifndef SYSDARFTHARDDISK_H
 #define SYSDARFTHARDDISK_H
 
-#include <fstream>
 #include <SysdarftIOHub.h>
 
 #define FDA_REG_SIZE        (0x116)
@@ -47,6 +46,8 @@ public:
     explicit SysdarftDiskError(const std::string & msg) : SysdarftDeviceIOError(msg) { }
 };
 
+int lock_file(int fd, int cmd, int type);
+
 template <  unsigned REG_SIZE,
             unsigned REG_START_SEC,
             unsigned REG_SEC_COUNT,
@@ -55,18 +56,19 @@ template <  unsigned REG_SIZE,
 class SYSDARFT_EXPORT_SYMBOL SysdarftDiskImager : public SysdarftExternalDeviceBaseClass
 {
 private:
-    std::fstream _sysdarftHardDiskFile;
+    int _sysdarftHardDiskFile;
     uint64_t start_sector = 0;
     uint64_t sector_count = 0;
     const uint64_t device_size = 0;
 
 public:
     explicit SysdarftDiskImager(const std::string & file_name);
+    ~SysdarftDiskImager() noexcept override;
     bool request_read(uint64_t) override;
     bool request_write(uint64_t) override;
 };
 
-class SYSDARFT_EXPORT_SYMBOL SysdarftHardDisk final : public SysdarftDiskImager
+class SYSDARFT_EXPORT_SYMBOL SysdarftBlockDevices final : public SysdarftDiskImager
     <   HDD_REG_SIZE,
         HDD_REG_START_SEC,
         HDD_REG_SEC_COUNT,
@@ -74,7 +76,7 @@ class SYSDARFT_EXPORT_SYMBOL SysdarftHardDisk final : public SysdarftDiskImager
         HDD_CMD_REQUEST_WR >
 {
 public:
-    explicit SysdarftHardDisk(const std::string & file_name) : SysdarftDiskImager(file_name) { }
+    explicit SysdarftBlockDevices(const std::string & file_name) : SysdarftDiskImager(file_name) { }
 };
 
 class SYSDARFT_EXPORT_SYMBOL SysdarftFloppyDiskA final : public SysdarftDiskImager
@@ -99,7 +101,7 @@ public:
     explicit SysdarftFloppyDiskB(const std::string & file_name) : SysdarftDiskImager(file_name) { }
 };
 
-std::streamoff SYSDARFT_EXPORT_SYMBOL getFileSize(std::fstream&);
+ssize_t SYSDARFT_EXPORT_SYMBOL getFileSize(int);
 
 #include "SysdarftDisks.inl"
 

@@ -20,7 +20,6 @@ void OperandSanityCheck(const uint8_t opcode, const std::vector < parsed_target_
     case OPCODE_IN:
     case OPCODE_MOV:
     case OPCODE_POP:
-    case OPCODE_LEA:
     case OPCODE_AND:
     case OPCODE_OR:
     case OPCODE_XOR:
@@ -40,6 +39,14 @@ void OperandSanityCheck(const uint8_t opcode, const std::vector < parsed_target_
     case OPCODE_DEC:
         if (operands.at(0).TargetType == parsed_target_t::CONSTANT) {
             throw_constant_error();
+        }
+        break;
+    case OPCODE_LEA:
+        if (operands.at(0).TargetType == parsed_target_t::CONSTANT &&
+            operands.at(1).TargetType != parsed_target_t::MEMORY) {
+            throw SysdarftAssemblerError(
+                "LEA only accepts register or memory reference as its first operand, "
+                "and memory reference as its second operand");
         }
         break;
     default:;

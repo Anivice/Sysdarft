@@ -256,7 +256,7 @@ add_library(SysdarftICH OBJECT
         src/include/SysdarftIOHub.h
         src/SysdarftIOHub.cpp
         src/include/SysdarftDisks.h
-        src/ext_dev/SysdarftHardDisk.cpp
+        src/ext_dev/SysdarftBlockDevices.cpp
         src/include/SysdarftDisks.inl
         src/include/RealTimeClock.h
         src/ext_dev/RealTimeClock.cpp

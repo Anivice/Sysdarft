@@ -42,7 +42,7 @@ void SysdarftCPUInstructionExecutor::ins(__uint128_t, WidthAndOperandsType & Ope
 {
     const auto DB = SysdarftRegister::load<DataBaseType>();
     const auto DP = SysdarftRegister::load<DataPointerType>();
-    const auto CX = SysdarftRegister::load<FullyExtendedRegisterType, 0>();
+    const auto CX = SysdarftRegister::load<FullyExtendedRegisterType, 3>();
     const auto & port = Operands.second[0].get_val();
 
     auto & buffer = SysdarftIOHub::ins(port);
@@ -59,7 +59,7 @@ void SysdarftCPUInstructionExecutor::outs(__uint128_t, WidthAndOperandsType & Op
     ControllerDataStream buffer;
     const auto DB = SysdarftRegister::load<DataBaseType>();
     const auto DP = SysdarftRegister::load<DataPointerType>();
-    const auto CX = SysdarftRegister::load<FullyExtendedRegisterType, 0>();
+    const auto CX = SysdarftRegister::load<FullyExtendedRegisterType, 3>();
     const auto & port = Operands.second[0].get_val();
 
     std::vector<uint8_t> wbuf;

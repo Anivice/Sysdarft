@@ -22,6 +22,9 @@
 #define SYSDARFTDISKS_INL
 
 #include "SysdarftDisks.h"
+#include <ext/stdio_filebuf.h> // For __gnu_cxx::stdio_filebuf
+#include <fcntl.h>
+#include <cstring>
 
 template <  unsigned REG_SIZE,
             unsigned REG_START_SEC,
@@ -31,9 +34,13 @@ template <  unsigned REG_SIZE,
 SysdarftDiskImager < REG_SIZE, REG_START_SEC, REG_SEC_COUNT, CMD_REQUEST_RD, CMD_REQUEST_WR > ::
 SysdarftDiskImager(const std::string &file_name)
 {
-    _sysdarftHardDiskFile.open(file_name);
-    if (!_sysdarftHardDiskFile.is_open()) {
+    _sysdarftHardDiskFile = open(file_name.c_str(), O_RDWR | O_SYNC | O_CLOEXEC);
+    if (_sysdarftHardDiskFile == -1) {
         throw SysdarftDiskError("Cannot open file " + file_name);
+    }
+
+    if (lock_file(_sysdarftHardDiskFile, F_SETLK, F_WRLCK) == -1) {
+        throw SysdarftDiskError("Failed to lock file " + file_name + ", possibly used by another process?");
     }
 
     device_buffer.emplace(REG_SIZE,         std::make_unique<ControllerDataStream>());
@@ -50,13 +57,34 @@ template <  unsigned REG_SIZE,
             unsigned REG_SEC_COUNT,
             unsigned CMD_REQUEST_RD,
             unsigned CMD_REQUEST_WR >
+SysdarftDiskImager < REG_SIZE, REG_START_SEC, REG_SEC_COUNT, CMD_REQUEST_RD, CMD_REQUEST_WR > ::
+~SysdarftDiskImager() noexcept
+{
+    // try unlock file
+    if (lock_file(_sysdarftHardDiskFile, F_SETLK, F_UNLCK) == -1)
+    {
+        if (debug::verbose) {
+            std::cerr << "Unlock file failed for descriptor " << std::to_string(_sysdarftHardDiskFile) << std::endl;
+            std::cerr << "Errno: " << errno << ": " << std::strerror(errno) << std::endl;
+        }
+    }
+
+    // close
+    close(_sysdarftHardDiskFile);
+}
+
+template <  unsigned REG_SIZE,
+            unsigned REG_START_SEC,
+            unsigned REG_SEC_COUNT,
+            unsigned CMD_REQUEST_RD,
+            unsigned CMD_REQUEST_WR >
 bool
 SysdarftDiskImager < REG_SIZE, REG_START_SEC, REG_SEC_COUNT, CMD_REQUEST_RD, CMD_REQUEST_WR > ::
 request_read(const uint64_t port)
 {
     if (port == REG_SIZE)
     {
-        device_buffer.at(port)->push(device_size);
+        device_buffer.at(port)->push(device_size / 512);
         return true;
     }
     else if (port == CMD_REQUEST_RD)
@@ -75,8 +103,7 @@ request_read(const uint64_t port)
         }
 
         // Seek to the specified offset
-        _sysdarftHardDiskFile.seekg(static_cast<long>(start_off), std::ios::beg);
-        if (!_sysdarftHardDiskFile) {
+        if (lseek64(_sysdarftHardDiskFile, start_off, SEEK_SET) == -1) {
             return false;
         }
 
@@ -84,11 +111,9 @@ request_read(const uint64_t port)
         buffer.resize(length);
 
         // Read 'length' bytes from the file
-        _sysdarftHardDiskFile.read((char*)buffer.data(), static_cast<long>(length));
+        const auto read_len = read(_sysdarftHardDiskFile, buffer.data(), static_cast<long>(length));
 
-        if (const std::streamsize bytesRead = _sysdarftHardDiskFile.gcount();
-            bytesRead < static_cast<std::streamsize>(length))
-        {
+        if (read_len != static_cast<std::streamsize>(length)) {
             return false;
         }
 
@@ -140,15 +165,17 @@ request_write(const uint64_t port)
         }
 
         // Seek to the specified offset
-        _sysdarftHardDiskFile.seekp(static_cast<long>(start_off), std::ios::beg);
-        if (!_sysdarftHardDiskFile) {
+        if (lseek64(_sysdarftHardDiskFile, start_off, SEEK_SET) == -1) {
             return false;
         }
 
-        _sysdarftHardDiskFile.write((char*)buffer.data(), static_cast<long>(length));
-        if (!_sysdarftHardDiskFile) {
+        const auto write_len = write(_sysdarftHardDiskFile, buffer.data(), static_cast<long>(length));
+        if (write_len != static_cast<std::streamsize>(length)) {
             return false;
         }
+
+        // flash device
+        fsync(_sysdarftHardDiskFile);
 
         device_buffer.at(port)->clear();
         return true;

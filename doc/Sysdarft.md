@@ -226,7 +226,7 @@ and is managed using special-purpose registers.
 ### Code Segment
 
 The code segment is typically managed by the operating system rather than the user.
-The pointer for this segment, the instruction pointer (`IP`), is inaccessible,
+The pointer for this segment, the instruction pointer (`%IP`), is inaccessible,
 even to the operating system.
 However, the Code Base (`%CB`) register is accessible and can be used to set up a code segment.
 
@@ -791,6 +791,31 @@ This is either because currently CPU is in an interruption routine,
 which sets `IM` to `1` automatically,
 or `IM` is specifically set to `0` using `ALWI` (Allow Interruption) instruction.
 
+# External Devices
+
+## Block Devices
+
+Block devices offer five I/O ports:
+
+- Read-only port, *SIZE*, used to read the available space on the block device.
+- Write-only port, *START SECTOR*[^SECTOR], used to specify the start sector for an operation.
+- Write-only port, *SECTOR COUNT*, used to specify the sector number for an operation.
+- Write-only port, *OUTPUT*, perform a write operation using parameters setup by port *START SECTOR* and *SECTOR COUNT*. 
+- Read-only port, *INPUT*, perform a read operation using parameters setup by port *START SECTOR* and *SECTOR COUNT*.
+
+[^SECTOR]:
+
+### Hard Disk
+
+### Floppy Drive `A:`
+
+### Floppy Drive `B:`
+
+
+## Real Time Clock (RTC)
+
+
+
 # **Appendix A: Instructions Set**
 
 ## Width Encoding
@@ -1304,48 +1329,336 @@ Pop a value the same size as `Operand1` from the stack into `Operand1`.
 | `0x23` | `POP`       | Register, Memory Reference         | None                              |
 
 
+#### **PUSHALL**
 
-| Instruction | Explanation                                                      | Syntax                       |
-|-------------|------------------------------------------------------------------|------------------------------|
-| **POP**     | `OPR1` $=$ `OPR1` - `OPR2` - `CF`                                | `SBB [Width] <OPR1>, <OPR2>` |
-| **PUSHALL** | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $\times$ (signed) `OPR1`   | `IMUL [Width] <OPR1>`        |
-| **POPALL**  | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $\times$ (unsigned) `OPR1` | `MUL [Width] <OPR1>`         |
-| **ENTER**   | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` / (signed) `OPR1`          | `IDIV [Width] <OPR1>`        |
-| **LEAVE**   | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` / (unsigned) `OPR1`        | `DIV [Width] <OPR1>`         |
-| **MOVS**    | `OPR1` $=$ $-$`OPR1`                                             | `NEG [Width] <OPR1>`         |
-| **LEA**     | Compare `OPR1` with `OPR2`, and set corresponding flags          | `CMP [Width] <OPR1>, <OPR2>` |
+Push all registers except `%CB` and `%IP` on to the stack in the following order
+(`%FER0` being the first to be pushed):
+
+`FER0`, `FER1`, `FER2`, `FER3`, `FER4`, `FER5`, `FER6`, `FER7`,
+`FER8`, `FER9`, `FER10`, `FER11`, `FER12`, `FER13`, `FER14`, `FER15`,
+`FG`, `SB`, `SP`, `DB`, `DP`, `EB`, `EP`, `CPS`.
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------|-----------------------------------|
+| `0x24` | `PUSHALL`   | None                              | None                              |
+
+#### **POPALL**
+
+Pop all registers except `%CB` and `%IP` from the stack to the corresponding registers
+in the order consistent to `PUSHALL`.
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------|-----------------------------------|
+| `0x25` | `POPALL`    | None                              | None                              |
+
+
+#### **ENTER**
+
+Reserve a stack space.
+
+```
+    %SP = %SP - Operand1
+    %CPS = Operand1
+```
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------------|-----------------------------------|
+| `0x26` | `ENTER`     | Register, Constant, or Memory Reference | None                              |
+
+
+#### **LEAVE**
+
+Reserve a stack space.
+
+```
+    %SP = %SP + %CPS
+    %CPS = 0
+```
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------|-----------------------------------|
+| `0x27` | `LEAVE`     | None                              | None                              |
+
+
+#### **MOVS**
+
+Move `%FER0` bytes from `%EB:%EP` to `%DB:DP`.
+
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------|-----------------------------------|
+| `0x28` | `MOVS`      | None                              | None                              |
+
+
+#### **LEA**
+
+Load effective address[^EA] from the Memory Reference.
+
+[^EA]: The Effective Address (EA) refers to the final memory address computed
+by the processor to access a memory reference[@Intel64AndIA32ArchitecturesSoftwareDevelopersManualCombinedVolumes].
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------|-----------------------------------|
+| `0x29` | `LEA`       | Register, Memory Reference        | Memory Reference                  |
 
 
 ## Control Flow
 
-| Instruction | Explanation                                                      | Syntax                       |
-|-------------|------------------------------------------------------------------|------------------------------|
-| **JMP**     | `OPR1` $=$ `OPR1` + `OPR2`                                       | `ADD [Width] <OPR1>, <OPR2>` |
-| **CALL**    | `OPR1` $=$ `OPR1` + `OPR2` + `CF`                                | `ADC [Width] <OPR1>, <OPR2>` |
-| **RET**     | `OPR1` $=$ `OPR1` - `OPR2`                                       | `SUB [Width] <OPR1>, <OPR2>` |
-| **JA**      | `OPR1` $=$ `OPR1` - `OPR2` - `CF`                                | `SBB [Width] <OPR1>, <OPR2>` |
-| **JNE**     | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $\times$ (signed) `OPR1`   | `IMUL [Width] <OPR1>`        |
-| **JB**      | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $\times$ (unsigned) `OPR1` | `MUL [Width] <OPR1>`         |
-| **JL**      | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` / (signed) `OPR1`          | `IDIV [Width] <OPR1>`        |
-| **JBE**     | `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` / (unsigned) `OPR1`        | `DIV [Width] <OPR1>`         |
-| **JLE**     | `OPR1` $=$ $-$`OPR1`                                             | `NEG [Width] <OPR1>`         |
-| **JC**      | Compare `OPR1` with `OPR2`, and set corresponding flags          | `CMP [Width] <OPR1>, <OPR2>` |
-| **JNC**     | Compare `OPR1` with `OPR2`, and set corresponding flags          | `CMP [Width] <OPR1>, <OPR2>` |
-| **JO**      | Compare `OPR1` with `OPR2`, and set corresponding flags          | `CMP [Width] <OPR1>, <OPR2>` |
-| **JNO**     | Compare `OPR1` with `OPR2`, and set corresponding flags          | `CMP [Width] <OPR1>, <OPR2>` |
-| **LOOP**    | Compare `OPR1` with `OPR2`, and set corresponding flags          | `CMP [Width] <OPR1>, <OPR2>` |
-| **INT**     | Compare `OPR1` with `OPR2`, and set corresponding flags          | `CMP [Width] <OPR1>, <OPR2>` |
-| **INT3**    | Compare `OPR1` with `OPR2`, and set corresponding flags          | `CMP [Width] <OPR1>, <OPR2>` |
-| **IRET**    | Compare `OPR1` with `OPR2`, and set corresponding flags          | `CMP [Width] <OPR1>, <OPR2>` |
+#### **JMP**
+
+Jump to a specific code location.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
+|--------|-------------|-----------------------------------------|------------------------------------------|
+| `0x30` | `JMP`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+
+The first operand is served as code segment address, which is usually `%CB`.
+The second is segment offset.
+Code linear address[^LinearAddress] is calculated by the following formula:
+
+$\text{Linear Address} = \text{Segment Address} + \text{Segment Offset}$
+
+[^LinearAddress]: Linear Address, or LA, is the address without segmentation and segmented addressing.
+
+#### **CALL**
+
+Call a subroutine (function).
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
+|--------|-------------|-----------------------------------------|------------------------------------------|
+| `0x31` | `CALL`      | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+
+`CALL` pushes `%CB` and `%IP` of next instruction onto the stack,
+then performs a jump to the target location.
+
+
+#### **RET**
+
+Return from a subroutine (function).
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------|-----------------------------------|
+| `0x32` | `RET`       | None                              | None                              |
+
+`RET` popes `%CB` and `%IP` from the stack stored by `CALL`.
+This will automatically jump back from the subroutine.
+
+
+#### **JE**
+
+Jump if equal.
+
+Jump to a specific code location if the flag `EQ` is `1`.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
+|--------|-------------|-----------------------------------------|------------------------------------------|
+| `0x33` | `JE`        | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+
+The first operand is served as code segment address, which is usually `%CB`.
+The second is segment offset.
+
+
+#### **JNE**
+
+Jump if not equal.
+
+Jump to a specific code location if the flag `EQ` is `0`.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
+|--------|-------------|-----------------------------------------|------------------------------------------|
+| `0x34` | `JNE`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+
+The first operand is served as code segment address, which is usually `%CB`.
+The second is segment offset.
+
+
+| Flag                     | Explanation                                                                                                           |
+|--------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| *Carry*, *CF*            | Overflow in unsigned arithmetic operations                                                                            |
+| *Overflow*, *OF*         | Overflow in signed arithmetic operations                                                                              |
+
+#### **JB**
+
+Jump if larger.
+
+Jump to a specific code location if the flag `BG` is `1`.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
+|--------|-------------|-----------------------------------------|------------------------------------------|
+| `0x35` | `JB`        | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+
+The first operand is served as code segment address, which is usually `%CB`.
+The second is segment offset.
+
+
+#### **JL**
+
+Jump if less.
+
+Jump to a specific code location if the flag `LE` is `1`.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
+|--------|-------------|-----------------------------------------|------------------------------------------|
+| `0x36` | `JL`        | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+
+The first operand is served as code segment address, which is usually `%CB`.
+The second is segment offset.
+
+
+#### **JBE**
+
+Jump if larger or equal.
+
+Jump to a specific code location if the flag `EQ` or `BG` is `1`.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
+|--------|-------------|-----------------------------------------|------------------------------------------|
+| `0x37` | `JBE`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+
+The first operand is served as code segment address, which is usually `%CB`.
+The second is segment offset.
+
+
+#### **JLE**
+
+Jump if less or equal.
+
+Jump to a specific code location if the flag `EQ` or `BG` is `1`.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
+|--------|-------------|-----------------------------------------|------------------------------------------|
+| `0x38` | `JLE`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+
+The first operand is served as code segment address, which is usually `%CB`.
+The second is segment offset.
+
+
+#### **JC**
+
+Jump to a specific code location if the flag `CF` is `1`.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
+|--------|-------------|-----------------------------------------|------------------------------------------|
+| `0x3C` | `JC`        | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+
+The first operand is served as code segment address, which is usually `%CB`.
+The second is segment offset.
+
+
+#### **JNC**
+
+Jump to a specific code location if the flag `CF` is `0`.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
+|--------|-------------|-----------------------------------------|------------------------------------------|
+| `0x3D` | `JNC`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+
+The first operand is served as code segment address, which is usually `%CB`.
+The second is segment offset.
+
+
+#### **JO**
+
+Jump to a specific code location if the flag `OF` is `1`.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
+|--------|-------------|-----------------------------------------|------------------------------------------|
+| `0x3E` | `JO`        | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+
+The first operand is served as code segment address, which is usually `%CB`.
+The second is segment offset.
+
+
+#### **JNO**
+
+Jump to a specific code location if the flag `OF` is `0`.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
+|--------|-------------|-----------------------------------------|------------------------------------------|
+| `0x3F` | `JNO`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+
+The first operand is served as code segment address, which is usually `%CB`.
+The second is segment offset.
+
+
+#### **LOOP**
+
+Jump to a specific code location when `%FER3` is not `0`.
+When performing a jump, `%FER3` is decreased by `1`.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
+|--------|-------------|-----------------------------------------|------------------------------------------|
+| `0x60` | `LOOP`      | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+
+The first operand is served as code segment address, which is usually `%CB`.
+The second is segment offset.
+
+
+#### **INT**
+
+Software interruption, with
+interruption code being `Operand1`.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------------|-----------------------------------|
+| `0x39` | `INT`       | Register, Constant, or Memory Reference | None                              |
+
+
+Performing interruption will push *ALL* registers,
+including `%CB` and `%IP`, onto the stack.
+
+
+#### **INT3**
+
+Software interruption code `3`.
+This is served as a breakpoint.
+
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------|-----------------------------------|
+| `0x3A` | `INT3`      | None                              | None                              |
+
+This instruction is no different from `INT <$(0x03)>`,
+except from the fact that `INT3` occupies one byte only in binary,
+and has fewer letters to type than `INT <$(0x03)>`,
+and can easily be setup at runtime.
+
 
 ## Input/Output
 
-| Instruction | Explanation                                                      | Syntax                       |
-|-------------|------------------------------------------------------------------|------------------------------|
-| **IN**      | `OPR1` $=$ `OPR1` + `OPR2`                                       | `ADD [Width] <OPR1>, <OPR2>` |
-| **OUT**     | `OPR1` $=$ `OPR1` + `OPR2` + `CF`                                | `ADC [Width] <OPR1>, <OPR2>` |
-| **INS**     | `OPR1` $=$ `OPR1` - `OPR2`                                       | `SUB [Width] <OPR1>, <OPR2>` |
-| **OUTS**    | `OPR1` $=$ `OPR1` - `OPR2` - `CF`                                | `SBB [Width] <OPR1>, <OPR2>` |
+#### **IN**
+
+Read from a port whose number is specified by `Operand1` and store it to `Operand2`.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------------|-----------------------------------|
+| `0x50` | `IN`        | Register, Constant, or Memory Reference | Register, Memory Reference        |
+
+
+#### **OUT**
+
+Write the value in `Operand2` to a port whose number is specified by `Operand1`.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand       |
+|--------|-------------|-----------------------------------------|-----------------------------------------|
+| `0x51` | `OUT`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference |
+
+
+#### **INS**
+
+Read `%FER0` length of bytes from a port whose number is specified by `Operand1` and store it to `%DB:%DP`.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------------|-----------------------------------|
+| `0x52` | `INS`       | Register, Constant, or Memory Reference |                                   |
+
+#### **OUTS**
+
+Write `%FER0` length of bytes from `%DB:%DP` to a port whose number is specified by `Operand1`.
+
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
+|--------|-------------|-----------------------------------------|-----------------------------------|
+| `0x53` | `OUTS`      | Register, Constant, or Memory Reference |                                   |
+
 
 # **Appendix B: Examples**
 
