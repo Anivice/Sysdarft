@@ -23,8 +23,8 @@
 
 #define RTC_CURRENT_TIME  (0x70UL)
 #define RTC_SET_INTERRUPT (0x71UL) /* [63-39] Reserved */
-                                 /* [38-9] * 5000ns (0.005 ms) */
-                                 /* [8-0] interruption number, <= 0x1F means disable interruption */
+                                 /* [37-8] * 5000ns (0.005 ms) */
+                                 /* [7-0] interruption number, <= 0x1F means disable interruption */
 
 #include <SysdarftIOHub.h>
 #include <WorkerThread.h>

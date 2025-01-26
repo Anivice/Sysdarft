@@ -51,6 +51,7 @@ bool SysdarftRealTimeClock::request_write(const uint64_t port)
     std::lock_guard<std::mutex> lock(m_mutex);
     if (port == RTC_CURRENT_TIME)
     {
+        // TODO: TEST NEEDED
         const auto epoch_seconds = device_buffer.at(port)->pop<uint64_t>();
         m_startTime = std::chrono::system_clock::time_point{std::chrono::seconds(epoch_seconds)};
         return true;
@@ -59,10 +60,10 @@ bool SysdarftRealTimeClock::request_write(const uint64_t port)
     if (port == RTC_SET_INTERRUPT)
     {
         const auto data = device_buffer.at(port)->pop<uint64_t>();
-        const uint64_t int_num = data & 0x1FF;
-        const uint64_t int_scale = (data >> 9) & 0x3FFFFFFF; /* approximately 1 hour, 29 minutes, and 28.7 seconds max */
+        const uint64_t int_num = data & 0xFF;
+        const uint64_t int_scale = (data >> 8) & 0x3FFFFFFF; /* approximately 1 hour, 29 minutes, and 28.7 seconds max */
 
-        if (int_num <= 0x1F || int_num >= 512) {
+        if (int_num <= 0x1F || int_num > MAX_INTERRUPTION_ENTRY) {
             return false;
         }
 
@@ -111,7 +112,7 @@ void SysdarftRealTimeClock::update_time(std::atomic < bool > & running)
         const auto after = std::chrono::system_clock::now();
 
         if (const auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(after - before);
-            duration.count() < 5000)
+            duration.count() < 5000) // TODO: I have no idea why, but apparently it triggers every 50,000ns, instead of 5,000.
         {
             std::this_thread::sleep_for(std::chrono::nanoseconds(5000 - duration.count()));
         }

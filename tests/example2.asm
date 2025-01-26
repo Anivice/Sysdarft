@@ -6,8 +6,6 @@
 .equ 'HDD_SEC_START', '0x137'
 .equ 'HDD_SEC_COUNT', '0x138'
 .equ 'HDD_IO', '0x139'
-.lab _start, reads, puts, _stack_frame, _int3, _skip_newl, gets
-.lab _loop2, _end, _int_kb_abort, _timeout, _message, _loop_message, _loop_msg_end
 .org 0xC1800
 
 jmp <%CB>, < _start >
@@ -16,7 +14,7 @@ reads:
     pushall
     out .64bit <$(HDD_SEC_START)>, <$(0)>           ; sector read starts from 0
     out .64bit <$(HDD_SEC_COUNT)>, <$(4)>           ; read 4 sector
-    mov .64bit <%FER0>, <$(2048)>                   ; ins operation input 2048 bytes of data
+    mov .64bit <%FER3>, <$(2048)>                   ; ins operation input 2048 bytes of data
     ins .64bit <$(HDD_IO)>                          ; ins from HDD_IO port
     popall
     ret

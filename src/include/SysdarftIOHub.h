@@ -61,7 +61,7 @@ public:
         for (unsigned int i = 0; i < sizeof(data); i++)
         {
             if (device_buffer.empty()) {
-                ((uint8_t*)&data)[i] = 0;
+                throw SysdarftDeviceIOError("Device buffer is empty");
             } else {
                 ((uint8_t*)&data)[i] = device_buffer.front();
                 device_buffer.erase(device_buffer.begin());

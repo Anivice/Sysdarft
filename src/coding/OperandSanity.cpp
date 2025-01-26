@@ -42,6 +42,10 @@ void OperandSanityCheck(const uint8_t opcode, const std::vector < parsed_target_
         }
         break;
     case OPCODE_IN:
+        if (operands.at(1).TargetType == parsed_target_t::CONSTANT) {
+            throw_constant_error();
+        }
+        break;
     case OPCODE_MOV:
     case OPCODE_POP:
     case OPCODE_AND:

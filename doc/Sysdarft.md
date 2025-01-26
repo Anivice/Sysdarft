@@ -797,24 +797,78 @@ or `IM` is specifically set to `0` using `ALWI` (Allow Interruption) instruction
 
 Block devices offer five I/O ports:
 
-- Read-only port, *SIZE*, used to read the available space on the block device.
+- Read-only port, *SIZE*, used to read the available space(sectors) on the block device.
 - Write-only port, *START SECTOR*[^SECTOR], used to specify the start sector for an operation.
 - Write-only port, *SECTOR COUNT*, used to specify the sector number for an operation.
 - Write-only port, *OUTPUT*, perform a write operation using parameters setup by port *START SECTOR* and *SECTOR COUNT*. 
 - Read-only port, *INPUT*, perform a read operation using parameters setup by port *START SECTOR* and *SECTOR COUNT*.
 
 [^SECTOR]:
+In computer disk storage, a sector is a subdivision of a track on a magnetic disk or optical disc.
+For most disks, each sector stores a fixed amount of user-accessible data,
+traditionally 512 bytes for hard disk drives (HDDs), and 2048 bytes for CD-ROMs, DVD-ROMs and BD-ROMs
+[@RandomAccessMethodOfAccountingAndControl],
+[@OPERATINGSYSTEMSDESIGNANDIMPLEMENTATION].
 
 ### Hard Disk
 
+| Port    | Explanation            |
+|---------|------------------------|
+| *0x136* | Disk Sector Count      |
+| *0x137* | Start Sector Number    |
+| *0x138* | Operation Sector Count |
+| *0x139* | Disk Output Port       |
+| *0x13A* | Disk Input Port        |
+
+
 ### Floppy Drive `A:`
+
+| Port    | Explanation            |
+|---------|------------------------|
+| *0x116* | Disk Sector Count      |
+| *0x117* | Start Sector Number    |
+| *0x118* | Operation Sector Count |
+| *0x119* | Disk Output Port       |
+| *0x11A* | Disk Input Port        |
+
 
 ### Floppy Drive `B:`
 
+| Port    | Explanation            |
+|---------|------------------------|
+| *0x126* | Disk Sector Count      |
+| *0x127* | Start Sector Number    |
+| *0x128* | Operation Sector Count |
+| *0x129* | Disk Output Port       |
+| *0x12A* | Disk Input Port        |
 
 ## Real Time Clock (RTC)
 
+Real Time Clock, or RTC,
+is a device powered by a battery on the motherboard
+that keeps updating its internal clock to real time,
+even when the CPU is not running.
 
+#### *Port `0x70`*
+
+This port is a read/write port.
+When reading, it returns a UNIX timestamp representing current time.
+When writing, it updates the current time to the provided timestamp.
+
+#### *Port `0x71`*
+
+RTC provides a way to trigger interruption periodically.
+RTC updates its internal clock every `50,000ns`,
+and if periodical interruption is set up,
+RTC can periodically trigger a maskable interruption.
+
+This is a $64$-bit port, and it has the following format:
+
+| [37-8]                                                                                            | `8-0`                                            |
+|---------------------------------------------------------------------------------------------------|--------------------------------------------------|
+| Periodical Scale, Interruption is triggered every $50000\text{ns} \times \text{Periodical Scale}$ | Interruption Number, must be larger than `0x1F`  |
+
+Interruption number is user defined.
 
 # **Appendix A: Instructions Set**
 
@@ -920,15 +974,15 @@ Instruction is encoded as the following format:
 | `0x00`    | `NOP`       | None                               | None                              | No                          |
 
 
-The opcode[^1] for `NOP` is `0x00`,
+The opcode[^opcode] for `NOP` is `0x00`,
 which is the default value when memory initialized
-and the default value used for peddling[^2].
+and the default value used for peddling[^peddling].
 This is the reason why there is an instruction `NOP` with its opcode being the default value.
 Should CPU mistakenly execute an uninitialized area, there would not be serious consequences.
 
-[^1]: opcode: The field that denotes the operation and format of an instruction [@ComputerOrganizationAndDesign].
+[^opcode]: opcode: The field that denotes the operation and format of an instruction [@ComputerOrganizationAndDesign].
 
-[^2]: When a field following another field does not fit into a partially filled storage unit,
+[^peddling]: When a field following another field does not fit into a partially filled storage unit,
 it may be split between units, or the unit may be padded.
 An unnamed field with width 0 forces this padding,
 so that the next field begins at the edge of the next allocation unit.
@@ -1408,9 +1462,9 @@ by the processor to access a memory reference[@Intel64AndIA32ArchitecturesSoftwa
 
 Jump to a specific code location.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
-|--------|-------------|-----------------------------------------|------------------------------------------|
-| `0x30` | `JMP`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        | Operation Width Enforcement              |
+|--------|-------------|-----------------------------------------|------------------------------------------|------------------------------------------|
+| `0x30` | `JMP`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  | No, but both operands must be 64bit wide |
 
 The first operand is served as code segment address, which is usually `%CB`.
 The second is segment offset.
@@ -1424,9 +1478,9 @@ $\text{Linear Address} = \text{Segment Address} + \text{Segment Offset}$
 
 Call a subroutine (function).
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
-|--------|-------------|-----------------------------------------|------------------------------------------|
-| `0x31` | `CALL`      | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        | Operation Width Enforcement              |
+|--------|-------------|-----------------------------------------|------------------------------------------|------------------------------------------|
+| `0x31` | `CALL`      | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  | No, but both operands must be 64bit wide |
 
 `CALL` pushes `%CB` and `%IP` of next instruction onto the stack,
 then performs a jump to the target location.
@@ -1436,9 +1490,9 @@ then performs a jump to the target location.
 
 Return from a subroutine (function).
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------|-----------------------------------|
-| `0x32` | `RET`       | None                              | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------|-----------------------------|
+| `0x32` | `RET`       | None                              | None                              | No                          |
 
 `RET` popes `%CB` and `%IP` from the stack stored by `CALL`.
 This will automatically jump back from the subroutine.
@@ -1450,9 +1504,9 @@ Jump if equal.
 
 Jump to a specific code location if the flag `EQ` is `1`.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
-|--------|-------------|-----------------------------------------|------------------------------------------|
-| `0x33` | `JE`        | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        | Operation Width Enforcement              |
+|--------|-------------|-----------------------------------------|------------------------------------------|------------------------------------------|
+| `0x33` | `JE`        | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  | No, but both operands must be 64bit wide |
 
 The first operand is served as code segment address, which is usually `%CB`.
 The second is segment offset.
@@ -1464,18 +1518,12 @@ Jump if not equal.
 
 Jump to a specific code location if the flag `EQ` is `0`.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
-|--------|-------------|-----------------------------------------|------------------------------------------|
-| `0x34` | `JNE`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        | Operation Width Enforcement               |
+|--------|-------------|-----------------------------------------|------------------------------------------|-------------------------------------------|
+| `0x34` | `JNE`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  | No, but both operands must be 64bit wide  |
 
 The first operand is served as code segment address, which is usually `%CB`.
 The second is segment offset.
-
-
-| Flag                     | Explanation                                                                                                           |
-|--------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| *Carry*, *CF*            | Overflow in unsigned arithmetic operations                                                                            |
-| *Overflow*, *OF*         | Overflow in signed arithmetic operations                                                                              |
 
 #### **JB**
 
@@ -1483,9 +1531,9 @@ Jump if larger.
 
 Jump to a specific code location if the flag `BG` is `1`.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
-|--------|-------------|-----------------------------------------|------------------------------------------|
-| `0x35` | `JB`        | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        | Operation Width Enforcement               |
+|--------|-------------|-----------------------------------------|------------------------------------------|-------------------------------------------|
+| `0x35` | `JB`        | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  | No, but both operands must be 64bit wide  |
 
 The first operand is served as code segment address, which is usually `%CB`.
 The second is segment offset.
@@ -1497,9 +1545,9 @@ Jump if less.
 
 Jump to a specific code location if the flag `LE` is `1`.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
-|--------|-------------|-----------------------------------------|------------------------------------------|
-| `0x36` | `JL`        | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        | Operation Width Enforcement               |
+|--------|-------------|-----------------------------------------|------------------------------------------|-------------------------------------------|
+| `0x36` | `JL`        | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  | No, but both operands must be 64bit wide  |
 
 The first operand is served as code segment address, which is usually `%CB`.
 The second is segment offset.
@@ -1511,9 +1559,9 @@ Jump if larger or equal.
 
 Jump to a specific code location if the flag `EQ` or `BG` is `1`.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
-|--------|-------------|-----------------------------------------|------------------------------------------|
-| `0x37` | `JBE`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        | Operation Width Enforcement               |
+|--------|-------------|-----------------------------------------|------------------------------------------|-------------------------------------------|
+| `0x37` | `JBE`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  | No, but both operands must be 64bit wide  |
 
 The first operand is served as code segment address, which is usually `%CB`.
 The second is segment offset.
@@ -1525,9 +1573,9 @@ Jump if less or equal.
 
 Jump to a specific code location if the flag `EQ` or `BG` is `1`.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
-|--------|-------------|-----------------------------------------|------------------------------------------|
-| `0x38` | `JLE`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        | Operation Width Enforcement               |
+|--------|-------------|-----------------------------------------|------------------------------------------|-------------------------------------------|
+| `0x38` | `JLE`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  | No, but both operands must be 64bit wide  |
 
 The first operand is served as code segment address, which is usually `%CB`.
 The second is segment offset.
@@ -1537,9 +1585,9 @@ The second is segment offset.
 
 Jump to a specific code location if the flag `CF` is `1`.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
-|--------|-------------|-----------------------------------------|------------------------------------------|
-| `0x3C` | `JC`        | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        | Operation Width Enforcement               |
+|--------|-------------|-----------------------------------------|------------------------------------------|-------------------------------------------|
+| `0x3C` | `JC`        | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  | No, but both operands must be 64bit wide  |
 
 The first operand is served as code segment address, which is usually `%CB`.
 The second is segment offset.
@@ -1549,9 +1597,9 @@ The second is segment offset.
 
 Jump to a specific code location if the flag `CF` is `0`.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
-|--------|-------------|-----------------------------------------|------------------------------------------|
-| `0x3D` | `JNC`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        | Operation Width Enforcement               |
+|--------|-------------|-----------------------------------------|------------------------------------------|-------------------------------------------|
+| `0x3D` | `JNC`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  | No, but both operands must be 64bit wide  |
 
 The first operand is served as code segment address, which is usually `%CB`.
 The second is segment offset.
@@ -1561,9 +1609,9 @@ The second is segment offset.
 
 Jump to a specific code location if the flag `OF` is `1`.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
-|--------|-------------|-----------------------------------------|------------------------------------------|
-| `0x3E` | `JO`        | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        | Operation Width Enforcement               |
+|--------|-------------|-----------------------------------------|------------------------------------------|-------------------------------------------|
+| `0x3E` | `JO`        | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  | No, but both operands must be 64bit wide  |
 
 The first operand is served as code segment address, which is usually `%CB`.
 The second is segment offset.
@@ -1573,9 +1621,9 @@ The second is segment offset.
 
 Jump to a specific code location if the flag `OF` is `0`.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
-|--------|-------------|-----------------------------------------|------------------------------------------|
-| `0x3F` | `JNO`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        | Operation Width Enforcement               |
+|--------|-------------|-----------------------------------------|------------------------------------------|-------------------------------------------|
+| `0x3F` | `JNO`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  | No, but both operands must be 64bit wide  |
 
 The first operand is served as code segment address, which is usually `%CB`.
 The second is segment offset.
@@ -1586,9 +1634,9 @@ The second is segment offset.
 Jump to a specific code location when `%FER3` is not `0`.
 When performing a jump, `%FER3` is decreased by `1`.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
-|--------|-------------|-----------------------------------------|------------------------------------------|
-| `0x60` | `LOOP`      | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        | Operation Width Enforcement               |
+|--------|-------------|-----------------------------------------|------------------------------------------|-------------------------------------------|
+| `0x60` | `LOOP`      | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  | No, but both operands must be 64bit wide  |
 
 The first operand is served as code segment address, which is usually `%CB`.
 The second is segment offset.
@@ -1599,9 +1647,9 @@ The second is segment offset.
 Software interruption, with
 interruption code being `Operand1`.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------------|-----------------------------------|
-| `0x39` | `INT`       | Register, Constant, or Memory Reference | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand | Operation Width Enforcement                     |
+|--------|-------------|-----------------------------------------|-----------------------------------|-------------------------------------------------|
+| `0x39` | `INT`       | Register, Constant, or Memory Reference | None                              | No, but $\text{interruption code} \in [0, 255]$ |
 
 
 Performing interruption will push *ALL* registers,
@@ -1613,9 +1661,9 @@ including `%CB` and `%IP`, onto the stack.
 Software interruption code `3`.
 This is served as a breakpoint.
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------|-----------------------------------|
-| `0x3A` | `INT3`      | None                              | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------|-----------------------------|
+| `0x3A` | `INT3`      | None                              | None                              | No                          |
 
 This instruction is no different from `INT <$(0x03)>`,
 except from the fact that `INT3` occupies one byte only in binary,
@@ -1629,134 +1677,207 @@ and can easily be setup at runtime.
 
 Read from a port whose number is specified by `Operand1` and store it to `Operand2`.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------------|-----------------------------------|
-| `0x50` | `IN`        | Register, Constant, or Memory Reference | Register, Memory Reference        |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand | Operation Width Enforcement                            |
+|--------|-------------|-----------------------------------------|-----------------------------------|--------------------------------------------------------|
+| `0x50` | `IN`        | Register, Constant, or Memory Reference | Register, Memory Reference        | Yes, and data width must be consistent with port width |
 
+If the device provides data less than requested data space,
+which it shouldn't for a single port,
+exception `I/O ERROR` will be triggered.
 
 #### **OUT**
 
 Write the value in `Operand2` to a port whose number is specified by `Operand1`.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand       |
-|--------|-------------|-----------------------------------------|-----------------------------------------|
-| `0x51` | `OUT`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand       | Operation Width Enforcement                            |
+|--------|-------------|-----------------------------------------|-----------------------------------------|--------------------------------------------------------|
+| `0x51` | `OUT`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference | Yes, and data width must be consistent with port width |
 
 
 #### **INS**
 
 Read `%FER3` length of bytes from a port whose number is specified by `Operand1` and store it to `%DB:%DP`.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------------|-----------------------------------|
-| `0x52` | `INS`       | Register, Constant, or Memory Reference |                                   |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------------|-----------------------------------|-----------------------------|
+| `0x52` | `INS`       | Register, Constant, or Memory Reference | None                              | Yes                         |
+
+If the device provides data buffer not equal to the provided data space,
+which is specified through register `%FER3`,
+exception `I/O ERROR` will be triggered.
 
 #### **OUTS**
 
 Write `%FER3` length of bytes from `%DB:%DP` to a port whose number is specified by `Operand1`.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------------|-----------------------------------|
-| `0x53` | `OUTS`      | Register, Constant, or Memory Reference |                                   |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------------|-----------------------------------|-----------------------------|
+| `0x53` | `OUTS`      | Register, Constant, or Memory Reference | None                              | Yes                         |
 
+If the device provides data buffer not equal to the provided data space,
+which is specified through register `%FER3`,
+exception `I/O ERROR` will be triggered.
 
 # **Appendix B: Examples**
 
 ## **Example A, Disk I/O**
 
 ```
-00000000000C1800: 30 01 64 A2 02 64 E3 18    JMP <%CB>, <$(0xC18E3)>
-                  0C 00 00 00 00 00       
-00000000000C180E: 24                         PUSHALL
-00000000000C180F: 51 64 02 64 37 01 00 00    OUT .64bit <$(0x137)>, <$(0x0)>
+Example A.sys        FORMAT    SYS
+
+SYMBOL TABLE - SIZE 12:
+00000000000C180E                             reads
+00000000000C1858                             puts
+00000000000C189F                             gets
+00000000000C18A0                             _loop2
+00000000000C18E1                             _end
+00000000000C18E3                             _start
+00000000000C1986                             _int3
+00000000000C1987                             _int_kb_abort
+00000000000C19A6                             _loop_message
+00000000000C1A03                             _loop_msg_end
+00000000000C1A1A                             _message
+00000000000C1A35                             _stack_frame
+
+
+00000000000C1800: 30 01 64 A2 02 64 E3 18     JMP <%CB>, <$(0xC18E3)>
+                  0C 00 00 00 00 00 
+
+
+<reads> :
+00000000000C180E: 24                          PUSHALL
+00000000000C180F: 51 64 02 64 37 01 00 00     OUT .64bit <$(0x137)>, <$(0x0)>
                   00 00 00 00 02 64 00 00 
-                  00 00 00 00 00 00       
-00000000000C1825: 51 64 02 64 38 01 00 00    OUT .64bit <$(0x138)>, <$(0x4)>
+                  00 00 00 00 00 00 
+00000000000C1825: 51 64 02 64 38 01 00 00     OUT .64bit <$(0x138)>, <$(0x4)>
                   00 00 00 00 02 64 04 00 
-                  00 00 00 00 00 00       
-00000000000C183B: 20 64 01 64 00 02 64 00    MOV .64bit <%FER0>, <$(0x800)>
-                  08 00 00 00 00 00 00    
-00000000000C184A: 52 64 02 64 39 01 00 00    INS .64bit <$(0x139)>
-                  00 00 00 00             
-00000000000C1856: 25                         POPALL
-00000000000C1857: 32                         RET
-00000000000C1858: 24                         PUSHALL
-00000000000C1859: 20 64 01 64 00 02 64 D0    MOV .64bit <%FER0>, <$(0x7D0)>
-                  07 00 00 00 00 00 00    
-00000000000C1868: 20 64 01 64 A4 02 64 00    MOV .64bit <%DP>, <$(0xB8000)>
-                  80 0B 00 00 00 00 00    
-00000000000C1877: 28                         MOVS
-00000000000C1878: 39 02 64 18 00 00 00 00    INT <$(0x18)>
-                  00 00 00                
-00000000000C1883: 20 16 01 16 00 02 64 CF    MOV .16bit <%EXR0>, <$(0x7CF)>
-                  07 00 00 00 00 00 00    
-00000000000C1892: 39 02 64 11 00 00 00 00    INT <$(0x11)>
-                  00 00 00                
-00000000000C189D: 25                         POPALL
-00000000000C189E: 32                         RET
-00000000000C189F: 24                         PUSHALL
-00000000000C18A0: 39 02 64 14 00 00 00 00    INT <$(0x14)>
-                  00 00 00                
-00000000000C18AB: 0A 08 01 08 00 02 64 71    CMP .8bit  <%R0>, <$(0x71)>
-                  00 00 00 00 00 00 00    
-00000000000C18BA: 33 01 64 A2 02 64 E1 18    JE <%CB>, <$(0xC18E1)>
-                  0C 00 00 00 00 00       
-00000000000C18C8: 39 02 64 10 00 00 00 00    INT <$(0x10)>
-                  00 00 00                
-00000000000C18D3: 30 01 64 A2 02 64 A0 18    JMP <%CB>, <$(0xC18A0)>
-                  0C 00 00 00 00 00       
-00000000000C18E1: 25                         POPALL
-00000000000C18E2: 32                         RET
-00000000000C18E3: 20 64 01 64 A1 02 64 FF    MOV .64bit <%SP>, <$(0xFFF)>
-                  0F 00 00 00 00 00 00    
-00000000000C18F2: 20 64 01 64 A0 02 64 35    MOV .64bit <%SB>, <$(0xC1A35)>
-                  1A 0C 00 00 00 00 00    
-00000000000C1901: 20 64 03 64 02 64 00 00    MOV .64bit <*1&64($(0xA0000), $(0x30), $(0x8))>, <$(0xC1986)>
+                  00 00 00 00 00 00 
+00000000000C183B: 20 64 01 64 03 02 64 00     MOV .64bit <%FER3>, <$(0x800)>
+                  08 00 00 00 00 00 00 
+00000000000C184A: 52 64 02 64 39 01 00 00     INS .64bit <$(0x139)>
+                  00 00 00 00 
+00000000000C1856: 25                          POPALL
+00000000000C1857: 32                          RET
+
+
+<puts> :
+00000000000C1858: 24                          PUSHALL
+00000000000C1859: 20 64 01 64 00 02 64 D0     MOV .64bit <%FER0>, <$(0x7D0)>
+                  07 00 00 00 00 00 00 
+00000000000C1868: 20 64 01 64 A4 02 64 00     MOV .64bit <%DP>, <$(0xB8000)>
+                  80 0B 00 00 00 00 00 
+00000000000C1877: 28                          MOVS
+00000000000C1878: 39 02 64 18 00 00 00 00     INT <$(0x18)>
+                  00 00 00 
+00000000000C1883: 20 16 01 16 00 02 64 CF     MOV .16bit <%EXR0>, <$(0x7CF)>
+                  07 00 00 00 00 00 00 
+00000000000C1892: 39 02 64 11 00 00 00 00     INT <$(0x11)>
+                  00 00 00 
+00000000000C189D: 25                          POPALL
+00000000000C189E: 32                          RET
+
+
+<gets> :
+00000000000C189F: 24                          PUSHALL
+
+
+<_loop2> :
+00000000000C18A0: 39 02 64 14 00 00 00 00     INT <$(0x14)>
+                  00 00 00 
+00000000000C18AB: 0A 08 01 08 00 02 64 71     CMP .8bit  <%R0>, <$(0x71)>
+                  00 00 00 00 00 00 00 
+00000000000C18BA: 33 01 64 A2 02 64 E1 18     JE <%CB>, <$(0xC18E1)>
+                  0C 00 00 00 00 00 
+00000000000C18C8: 39 02 64 10 00 00 00 00     INT <$(0x10)>
+                  00 00 00 
+00000000000C18D3: 30 01 64 A2 02 64 A0 18     JMP <%CB>, <$(0xC18A0)>
+                  0C 00 00 00 00 00 
+
+
+<_end> :
+00000000000C18E1: 25                          POPALL
+00000000000C18E2: 32                          RET
+
+
+<_start> :
+00000000000C18E3: 20 64 01 64 A1 02 64 FF     MOV .64bit <%SP>, <$(0xFFF)>
+                  0F 00 00 00 00 00 00 
+00000000000C18F2: 20 64 01 64 A0 02 64 35     MOV .64bit <%SB>, <$(0xC1A35)>
+                  1A 0C 00 00 00 00 00 
+00000000000C1901: 20 64 03 64 02 64 00 00     MOV .64bit <*1&64($(0xA0000), $(0x30), $(0x8))>, <$(0xC1986)>
                   0A 00 00 00 00 00 02 64 
                   30 00 00 00 00 00 00 00 
                   02 64 08 00 00 00 00 00 
                   00 00 01 02 64 86 19 0C 
-                  00 00 00 00 00          
-00000000000C192E: 20 64 03 64 02 64 00 00    MOV .64bit <*1&64($(0xA0000), $(0x50), $(0x8))>, <$(0xC1987)>
+                  00 00 00 00 00 
+00000000000C192E: 20 64 03 64 02 64 00 00     MOV .64bit <*1&64($(0xA0000), $(0x50), $(0x8))>, <$(0xC1987)>
                   0A 00 00 00 00 00 02 64 
                   50 00 00 00 00 00 00 00 
                   02 64 08 00 00 00 00 00 
                   00 00 01 02 64 87 19 0C 
-                  00 00 00 00 00          
-00000000000C195B: 31 01 64 A2 02 64 0E 18    CALL <%CB>, <$(0xC180E)>
-                  0C 00 00 00 00 00       
-00000000000C1969: 31 01 64 A2 02 64 58 18    CALL <%CB>, <$(0xC1858)>
-                  0C 00 00 00 00 00       
-00000000000C1977: 31 01 64 A2 02 64 9F 18    CALL <%CB>, <$(0xC189F)>
-                  0C 00 00 00 00 00       
-00000000000C1985: 40                         HLT
-00000000000C1986: 3B                         IRET
-00000000000C1987: 12 64 01 64 02 01 64 02    XOR .64bit <%FER2>, <%FER2>
-00000000000C198F: 12 64 01 64 00 01 64 00    XOR .64bit <%FER0>, <%FER0>
-00000000000C1997: 20 64 01 64 01 02 64 1A    MOV .64bit <%FER1>, <$(0xC1A1A)>
-                  1A 0C 00 00 00 00 00    
-00000000000C19A6: 20 08 01 08 00 03 08 01    MOV .8bit  <%R0>, <*1&8(%FER1, %FER2, $(0x0))>
+                  00 00 00 00 00 
+00000000000C195B: 31 01 64 A2 02 64 0E 18     CALL <%CB>, <$(0xC180E)>
+                  0C 00 00 00 00 00 
+00000000000C1969: 31 01 64 A2 02 64 58 18     CALL <%CB>, <$(0xC1858)>
+                  0C 00 00 00 00 00 
+00000000000C1977: 31 01 64 A2 02 64 9F 18     CALL <%CB>, <$(0xC189F)>
+                  0C 00 00 00 00 00 
+00000000000C1985: 40                          HLT
+
+
+<_int3> :
+00000000000C1986: 3B                          IRET
+
+
+<_int_kb_abort> :
+00000000000C1987: 12 64 01 64 02 01 64 02     XOR .64bit <%FER2>, <%FER2>
+00000000000C198F: 12 64 01 64 00 01 64 00     XOR .64bit <%FER0>, <%FER0>
+00000000000C1997: 20 64 01 64 01 02 64 1A     MOV .64bit <%FER1>, <$(0xC1A1A)>
+                  1A 0C 00 00 00 00 00 
+
+
+<_loop_message> :
+00000000000C19A6: 20 08 01 08 00 03 08 01     MOV .8bit  <%R0>, <*1&8(%FER1, %FER2, $(0x0))>
                   64 01 01 64 02 02 64 00 
                   00 00 00 00 00 00 00 01 
-00000000000C19BE: 01 64 01 64 02 02 64 01    ADD .64bit <%FER2>, <$(0x1)>
-                  00 00 00 00 00 00 00    
-00000000000C19CD: 0A 08 01 08 00 02 64 00    CMP .8bit  <%R0>, <$(0x0)>
-                  00 00 00 00 00 00 00    
-00000000000C19DC: 33 01 64 A2 02 64 03 1A    JE <%CB>, <$(0xC1A03)>
-                  0C 00 00 00 00 00       
-00000000000C19EA: 39 02 64 10 00 00 00 00    INT <$(0x10)>
-                  00 00 00                
-00000000000C19F5: 30 01 64 A2 02 64 A6 19    JMP <%CB>, <$(0xC19A6)>
-                  0C 00 00 00 00 00       
-00000000000C1A03: 39 02 64 13 00 00 00 00    INT <$(0x13)>
-                  00 00 00                
-00000000000C1A0E: 39 02 64 17 00 00 00 00    INT <$(0x17)>
-                  00 00 00                
-00000000000C1A19: 3B                         IRET
-00000000000C1A1A: .8bit_data < 'K', 'e', 'y', 'b', 'o', 'a', 'r', 'd', ' ', > 
-                  .8bit_data < 'I', 'n', 't', 'e', 'r', 'r', 'u', 'p', 't', ' ', > 
-                  .8bit_data < 'c', 'a', 'l', 'l', 'e', 'd', '!', 0x00, >
-00000000000C1A35: 00                         NOP
+00000000000C19BE: 01 64 01 64 02 02 64 01     ADD .64bit <%FER2>, <$(0x1)>
+                  00 00 00 00 00 00 00 
+00000000000C19CD: 0A 08 01 08 00 02 64 00     CMP .8bit  <%R0>, <$(0x0)>
+                  00 00 00 00 00 00 00 
+00000000000C19DC: 33 01 64 A2 02 64 03 1A     JE <%CB>, <$(0xC1A03)>
+                  0C 00 00 00 00 00 
+00000000000C19EA: 39 02 64 10 00 00 00 00     INT <$(0x10)>
+                  00 00 00 
+00000000000C19F5: 30 01 64 A2 02 64 A6 19     JMP <%CB>, <$(0xC19A6)>
+                  0C 00 00 00 00 00 
+
+
+<_loop_msg_end> :
+00000000000C1A03: 39 02 64 13 00 00 00 00     INT <$(0x13)>
+                  00 00 00 
+00000000000C1A0E: 39 02 64 17 00 00 00 00     INT <$(0x17)>
+                  00 00 00 
+00000000000C1A19: 3B                          IRET
+
+
+<_message> :
+00000000000C1A1A: 4B65 7962 6F61 7264 2049 6E74 6572 7275    Keyboard Interru
+00000000000C1A2A: 7074 2063 616C 6C65 6421 00                pt called!.
+
+
+
+<_stack_frame> :
+00000000000C1A35: 00                          NOP
+00000000000C1A36: 00                          NOP
+00000000000C1A37: 00                          NOP
+00000000000C1A38: 00                          NOP
+00000000000C1A39: 00                          NOP
+00000000000C1A3A: 00                          NOP
+00000000000C1A3B: 00                          NOP
+00000000000C1A3C: 00                          NOP
+00000000000C1A3D: 00                          NOP
+00000000000C1A3E: 00                          NOP
+00000000000C1A3F: 00                          NOP
 ```
 
 # Result of Example A
@@ -1766,86 +1887,146 @@ Write `%FER3` length of bytes from `%DB:%DP` to a port whose number is specified
 # Example B, Real Time Clock
 
 ```
-00000000000C1800: 20 64 01 64 A1 02 64 FF    MOV .64bit <%SP>, <$(0xFFF)>
-                  0F 00 00 00 00 00 00    
-00000000000C180F: 20 64 01 64 A0 02 64 1D    MOV .64bit <%SB>, <$(0xC1A1D)>
-                  1A 0C 00 00 00 00 00    
-00000000000C181E: 20 64 03 64 02 64 00 00    MOV .64bit <*1&64($(0xA0000), $(0x800), $(0x8))>, <$(0xC1940)>
+rtc.sys        FORMAT    SYS
+
+SYMBOL TABLE - SIZE 10:
+00000000000C1800                             _start
+00000000000C18A4                             _inf_loop
+00000000000C18CD                             _int_kb_abort
+00000000000C18EC                             _int_kb_abort_loop_message
+00000000000C193F                             _int_kb_abort_loop_msg_end
+00000000000C1956                             _int_rtc
+00000000000C1974                             _int_rtc_loop_rtc_start
+00000000000C19EE                             _int_rtc_loop_print
+00000000000C1A18                             _message
+00000000000C1A33                             _stack_frame
+
+
+
+
+<_start> :
+00000000000C1800: 20 64 01 64 A1 02 64 FF     MOV .64bit <%SP>, <$(0xFFF)>
+                  0F 00 00 00 00 00 00 
+00000000000C180F: 20 64 01 64 A0 02 64 33     MOV .64bit <%SB>, <$(0xC1A33)>
+                  1A 0C 00 00 00 00 00 
+00000000000C181E: 20 64 03 64 02 64 00 00     MOV .64bit <*1&64($(0xA0000), $(0x800), $(0x8))>, <$(0xC1956)>
                   0A 00 00 00 00 00 02 64 
                   00 08 00 00 00 00 00 00 
                   02 64 08 00 00 00 00 00 
-                  00 00 01 02 64 40 19 0C 
-                  00 00 00 00 00          
-00000000000C184B: 20 64 03 64 02 64 00 00    MOV .64bit <*1&64($(0xA0000), $(0x50), $(0x8))>, <$(0xC18B7)>
+                  00 00 01 02 64 56 19 0C 
+                  00 00 00 00 00 
+00000000000C184B: 20 64 03 64 02 64 00 00     MOV .64bit <*1&64($(0xA0000), $(0x50), $(0x8))>, <$(0xC18CD)>
                   0A 00 00 00 00 00 02 64 
                   50 00 00 00 00 00 00 00 
                   02 64 08 00 00 00 00 00 
-                  00 00 01 02 64 B7 18 0C 
-                  00 00 00 00 00          
-00000000000C1878: 51 64 02 64 71 00 00 00    OUT .64bit <$(0x71)>, <$(0x9C4080)>
-                  00 00 00 00 02 64 80 40 
-                  9C 00 00 00 00 00       
-00000000000C188E: 39 02 64 14 00 00 00 00    INT <$(0x14)>
-                  00 00 00                
-00000000000C1899: 0A 08 01 08 00 02 64 71    CMP .8bit  <%R0>, <$(0x71)>
-                  00 00 00 00 00 00 00    
-00000000000C18A8: 34 01 64 A2 02 64 8E 18    JNE <%CB>, <$(0xC188E)>
-                  0C 00 00 00 00 00       
-00000000000C18B6: 40                         HLT
-00000000000C18B7: 12 64 01 64 02 01 64 02    XOR .64bit <%FER2>, <%FER2>
-00000000000C18BF: 12 64 01 64 00 01 64 00    XOR .64bit <%FER0>, <%FER0>
-00000000000C18C7: 20 64 01 64 01 02 64 02    MOV .64bit <%FER1>, <$(0xC1A02)>
-                  1A 0C 00 00 00 00 00    
-00000000000C18D6: 20 08 01 08 00 03 08 01    MOV .8bit  <%R0>, <*1&8(%FER1, %FER2, $(0x0))>
+                  00 00 01 02 64 CD 18 0C 
+                  00 00 00 00 00 
+00000000000C1878: 51 64 02 64 70 00 00 00     OUT .64bit <$(0x70)>, <$(0x0)>
+                  00 00 00 00 02 64 00 00 
+                  00 00 00 00 00 00 
+00000000000C188E: 51 64 02 64 71 00 00 00     OUT .64bit <$(0x71)>, <$(0x4E2080)>
+                  00 00 00 00 02 64 80 20 
+                  4E 00 00 00 00 00 
+
+
+<_inf_loop> :
+00000000000C18A4: 39 02 64 14 00 00 00 00     INT <$(0x14)>
+                  00 00 00 
+00000000000C18AF: 0A 08 01 08 00 02 64 71     CMP .8bit  <%R0>, <$(0x71)>
+                  00 00 00 00 00 00 00 
+00000000000C18BE: 34 01 64 A2 02 64 A4 18     JNE <%CB>, <$(0xC18A4)>
+                  0C 00 00 00 00 00 
+00000000000C18CC: 40                          HLT
+
+
+<_int_kb_abort> :
+00000000000C18CD: 12 64 01 64 02 01 64 02     XOR .64bit <%FER2>, <%FER2>
+00000000000C18D5: 12 64 01 64 00 01 64 00     XOR .64bit <%FER0>, <%FER0>
+00000000000C18DD: 20 64 01 64 01 02 64 18     MOV .64bit <%FER1>, <$(0xC1A18)>
+                  1A 0C 00 00 00 00 00 
+
+
+<_int_kb_abort_loop_message> :
+00000000000C18EC: 20 08 01 08 00 03 08 01     MOV .8bit  <%R0>, <*1&8(%FER1, %FER2, $(0x0))>
                   64 01 01 64 02 02 64 00 
                   00 00 00 00 00 00 00 01 
-00000000000C18EE: 0B 64 01 64 02             INC .64bit <%FER2>
-00000000000C18F3: 0A 08 01 08 00 02 64 00    CMP .8bit  <%R0>, <$(0x0)>
-                  00 00 00 00 00 00 00    
-00000000000C1902: 33 01 64 A2 02 64 29 19    JE <%CB>, <$(0xC1929)>
-                  0C 00 00 00 00 00       
-00000000000C1910: 39 02 64 10 00 00 00 00    INT <$(0x10)>
-                  00 00 00                
-00000000000C191B: 30 01 64 A2 02 64 D6 18    JMP <%CB>, <$(0xC18D6)>
-                  0C 00 00 00 00 00       
-00000000000C1929: 39 02 64 13 00 00 00 00    INT <$(0x13)>
-                  00 00 00                
-00000000000C1934: 39 02 64 17 00 00 00 00    INT <$(0x17)>
-                  00 00 00                
-00000000000C193F: 3B                         IRET
-00000000000C1940: 50 64 02 64 70 00 00 00    IN .64bit <$(0x70)>, <%FER0>
-                  00 00 00 00 01 64 00    
-00000000000C194F: 20 64 01 64 02 02 64 00    MOV .64bit <%FER2>, <$(0x0)>
-                  00 00 00 00 00 00 00    
-00000000000C195E: 20 64 01 64 01 02 64 0A    MOV .64bit <%FER1>, <$(0xA)>
-                  00 00 00 00 00 00 00    
-00000000000C196D: 08 64 01 64 01             DIV .64bit <%FER1>
-00000000000C1972: 20 64 01 64 03 01 64 00    MOV .64bit <%FER3>, <%FER0>
-00000000000C197A: 20 64 01 64 04 01 64 01    MOV .64bit <%FER4>, <%FER1>
-00000000000C1982: 20 64 01 64 00 01 64 01    MOV .64bit <%FER0>, <%FER1>
-00000000000C198A: 01 64 01 64 00 02 64 30    ADD .64bit <%FER0>, <$(0x30)>
-                  00 00 00 00 00 00 00    
-00000000000C1999: 22 64 01 64 00             PUSH .64bit <%FER0>
-00000000000C199E: 0B 64 01 64 02             INC .64bit <%FER2>
-00000000000C19A3: 20 64 01 64 01 01 64 04    MOV .64bit <%FER1>, <%FER4>
-00000000000C19AB: 20 64 01 64 00 01 64 03    MOV .64bit <%FER0>, <%FER3>
-00000000000C19B3: 0A 64 01 64 00 02 64 00    CMP .64bit <%FER0>, <$(0x0)>
-                  00 00 00 00 00 00 00    
-00000000000C19C2: 34 01 64 A2 02 64 5E 19    JNE <%CB>, <$(0xC195E)>
-                  0C 00 00 00 00 00       
-00000000000C19D0: 20 64 01 64 03 01 64 02    MOV .64bit <%FER3>, <%FER2>
-00000000000C19D8: 23 64 01 64 00             POP .64bit <%FER0>
-00000000000C19DD: 39 02 64 10 00 00 00 00    INT <$(0x10)>
-                  00 00 00                
-00000000000C19E8: 60 01 64 A2 02 64 D8 19    LOOP <%CB>, <$(0xC19D8)>
-                  0C 00 00 00 00 00       
-00000000000C19F6: 39 02 64 13 00 00 00 00    INT <$(0x13)>
-                  00 00 00                
-00000000000C1A01: 3B                         IRET
-00000000000C1A02: .8bit_data < 'K', 'e', 'y', 'b', 'o', 'a', 'r', 'd', ' ', > 
-                  .8bit_data < 'I', 'n', 't', 'e', 'r', 'r', 'u', 'p', 't', ' ', > 
-                  .8bit_data < 'c', 'a', 'l', 'l', 'e', 'd', '!', 0x00, >
-00000000000C1A1D: 00                         NOP
+00000000000C1904: 0B 64 01 64 02              INC .64bit <%FER2>
+00000000000C1909: 0A 08 01 08 00 02 64 00     CMP .8bit  <%R0>, <$(0x0)>
+                  00 00 00 00 00 00 00 
+00000000000C1918: 33 01 64 A2 02 64 3F 19     JE <%CB>, <$(0xC193F)>
+                  0C 00 00 00 00 00 
+00000000000C1926: 39 02 64 10 00 00 00 00     INT <$(0x10)>
+                  00 00 00 
+00000000000C1931: 30 01 64 A2 02 64 EC 18     JMP <%CB>, <$(0xC18EC)>
+                  0C 00 00 00 00 00 
+
+
+<_int_kb_abort_loop_msg_end> :
+00000000000C193F: 39 02 64 13 00 00 00 00     INT <$(0x13)>
+                  00 00 00 
+00000000000C194A: 39 02 64 17 00 00 00 00     INT <$(0x17)>
+                  00 00 00 
+00000000000C1955: 3B                          IRET
+
+
+<_int_rtc> :
+00000000000C1956: 50 64 02 64 70 00 00 00     IN .64bit <$(0x70)>, <%FER0>
+                  00 00 00 00 01 64 00 
+00000000000C1965: 20 64 01 64 02 02 64 00     MOV .64bit <%FER2>, <$(0x0)>
+                  00 00 00 00 00 00 00 
+
+
+<_int_rtc_loop_rtc_start> :
+00000000000C1974: 20 64 01 64 01 02 64 0A     MOV .64bit <%FER1>, <$(0xA)>
+                  00 00 00 00 00 00 00 
+00000000000C1983: 08 64 01 64 01              DIV .64bit <%FER1>
+00000000000C1988: 20 64 01 64 03 01 64 00     MOV .64bit <%FER3>, <%FER0>
+00000000000C1990: 20 64 01 64 04 01 64 01     MOV .64bit <%FER4>, <%FER1>
+00000000000C1998: 20 64 01 64 00 01 64 01     MOV .64bit <%FER0>, <%FER1>
+00000000000C19A0: 01 64 01 64 00 02 64 30     ADD .64bit <%FER0>, <$(0x30)>
+                  00 00 00 00 00 00 00 
+00000000000C19AF: 22 64 01 64 00              PUSH .64bit <%FER0>
+00000000000C19B4: 0B 64 01 64 02              INC .64bit <%FER2>
+00000000000C19B9: 20 64 01 64 01 01 64 04     MOV .64bit <%FER1>, <%FER4>
+00000000000C19C1: 20 64 01 64 00 01 64 03     MOV .64bit <%FER0>, <%FER3>
+00000000000C19C9: 0A 64 01 64 00 02 64 00     CMP .64bit <%FER0>, <$(0x0)>
+                  00 00 00 00 00 00 00 
+00000000000C19D8: 34 01 64 A2 02 64 74 19     JNE <%CB>, <$(0xC1974)>
+                  0C 00 00 00 00 00 
+00000000000C19E6: 20 64 01 64 03 01 64 02     MOV .64bit <%FER3>, <%FER2>
+
+
+<_int_rtc_loop_print> :
+00000000000C19EE: 23 64 01 64 00              POP .64bit <%FER0>
+00000000000C19F3: 39 02 64 10 00 00 00 00     INT <$(0x10)>
+                  00 00 00 
+00000000000C19FE: 60 01 64 A2 02 64 EE 19     LOOP <%CB>, <$(0xC19EE)>
+                  0C 00 00 00 00 00 
+00000000000C1A0C: 39 02 64 13 00 00 00 00     INT <$(0x13)>
+                  00 00 00 
+00000000000C1A17: 3B                          IRET
+
+
+<_message> :
+00000000000C1A18: 4B65 7962 6F61 7264 2049 6E74 6572 7275    Keyboard Interru
+00000000000C1A28: 7074 2063 616C 6C65 6421 00                pt called!.
+
+
+
+<_stack_frame> :
+00000000000C1A33: 00                          NOP
+00000000000C1A34: 00                          NOP
+00000000000C1A35: 00                          NOP
+00000000000C1A36: 00                          NOP
+00000000000C1A37: 00                          NOP
+00000000000C1A38: 00                          NOP
+00000000000C1A39: 00                          NOP
+00000000000C1A3A: 00                          NOP
+00000000000C1A3B: 00                          NOP
+00000000000C1A3C: 00                          NOP
+00000000000C1A3D: 00                          NOP
+00000000000C1A3E: 00                          NOP
+00000000000C1A3F: 00                          NOP
 ```
 
 # Result of Example B
