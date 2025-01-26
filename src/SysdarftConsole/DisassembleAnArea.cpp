@@ -47,150 +47,105 @@ std::string insert_newlines_every_24(const std::string& input)
     return result;
 }
 
+std::string linear_binary_to_string(const std::vector<uint8_t> & data)
+{
+    std::stringstream ss;
+    for (const auto & c : data) {
+        ss << std::hex << std::setfill('0') << std::setw(2) << std::uppercase
+           << static_cast<int>(c);
+        ss << " ";
+    }
+
+    return ss.str();
+}
+
 std::string disassemble_code(std::vector < uint8_t > assembled_code,
     const uint64_t org, const std::map < uint64_t, std::string >& symbol_table)
 {
-    auto assembled_code_backup = assembled_code;
     std::stringstream ret;
+    auto assembled_code_reference = assembled_code;
     const std::regex _8bit_data(R"(.8bit_data <(.*)>)");
-    const auto space = assembled_code.size();
-    std::vector < std::string > lines;
-    std::vector < std::pair < uint64_t, std::string > > bad_data;
-    auto process_bad_data = [&]()->void
-    {
-        std::stringstream ss;
-        std::stringstream dat;
-
-        if (symbol_table.contains(bad_data.front().first)) {
-            ss << "\n<" << symbol_table.at(bad_data.front().first) << ">:\n";
-        }
-
-        ss << std::hex << std::setfill('0') << std::setw(16) << std::uppercase
-           << bad_data.front().first;
-        ss << ": ";
-
-        dat << ".8bit_data <";
-        for (auto & [location, data] : bad_data) {
-            dat << " " << data << ",";
-        }
-        dat << " >";
-        bad_data.clear();
-
-        lines.push_back(ss.str());
-        lines.push_back(dat.str());
-        lines.emplace_back("");
-    };
-
-    auto ins_code = [&](const std::vector<uint8_t> & code)->std::string
-    {
-        std::stringstream ss;
-        for (const auto & c : code) {
-            ss << std::hex << std::setfill('0') << std::setw(2) << std::uppercase
-               << static_cast<int>(c);
-            ss << " ";
-        }
-
-        return ss.str();
-    };
+    const auto assembled_code_space = assembled_code.size();
+    std::vector < std::vector < uint8_t > > bad_8bit_data;
+    uint64_t bad_8bit_data_offset = 0;
 
     while (!assembled_code.empty())
     {
-        std::stringstream off;
-        std::vector < std::string > line;
-        auto current_pos = space - assembled_code.size() + org;
+        std::vector < std::string > disassembled_code_literals;
+        const auto current_pos = assembled_code_space - assembled_code.size() + org;
+        const auto offset_before = assembled_code_space - assembled_code.size();
+
+        decode_instruction(disassembled_code_literals, assembled_code);
+
+        const auto offset_after = assembled_code_space - assembled_code.size();
+        const auto decoded_code_literal_length = offset_after - offset_before;
+        std::vector < uint8_t > decoded_literal_binary;
+
+        decoded_literal_binary.resize(decoded_code_literal_length);
+        std::memcpy(decoded_literal_binary.data(),
+            assembled_code_reference.data() + offset_before,
+            decoded_code_literal_length);
+
+        // check if it's bad data
+        // true if empty,
+        // further code check is not performed but is indeed a bad data
+        bool bad_data = disassembled_code_literals.empty();
+        for (const auto & line : disassembled_code_literals)
+        {
+            if (std::regex_search(line, _8bit_data)) {
+                bad_data = true;
+                break;
+            }
+        }
+
+        // if bad_data
+        if (bad_data)
+        {
+            if (bad_8bit_data.empty()) {
+                bad_8bit_data_offset = current_pos; // record current position for later use
+            }
+            bad_8bit_data.emplace_back(decoded_literal_binary);
+            continue;
+        }
+
+        // made it here, check if there is any preceding bad data
+        if (!bad_8bit_data.empty())
+        {
+            // unify data
+            std::vector < uint8_t > unified_bad_data;
+            for (const auto & line : bad_8bit_data) {
+                unified_bad_data.insert(unified_bad_data.end(), line.begin(), line.end());
+            }
+
+            if (symbol_table.contains(bad_8bit_data_offset)) {
+                ret << std::endl << std::endl << "<" << symbol_table.at(bad_8bit_data_offset) << "> :" << std::endl;
+            }
+            auto dumped = xxd_like_dump(bad_8bit_data_offset, unified_bad_data);
+            ret << dumped << std::endl;
+            bad_8bit_data.clear();
+            bad_8bit_data_offset = 0;
+        }
+
         if (symbol_table.contains(current_pos)) {
-            off << "\n<" << symbol_table.at(current_pos) << ">:\n";
+            ret << std::endl << std::endl << "<" << symbol_table.at(current_pos) << "> :" << std::endl;
         }
+        // write current offset
+        ret << std::hex << std::setfill('0') << std::setw(16) << std::uppercase << current_pos << ": ";
 
-        off << std::hex << std::setfill('0') << std::setw(16) << std::uppercase
-            << current_pos;
+        // first, we need a binary view of the data
+        std::string disassembled_data_literal = linear_binary_to_string(decoded_literal_binary);
 
-        auto offset_before = space - assembled_code.size();
-        decode_instruction(line, assembled_code);
-        auto offset_after = space - assembled_code.size();
-
-        auto code_length = offset_after - offset_before;
-        std::vector < uint8_t > current_code;
-        current_code.resize(code_length);
-        std::memcpy(
-            current_code.data(),
-            assembled_code_backup.data() + offset_before,
-            code_length);
-
-        if (!line.empty())
-        {
-            bool continue_flag = false;
-            // if bad data
-            for (const auto & ls : line)
-            {
-                if (std::smatch match; std::regex_match(ls, match, _8bit_data)) {
-                    bad_data.emplace_back(current_pos, match[1].str());
-                    continue_flag = true;
-                }
-            }
-
-            // bad, skip print
-            if (continue_flag) {
-                continue;
-            }
-
-            // not a match, flash cache
-            if (!bad_data.empty())
-            {
-                process_bad_data();
-            }
-
-            off << ": ";
-            lines.push_back(off.str());
-            lines.push_back(ins_code(current_code));
-            lines.push_back(line[0]);
-            lines.emplace_back("");
-        }
-    }
-
-    if (!bad_data.empty())
-    {
-        process_bad_data();
-    }
-
-    auto it = lines.begin();
-    if (lines.size() < 3) {
-        return "";
-    }
-
-    while (it != lines.end())
-    {
-        // check DATA2 in [cur] [DATA] [DATA2]
-        const auto is_8bit_data = (it + 2)->empty(); // if empty, then 8bit data, else, no
-        if (!is_8bit_data)
-        {
-            const auto & off_marker = *it;
-            auto ins_code_exp = *(it + 1);
-            ins_code_exp = insert_newlines_every_24(ins_code_exp);
-            const auto & instruction_statement = *(it + 2);
-            std::string padding_before(18, ' ');
-            int padding_after_len = static_cast<int>(24 - (ins_code_exp.size() - ins_code_exp.find_last_of('\n') - 1));
-
-            if (ins_code_exp.size() > 24)
-            {
-                // '00000000000C18D3: ', 18 bytes
-                replace_all(ins_code_exp, "\n", "\n" + padding_before);
-                std::string padding_after(padding_after_len, ' ');
-                ins_code_exp += padding_after;
-
-                auto pos = ins_code_exp.find_first_of('\n');
-                ins_code_exp.insert(pos, "   " + instruction_statement);
-
-                ret << off_marker << ins_code_exp << std::endl;
-            } else {
-                std::string padding_after(27 - ins_code_exp.size(), ' ');
-                ret << off_marker << ins_code_exp << padding_after << instruction_statement << std::endl;
-            }
-
-            it += 4;
+        // then, we need to bend it into multiple lines
+        if (disassembled_data_literal.size() > 24) {
+            disassembled_data_literal = insert_newlines_every_24(disassembled_data_literal);
+            // insert instruction after first '\n'
+            auto pos = disassembled_data_literal.find_first_of('\n');
+            disassembled_data_literal.insert(pos, "    " + disassembled_code_literals[0]);
+            replace_all(disassembled_data_literal, "\n", "\n" + std::string(18, ' '));
+            ret << disassembled_data_literal << std::endl;
         } else {
-            ret << *it << *(it + 1) << std::endl;
-            it += 3;
+            ret << disassembled_data_literal << std::string(28 - disassembled_data_literal.size(), ' ')
+                << disassembled_code_literals[0] << std::endl;
         }
     }
 

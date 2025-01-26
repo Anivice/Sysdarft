@@ -28,91 +28,81 @@
 #include <InstructionSet.h>
 #include <SysdarftMain.h>
 
-/**
- * Generates a string similar to the output of the `xxd` command
- * for the provided vector of bytes.
- *
- * - 16 bytes per line
- * - Left column is an 8-hex-digit address offset
- * - Middle section shows bytes in groups of 2, separated by spaces
- * - After two groups of 8 bytes, print two spaces, then print ASCII
- *   representation of all 16 bytes
- * - If the total size is not a multiple of 16, the last line will be shorter
- *
- * @param offset Basically origin
- * @param data A vector of bytes to dump.
- * @return A string that mimics `xxd` output.
- */
-std::string xxd_like_dump(const uint64_t offset, const std::vector<uint8_t>& data)
+
+std::string print_bin_line(const std::vector < uint8_t > & data)
 {
-    constexpr std::size_t BYTES_PER_LINE = 16;
-
     std::stringstream ss;
-    ss << std::hex << std::uppercase << std::setfill('0');
-
-    for (std::size_t i = 0; i < data.size(); i += BYTES_PER_LINE)
+    for (auto it = data.begin(); it != data.end();)
     {
-        ss << std::setw(16) << std::setfill('0') << i + offset << ": ";
-
-        // Print up to 16 bytes in hex, grouped for readability
-        // xxd often groups in sets of 2 or 4; here we'll group 2 bytes for a close match
-
-        // 1) Print the hex
-        const std::size_t lineEnd = (i + BYTES_PER_LINE < data.size())
-                                ? (i + BYTES_PER_LINE)
-                                : data.size();
-
-        // We'll break them into two sets of 8 (each set is 8 bytes => 4 groups of 2)
-        for (std::size_t j = i; j < lineEnd; ++j)
+        ss << std::uppercase << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(*it);
+        ++it;
+        if (it != data.end())
         {
-            // Print each byte as 2 hex digits
-            ss << std::setw(2) << static_cast<unsigned>(data[j]);
-
-            // Insert a space after each 2 bytes for visual grouping
-            // (xxd typically shows "00 11 22 33" with each pair as a "word" grouping)
-            // We'll do a space after every 2 bytes => check j vs. i offset
-            if ((j - i) % 2 == 1) ss << ' ';
-
-            // For spacing between the 8-byte halves, after 8 bytes, we do an extra space
-            if ((j - i + 1) == 8 && (j + 1) < lineEnd) {
-                ss << " ";
-            }
+            ss << std::uppercase << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(*it) << " ";
+            ++it;
         }
-
-        // If less than 16 bytes on this line, pad spaces so ASCII aligns
-        if (const std::size_t bytesOnThisLine = lineEnd - i; bytesOnThisLine < BYTES_PER_LINE)
-        {
-            // Each byte printed as 2 hex chars plus 1 space every 2 bytes => total per line
-            // For each missing byte, we skip 2 chars in hex + possible space.
-            // A simpler approach: figure out how many 2-byte groups remain.
-            const std::size_t groupsMissing = ((BYTES_PER_LINE - bytesOnThisLine) + 1) / 2;
-            for (uint64_t gm = 0; gm < groupsMissing; ++gm)
-            {
-                ss << "     ";
-            }
-            // Might need an extra space if we didn't reach the 8-byte halfway mark
-            if (bytesOnThisLine <= 8) {
-                ss << " ";
-            }
-        }
-
-        ss << "  "; // two spaces before an ASCII section
-
-        // 2) Print ASCII (or '.' for non-printable)
-        for (std::size_t j = i; j < lineEnd; ++j)
-        {
-            unsigned char c = data[j];
-            if (c >= 32 && c < 127) {
-                ss << c;
-            } else {
-                ss << '.';
-            }
-        }
-
-        ss << "\n";
     }
 
     return ss.str();
+}
+
+std::string print_ascii(const std::vector < uint8_t > & data)
+{
+    std::stringstream ss;
+    for (const auto & c : data)
+    {
+        if (c >= 0x20 && c <= 0x7E) {
+            ss << static_cast<char>(c);
+        } else {
+            ss << '.';
+        }
+    }
+
+    return ss.str();
+}
+
+std::string xxd_like_dump(const uint64_t offset, const std::vector<uint8_t>& data)
+{
+    constexpr std::size_t BYTES_PER_LINE = 16;
+    std::vector < std::vector < uint8_t > > split_data;
+    for (uint64_t i = 0; i < data.size() / BYTES_PER_LINE; ++i)
+    {
+        std::vector < uint8_t > line;
+        line.resize(BYTES_PER_LINE);
+        std::memcpy(line.data(), data.data() + (i * BYTES_PER_LINE), BYTES_PER_LINE);
+        split_data.push_back(line);
+    }
+
+    if (data.size() % BYTES_PER_LINE != 0)
+    {
+        std::vector < uint8_t > line;
+        line.resize(data.size() % BYTES_PER_LINE);
+        std::memcpy(line.data(),
+            data.data() + (data.size() / BYTES_PER_LINE) * BYTES_PER_LINE,
+            data.size() % BYTES_PER_LINE);
+        split_data.push_back(line);
+    }
+
+    uint64_t origin = offset;
+    std::stringstream ss;
+    for (const auto& line : split_data)
+    {
+        ss << std::uppercase << std::hex << std::setfill('0') << std::setw(16) << origin << ": ";
+        origin += line.size();
+        const auto hex = print_bin_line(line);
+        const auto ascii = print_ascii(line);
+        const auto characters_per_line = BYTES_PER_LINE / 2 + BYTES_PER_LINE * 2;
+        const auto characters_printed = line.size() / 2 + line.size() * 2;
+        const std::string padding_space(characters_per_line - characters_printed, ' ');
+        ss << hex << padding_space << "   " << ascii << std::endl;
+    }
+
+#ifdef __DEBUG__
+    auto str = ss.str();
+    return str;
+#else
+    return ss.str();
+#endif
 }
 
 // Example helper to convert an unsigned value to a hex string

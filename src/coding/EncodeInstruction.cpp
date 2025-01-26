@@ -112,7 +112,9 @@ void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> & buffer, co
             throw InstructionExpressionError(
                 "Expected " + std::to_string(argument_count) +
                         " operands, but found " + std::to_string(cleaned_line.size() - operand_index_begin) +
-                        ": " + instruction);
+                        ": " + instruction + ".\n"
+                        "If the missing operand is provided, it's possibly due to a malformed operand expression which,\n"
+                        "in turn, leads to the operand not being detected.");
         }
 
         if (provided_args > argument_count) {
@@ -144,7 +146,7 @@ void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> & buffer, co
         };
 
         // width consistency check
-        if (current_ops_width != 0)
+        if (current_ops_width != 0 && instruction_map.at(instruction_name).at(ENTRY_OPCODE) != OPCODE_LEA)
         {
             if (parsed_target.TargetType == parsed_target_t::REGISTER)
             {
@@ -181,7 +183,11 @@ void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> & buffer, co
                 }
             }
         }
+    }
 
+    try {
         OperandSanityCheck(instruction_map.at(instruction_name).at(ENTRY_OPCODE), SanityCheckOperandVector);
+    } catch (const std::exception & e) {
+        throw InstructionExpressionError("Operand sanity check for " + instruction + " failed: " + e.what());
     }
 }

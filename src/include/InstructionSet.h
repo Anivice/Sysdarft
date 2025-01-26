@@ -326,7 +326,7 @@ const std::unordered_map<std::string, std::map<std::string, uint64_t>> instructi
     {"LEA", {
                  {ENTRY_OPCODE, OPCODE_LEA},
                  {ENTRY_ARGUMENT_COUNT, 2},
-                 {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 1},
+                 {ENTRY_REQUIRE_OPERATION_WIDTH_SPECIFICATION, 0},
              }
     },
 

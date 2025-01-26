@@ -915,9 +915,9 @@ Instruction is encoded as the following format:
 
 #### **NOP**
 
-| Opcode    | Instruction | Acceptable Type for First Operand  | Acceptable Type for First Operand | 
-|-----------|-------------|------------------------------------|-----------------------------------|
-| `0x00`    | `NOP`       | None                               | None                              | 
+| Opcode    | Instruction | Acceptable Type for First Operand  | Acceptable Type for First Operand | Operation Width Enforcement |
+|-----------|-------------|------------------------------------|-----------------------------------|-----------------------------|
+| `0x00`    | `NOP`       | None                               | None                              | No                          |
 
 
 The opcode[^1] for `NOP` is `0x00`,
@@ -938,9 +938,9 @@ so that the next field begins at the edge of the next allocation unit.
 
 Halt the CPU, then *shutdown*.
 
-| Opcode    | Instruction | Acceptable Type for First Operand  | Acceptable Type for First Operand | 
-|-----------|-------------|------------------------------------|-----------------------------------|
-| `0x40`    | `HLT`       | None                               | None                              |
+| Opcode    | Instruction | Acceptable Type for First Operand  | Acceptable Type for First Operand | Operation Width Enforcement |
+|-----------|-------------|------------------------------------|-----------------------------------|-----------------------------|
+| `0x40`    | `HLT`       | None                               | None                              | No                          |
 
 
 `HLT` is different from almost any other CPUs where `hlt` enters a power-saving state
@@ -950,9 +950,9 @@ until an external interrupt wakes itself.
 
 Set IM (Interruption Mask) to `1`.
 
-| Opcode    | Instruction | Acceptable Type for First Operand  | Acceptable Type for First Operand |
-|-----------|-------------|------------------------------------|-----------------------------------|
-| `0x41`    | `IGNI`      | None                               | None                              |
+| Opcode    | Instruction | Acceptable Type for First Operand  | Acceptable Type for First Operand | Operation Width Enforcement |
+|-----------|-------------|------------------------------------|-----------------------------------|-----------------------------|
+| `0x41`    | `IGNI`      | None                               | None                              | No                          |
 
 
 `IGNI` masks all maskable interruptions.
@@ -961,9 +961,9 @@ Set IM (Interruption Mask) to `1`.
 
 Set IM (Interruption Mask) to `0`.
 
-| Opcode    | Instruction | Acceptable Type for First Operand  | Acceptable Type for First Operand |
-|-----------|-------------|------------------------------------|-----------------------------------|
-| `0x42`    | `ALWI`      | None                               | None                              |
+| Opcode    | Instruction | Acceptable Type for First Operand  | Acceptable Type for First Operand | Operation Width Enforcement |
+|-----------|-------------|------------------------------------|-----------------------------------|-----------------------------|
+| `0x42`    | `ALWI`      | None                               | None                              | No                          |
 
 
 `ALWI` enables interruption response from all interruption types,
@@ -976,9 +976,9 @@ either from maskable or un-maskable interruptions.
 Add two numbers and store the result to the first operand.
 (`Operand1 = Operand1 + Operand2`)
 
-| Opcode    | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
-|-----------|-------------|-----------------------------------|-----------------------------------------|
-| `0x01`    | `ADD`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+| Opcode    | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       | Operation Width Enforcement |
+|-----------|-------------|-----------------------------------|-----------------------------------------|-----------------------------|
+| `0x01`    | `ADD`       | Register, Memory Reference        | Register, Constant, or Memory Reference | Yes                         |
 
 
 `ADD` adds two numbers and store the result to the first operand.
@@ -991,9 +991,9 @@ Add two numbers and store the result to the first operand.
 Add two numbers and `CF`, then store the result to the first operand.
 (`Operand1 = Operand1 + Operand2 + CF`)
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
-|--------|-------------|-----------------------------------|-----------------------------------------|
-| `0x02` | `ADC`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------------|-----------------------------|
+| `0x02` | `ADC`       | Register, Memory Reference        | Register, Constant, or Memory Reference | Yes                         |
 
 
 `ADD` adds two numbers and `CF`, then store the result to the first operand.
@@ -1026,9 +1026,9 @@ Add two numbers and `CF`, then store the result to the first operand.
 Subtract two numbers and store the result to the first operand.
 (`Operand1 = Operand1 - Operand2`)
 
-| Opcode    | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
-|-----------|-------------|-----------------------------------|-----------------------------------------|
-| `0x03`    | `SUB`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+| Opcode    | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       | Operation Width Enforcement |
+|-----------|-------------|-----------------------------------|-----------------------------------------|-----------------------------|
+| `0x03`    | `SUB`       | Register, Memory Reference        | Register, Constant, or Memory Reference | Yes                         |
 
 
 `SUB` subtracts two numbers and store the result to the first operand.
@@ -1041,9 +1041,9 @@ Subtract two numbers and store the result to the first operand.
 Subtract two numbers and `CF`, then store the result to the first operand.
 (`Operand1 = Operand1 - Operand2 - CF`)
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
-|--------|-------------|-----------------------------------|-----------------------------------------|
-| `0x04` | `SBB`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------------|-----------------------------|
+| `0x04` | `SBB`       | Register, Memory Reference        | Register, Constant, or Memory Reference | Yes                         |
 
 
 `SBB` subtracts two numbers and `CF`, then store the result to the first operand.
@@ -1082,9 +1082,9 @@ then store the result to first referenced register.
 and its width being any valid width.
 
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------------|-----------------------------------|
-| `0x05` | `IMUL`      | Register, Constant, or Memory Reference | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------------|-----------------------------------|-----------------------------|
+| `0x05` | `IMUL`      | Register, Constant, or Memory Reference | None                              | Yes                         |
 
 
 #### **MUL**
@@ -1094,9 +1094,9 @@ then store the result to first referenced register.
 (`R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $\times$ (Assume Unsigned) `Operand1`)
 
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------------|-----------------------------------|
-| `0x06` | `MUL`       | Register, Constant, or Memory Reference | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------------|-----------------------------------|-----------------------------|
+| `0x06` | `MUL`       | Register, Constant, or Memory Reference | None                              | Yes                         |
 
 
 #### **IDIV**
@@ -1109,9 +1109,9 @@ and the *remainder* to the second referenced register.
 `OF` will be set to `1` when an overflow is detected.
 
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------------|-----------------------------------|
-| `0x07` | `IDIV`      | Register, Constant, or Memory Reference | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------------|-----------------------------------|-----------------------------|
+| `0x07` | `IDIV`      | Register, Constant, or Memory Reference | None                              | Yes                         |
 
 
 #### **DIV**
@@ -1123,9 +1123,9 @@ and the *remainder* to the second referenced register.
 `R/EXR/HER/FER0` $=$ `R/EXR/HER/FER0` $\%$ (Assume Unsigned) `Operand1`)
 
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------------|-----------------------------------|
-| `0x08` | `DIV`       | Register, Constant, or Memory Reference | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------------|-----------------------------------|-----------------------------|
+| `0x08` | `DIV`       | Register, Constant, or Memory Reference | None                              | Yes                         |
 
 
 #### **NEG**
@@ -1134,9 +1134,9 @@ Negation of `Operand1`, and store the result to `Operand1`.
 (`Operand1 = -Operand1`)
 
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------|-----------------------------------|
-| `0x09` | `NEG`       | Register, Memory Reference        | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------|-----------------------------|
+| `0x09` | `NEG`       | Register, Memory Reference        | None                              | Yes                         |
 
 
 
@@ -1144,9 +1144,9 @@ Negation of `Operand1`, and store the result to `Operand1`.
 
 Compare `Operand1` to `Operand2`, and set corresponding flags.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        |
-|--------|-------------|-----------------------------------------|------------------------------------------|
-| `0x0A` | `CMP`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand        | Operation Width Enforcement |
+|--------|-------------|-----------------------------------------|------------------------------------------|-----------------------------|
+| `0x0A` | `CMP`       | Register, Constant, or Memory Reference | Register, Constant, or Memory Reference  | Yes                         |
 
 
 | Flag               | Condition                           |
@@ -1160,18 +1160,18 @@ Compare `Operand1` to `Operand2`, and set corresponding flags.
 
 Increase the value in `Operand1` by `1`.
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------|-----------------------------------|
-| `0x0B` | `INC`       | Register, Memory Reference        | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------|-----------------------------|
+| `0x0B` | `INC`       | Register, Memory Reference        | None                              | Yes                         |
 
 
 #### **DEC**
 
 Decrease the value in `Operand1` by `1`.
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------|-----------------------------------|
-| `0x0C` | `DEC`       | Register, Memory Reference        | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------|-----------------------------|
+| `0x0C` | `DEC`       | Register, Memory Reference        | None                              | Yes                         |
 
 ## Logic and Bitwise
 
@@ -1182,9 +1182,9 @@ and store the result in `Operand1`.
 (`Operand1 = Operand1 & Operand2`)
 
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
-|--------|-------------|-----------------------------------|-----------------------------------------|
-| `0x10` | `AND`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------------|-----------------------------|
+| `0x10` | `AND`       | Register, Memory Reference        | Register, Constant, or Memory Reference | Yes                         |
 
 
 #### **OR**
@@ -1194,9 +1194,9 @@ and store the result in `Operand1`.
 (`Operand1 = Operand1 | Operand2`)
 
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
-|--------|-------------|-----------------------------------|-----------------------------------------|
-| `0x11` | `OR`        | Register, Memory Reference        | Register, Constant, or Memory Reference |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------------|-----------------------------|
+| `0x11` | `OR`        | Register, Memory Reference        | Register, Constant, or Memory Reference | Yes                         |
 
 
 #### **XOR**
@@ -1206,9 +1206,9 @@ and store the result in `Operand1`.
 (`Operand1 = Operand1 ^ Operand2`)
 
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
-|--------|-------------|-----------------------------------|-----------------------------------------|
-| `0x12` | `XOR`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------------|-----------------------------|
+| `0x12` | `XOR`       | Register, Memory Reference        | Register, Constant, or Memory Reference | Yes                         |
 
 
 #### **NOT**
@@ -1218,9 +1218,9 @@ and store the result in `Operand1`.
 (`Operand1 = ~Operand1`)
 
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------|-----------------------------------|
-| `0x13` | `NOT`       | Register, Memory Reference        | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------|-----------------------------|
+| `0x13` | `NOT`       | Register, Memory Reference        | None                              | Yes                         |
 
 
 #### **SHL**
@@ -1230,9 +1230,9 @@ and store the result in `Operand1`.
 (`Operand1 = Operand1 << Operand2`)
 
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
-|--------|-------------|-----------------------------------|-----------------------------------------|
-| `0x14` | `SHL`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------------|-----------------------------|
+| `0x14` | `SHL`       | Register, Memory Reference        | Register, Constant, or Memory Reference | Yes                         |
 
 
 #### **SHR**
@@ -1242,9 +1242,9 @@ and store the result in `Operand1`.
 (`Operand1 = Operand1 >> Operand2`)
 
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
-|--------|-------------|-----------------------------------|-----------------------------------------|
-| `0x15` | `SHR`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------------|-----------------------------|
+| `0x15` | `SHR`       | Register, Memory Reference        | Register, Constant, or Memory Reference | Yes                         |
 
 
 #### **ROL**
@@ -1253,9 +1253,9 @@ Rotate bits in `Operand1` towards the left by `Operand2`,
 and store the result in `Operand1`.
 
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
-|--------|-------------|-----------------------------------|-----------------------------------------|
-| `0x16` | `ROL`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------------|-----------------------------|
+| `0x16` | `ROL`       | Register, Memory Reference        | Register, Constant, or Memory Reference | Yes                         |
 
 
 #### **ROR**
@@ -1264,9 +1264,9 @@ Rotate bits in `Operand1` towards the right by `Operand2`,
 and store the result in `Operand1`.
 
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
-|--------|-------------|-----------------------------------|-----------------------------------------|
-| `0x17` | `ROR`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------------|-----------------------------|
+| `0x17` | `ROR`       | Register, Memory Reference        | Register, Constant, or Memory Reference | Yes                         |
 
 
 #### **RCL**
@@ -1275,9 +1275,9 @@ Rotate bits in `Operand1` towards the left through `CF` by `Operand2`,
 and store the result in `Operand1`.
 
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
-|--------|-------------|-----------------------------------|-----------------------------------------|
-| `0x18` | `RCL`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------------|-----------------------------|
+| `0x18` | `RCL`       | Register, Memory Reference        | Register, Constant, or Memory Reference | Yes                         |
 
 
 #### **RCR**
@@ -1286,9 +1286,9 @@ Rotate bits in `Operand1` towards the right through `CF` by `Operand2`,
 and store the result in `Operand1`.
 
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       |
-|--------|-------------|-----------------------------------|-----------------------------------------|
-| `0x19` | `RCR`       | Register, Memory Reference        | Register, Constant, or Memory Reference |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand       | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------------|-----------------------------|
+| `0x19` | `RCR`       | Register, Memory Reference        | Register, Constant, or Memory Reference | Yes                         |
 
 ## Data Transfer
 
@@ -1297,36 +1297,36 @@ and store the result in `Operand1`.
 Copy value in `Operand2` to `Operand1`.
 
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand        |
-|--------|-------------|-----------------------------------|------------------------------------------|
-| `0x20` | `MOV`       | Register, Memory Reference        | Register, Constant, or Memory Reference  |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand        | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|------------------------------------------|-----------------------------|
+| `0x20` | `MOV`       | Register, Memory Reference        | Register, Constant, or Memory Reference  | Yes                         |
 
 #### **XCHG**
 
 Exchange values in `Operand1` and `Operand2`.
 
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------|-----------------------------------|
-| `0x21` | `XCHG`      | Register, Memory Reference        | Register, Memory Reference        |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------|-----------------------------|
+| `0x21` | `XCHG`      | Register, Memory Reference        | Register, Memory Reference        | Yes                         |
 
 
 #### **PUSH**
 
 Push `Operand1` onto the stack.
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------------|-----------------------------------|
-| `0x22` | `PUSH`      | Register, Constant, or Memory Reference | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------------|-----------------------------------|-----------------------------|
+| `0x22` | `PUSH`      | Register, Constant, or Memory Reference | None                              | Yes                         |
 
 
 #### **POP**
 
 Pop a value the same size as `Operand1` from the stack into `Operand1`.
 
-| Opcode | Instruction | Acceptable Type for First Operand  | Acceptable Type for First Operand |
-|--------|-------------|------------------------------------|-----------------------------------|
-| `0x23` | `POP`       | Register, Memory Reference         | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------|-----------------------------|
+| `0x23` | `POP`       | Register, Memory Reference        | None                              | Yes                         |
 
 
 #### **PUSHALL**
@@ -1338,18 +1338,18 @@ Push all registers except `%CB` and `%IP` on to the stack in the following order
 `FER8`, `FER9`, `FER10`, `FER11`, `FER12`, `FER13`, `FER14`, `FER15`,
 `FG`, `SB`, `SP`, `DB`, `DP`, `EB`, `EP`, `CPS`.
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------|-----------------------------------|
-| `0x24` | `PUSHALL`   | None                              | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------|-----------------------------|
+| `0x24` | `PUSHALL`   | None                              | None                              | No                          |
 
 #### **POPALL**
 
 Pop all registers except `%CB` and `%IP` from the stack to the corresponding registers
 in the order consistent to `PUSHALL`.
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------|-----------------------------------|
-| `0x25` | `POPALL`    | None                              | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------|-----------------------------|
+| `0x25` | `POPALL`    | None                              | None                              | No                          |
 
 
 #### **ENTER**
@@ -1361,9 +1361,9 @@ Reserve a stack space.
     %CPS = Operand1
 ```
 
-| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------------|-----------------------------------|
-| `0x26` | `ENTER`     | Register, Constant, or Memory Reference | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------------|-----------------------------------|-----------------------------|
+| `0x26` | `ENTER`     | Register, Constant, or Memory Reference | None                              | Yes                         |
 
 
 #### **LEAVE**
@@ -1375,9 +1375,9 @@ Reserve a stack space.
     %CPS = 0
 ```
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------|-----------------------------------|
-| `0x27` | `LEAVE`     | None                              | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------|-----------------------------|
+| `0x27` | `LEAVE`     | None                              | None                              | No                          |
 
 
 #### **MOVS**
@@ -1385,9 +1385,9 @@ Reserve a stack space.
 Move `%FER0` bytes from `%EB:%EP` to `%DB:DP`.
 
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------|-----------------------------------|
-| `0x28` | `MOVS`      | None                              | None                              |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand | Operation Width Enforcement |
+|--------|-------------|-----------------------------------|-----------------------------------|-----------------------------|
+| `0x28` | `MOVS`      | None                              | None                              | No                          |
 
 
 #### **LEA**
@@ -1397,9 +1397,9 @@ Load effective address[^EA] from the Memory Reference.
 [^EA]: The Effective Address (EA) refers to the final memory address computed
 by the processor to access a memory reference[@Intel64AndIA32ArchitecturesSoftwareDevelopersManualCombinedVolumes].
 
-| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand |
-|--------|-------------|-----------------------------------|-----------------------------------|
-| `0x29` | `LEA`       | Register, Memory Reference        | Memory Reference                  |
+| Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand | Operation Width Enforcement           |
+|--------|-------------|-----------------------------------|-----------------------------------|---------------------------------------|
+| `0x29` | `LEA`       | Register, Memory Reference        | Memory Reference                  | No, but `Operand1` must be 64bit wide |
 
 
 ## Control Flow
@@ -1645,7 +1645,7 @@ Write the value in `Operand2` to a port whose number is specified by `Operand1`.
 
 #### **INS**
 
-Read `%FER0` length of bytes from a port whose number is specified by `Operand1` and store it to `%DB:%DP`.
+Read `%FER3` length of bytes from a port whose number is specified by `Operand1` and store it to `%DB:%DP`.
 
 | Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
 |--------|-------------|-----------------------------------------|-----------------------------------|
@@ -1653,7 +1653,7 @@ Read `%FER0` length of bytes from a port whose number is specified by `Operand1`
 
 #### **OUTS**
 
-Write `%FER0` length of bytes from `%DB:%DP` to a port whose number is specified by `Operand1`.
+Write `%FER3` length of bytes from `%DB:%DP` to a port whose number is specified by `Operand1`.
 
 | Opcode | Instruction | Acceptable Type for First Operand       | Acceptable Type for First Operand |
 |--------|-------------|-----------------------------------------|-----------------------------------|

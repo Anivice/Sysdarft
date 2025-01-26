@@ -52,7 +52,7 @@ public:
         encode_instruction(buffer, "popall");
         encode_instruction(buffer, "enter .64bit <$(0xFF)>");
         encode_instruction(buffer, "leave");
-        encode_instruction(buffer, "lea .64bit <%FER1>, <*16&64($(0x00), $(0x00), $(0x01))>");
+        encode_instruction(buffer, "lea <%FER1>, <*16&8($(0x00), $(0x00), $(0x01))>");
         encode_instruction(buffer, "mov .64bit <%DP>, <%FER1>");
         encode_instruction(buffer, "mov .64bit <%EP>, <$(0xC1800)>");
         encode_instruction(buffer, "mov .64bit <%FER0>, <$(0xFFF)>");
