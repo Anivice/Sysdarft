@@ -54,7 +54,7 @@ std::vector < uint8_t > generate_symbol_table(const object_t & obj)
 }
 
 void compile_to_binary(const std::vector<std::string> &source_files, const std::string &binary_filename, const bool regex,
-                       const COMPILATION_MODE compile_mode)
+                       const COMPILATION_MODE compile_mode, const std::vector<std::string> &include_path)
 {
     struct file_attr_t {
         defined_line_marker_t symbol_table;
@@ -104,7 +104,7 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
     for (file_attr_t & file : files)
     {
         try {
-            HeadProcess(file.file, file.definition, file.header_files);
+            HeadProcess(file.file, file.definition, file.header_files, include_path);
         } catch (const std::exception & err) {
             throw std::runtime_error("Error when processing file " + file.filename + ": " + err.what());
         }
@@ -119,7 +119,14 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
     {
         try {
             std::map < std::string, std::string > equ_replacement;
-            PreProcess(file.file, file.symbol_table, org, file.header_files, regex, equ_replacement);
+            PreProcess(file.file,
+                file.symbol_table,
+                org,
+                regex,
+                equ_replacement,
+                file.header_files,
+                file.definition,
+                include_path);
         } catch (const std::exception & err) {
             throw std::runtime_error("Error when processing file " + file.filename + ": " + err.what());
         }

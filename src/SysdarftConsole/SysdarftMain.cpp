@@ -265,12 +265,17 @@ int main(int argc, char** argv)
                     regex = true;
                 }
 
+                std::vector < std::string > include_path;
+                if (parsed_options.contains("include")) {
+                    include_path = parsed_options["include"];
+                }
+
                 if (format.at(0) == "bin") {
-                    compile_to_binary(src_files, output_file.at(0), regex, BIN);
+                    compile_to_binary(src_files, output_file.at(0), regex, BIN, include_path);
                 } else if (format.at(0) == "exe") {
-                    compile_to_binary(src_files, output_file.at(0), regex, EXE);
+                    compile_to_binary(src_files, output_file.at(0), regex, EXE, include_path);
                 } else if (format.at(0) == "sys") {
-                    compile_to_binary(src_files, output_file.at(0), regex, SYS);
+                    compile_to_binary(src_files, output_file.at(0), regex, SYS, include_path);
                 } else {
                     exit_failure_on_error();
                 }

@@ -124,6 +124,10 @@ line_marker_register(std::vector<std::string> & file)
         }
     }
 
+    if (!current_file_section.empty()) {
+        processed_file_sections.emplace_back(current_file_section);
+    }
+
     std::vector < std::string > flat_file;
 
     for (auto & section : processed_file_sections)
@@ -267,12 +271,9 @@ void sed_equ(std::string& input, std::map < std::string, std::string > & equ_rep
 }
 
 // declarative preprocessing directives and symbol extraction
-void PreProcess(std::vector < std::string > & file,
-    defined_line_marker_t & defined_line_marker,
-    uint64_t & org,
-    const header_file_list_t & headers,
-    const bool regex,
-    std::map < std::string, std::string > & equ_replacement)
+void PreProcess(std::vector<std::string> &file, defined_line_marker_t &defined_line_marker, uint64_t &org, const bool regex,
+                std::map<std::string, std::string> &equ_replacement, const header_file_list_t &headers,
+                source_file_c_style_definition_t &definition, const std::vector<std::string> &include_path)
 {
     uint64_t line_number = 0;
 
@@ -338,7 +339,16 @@ void PreProcess(std::vector < std::string > & file,
             !filename.empty())
         {
             try {
-                PreProcess(header_file, defined_line_marker, org, {}, regex, equ_replacement);
+                header_file_list_t header_files;
+                HeadProcess(header_file, definition, header_files, include_path);
+                PreProcess(header_file,
+                    defined_line_marker,
+                    org,
+                    regex,
+                    equ_replacement,
+                    header_files,
+                    definition,
+                    include_path);
             } catch (const SysdarftPreProcessorError & e) {
                 throw SysdarftPreProcessorError("Error when processing file " + filename + ": " + e.what());
             }

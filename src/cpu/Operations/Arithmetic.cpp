@@ -234,10 +234,16 @@ void SysdarftCPUInstructionExecutor::cmp(__uint128_t, WidthAndOperandsType & Wid
 
     if (operand1 > operand2) {
         FG.LargerThan = 1;
+        FG.LessThan = 0;
+        FG.Equal = 0;
     } else if (operand1 == operand2) {
+        FG.LargerThan = 0;
+        FG.LessThan = 0;
         FG.Equal = 1;
     } else if (operand1 < operand2) {
+        FG.LargerThan = 0;
         FG.LessThan = 1;
+        FG.Equal = 0;
     }
 
     SysdarftRegister::store<FlagRegisterType>(FG);

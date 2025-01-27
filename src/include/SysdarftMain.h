@@ -75,6 +75,7 @@ const option_complicated long_options[] = {
                                                                                                 "to compile multiple files into one single binary"},
     {"output",  required_argument,  nullptr, 'o',   "Compilation output file"},
     {"format",  required_argument,  nullptr, 'f',   "Compile format. It can be bin, exe, or sys"},
+    {"include",         required_argument,  nullptr, 'I',   "Specify one or more include path"},
     {"regex",   no_argument,        nullptr, 'R',   "If .equ preprocessor will be using regular expression\n"
                                                                                                 "If this option is not set, .equ will simply replace the string\n"
                                                                                                 "If this option is set, .equ will be processed\n"
@@ -104,7 +105,8 @@ using ParsedArgs = std::pair<ParsedOptions, std::vector<std::string>>;
 ParsedArgs get_args(int argc, char** argv, option long_options[]);
 
 enum COMPILATION_MODE { BIN, EXE, SYS };
-void compile_to_binary(const std::vector<std::string> &, const std::string &, bool, COMPILATION_MODE compile_mode);
+void compile_to_binary(const std::vector<std::string> &, const std::string &, bool, COMPILATION_MODE compile_mode,
+                       const std::vector<std::string> &include_path);
 void disassemble(const std::string & binary_filename, uint64_t org, COMPILATION_MODE compile_mode);
 std::string disassemble_code(std::vector < uint8_t >, uint64_t, const std::map < uint64_t, std::string >& symbol_table = {});
 std::string show_context(SysdarftCPU &, uint64_t actual_ip, uint8_t, const SysdarftCPU::WidthAndOperandsType &);

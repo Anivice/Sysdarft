@@ -348,12 +348,16 @@ function(add_unit_test TARGET_NAME)
     add_test(NAME "Compile Test: ${TARGET_NAME}"
             COMMAND ${CMAKE_CURRENT_BINARY_DIR}/sysdarft-system ${ARGUMENTS}
                                                                 -o ${TARGET_NAME}.bin
-                                                                -f bin)
+                                                                -f bin
+                                                                -I ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    )
 
     add_test(NAME "Symbol Extraction Test: ${TARGET_NAME}"
             COMMAND ${CMAKE_CURRENT_BINARY_DIR}/sysdarft-system ${ARGUMENTS}
                                                                 -o ${TARGET_NAME}.sys
-                                                                -f sys)
+                                                                -f sys
+                                                                -I ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    )
 endfunction()
 
 # Unit Tests:
@@ -363,8 +367,8 @@ add_unit_test(rtc tests/rtc.asm)
 add_custom_target(
         COPY_SRC_FILE ALL
         COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/hda.img ${CMAKE_CURRENT_BINARY_DIR}/
-        DEPENDS tests/hda.img
-        COMMENT "Copy ASCII disk image sample"
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/hda.img
+        COMMENT "Copying assembly source code..."
 )
 
 if (NOT "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")

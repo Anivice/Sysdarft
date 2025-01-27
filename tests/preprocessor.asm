@@ -1,29 +1,21 @@
 .org 0xC1800
-.equ 'REFRESH', 'int < $(0x18) >'
-.equ 'SETCUSP', 'int < $(0x11) >'
-.equ 'INTGETC', 'int < $(0x14) >'
-.equ 'DISK_SIZE',           '< $(0x136) >'
-.equ 'DISK_START_SEC',      '< $(0x137) >'
-.equ 'DISK_OPS_SEC_CNT',    '< $(0x138) >'
-.equ 'DISK_INPUT',          '< $(0x13A) >'
-.equ 'FDA_SIZE',            '< $(0x116) >'
-.equ 'FDA_START_SEC',       '< $(0x117) >'
-.equ 'FDA_OPS_SEC_CNT',     '< $(0x118) >'
-.equ 'FDA_OUTPUT',          '< $(0x119) >'
+
+%include "./int_and_port.asm"
 
 jmp <%cb>, <_start>
 
 ; _putc(%EXR0, linear position, %EXR1, ASCII Code)
 _putc:
     pushall
-    mov     .64bit <%db>,       <$(0xB8000)>    ; set data base to base of video memory
-    push    .16bit <%exr1>                      ; preserve %exr1
-    xor     .16bit <%exr1>,     <%exr1>         ; clear %exr1
-    xor     .32bit <%her1>,     <%her1>         ; clear %her1
-    mov     .64bit <%dp>,       <%fer0>         ; by clearing the rest of the registers
-                                                ; %fer0 is the linear address of the display location
-    pop     .16bit <%exr0>
-    mov     .8bit  <*1&8(%db, %dp, $(0))>, <%r0>
+    mov     .64bit      <%db>,                      <$(0xB8000)>    ; set data base to base of video memory
+    push    .16bit      <%exr1>                                     ; preserve %exr1, which is ASCII code
+    xor     .16bit      <%exr1>,                    <%exr1>         ; clear %exr1
+    xor     .32bit      <%her1>,                    <%her1>         ; clear %her1
+    mov     .64bit      <%dp>,                      <%fer0>         ; by clearing these registers
+                                                                    ; %fer0 is the linear address of the display location
+                                                                    ; so we load it to %dp
+    pop     .16bit      <%exr0>                                     ; pop ASCII code to %exr0
+    mov     .8bit       <*1&8(%db, %dp, $(0))>,     <%r0>           ; move the ASCII code to video memory
 
     REFRESH
 
@@ -32,21 +24,21 @@ _putc:
 
 ; _newline(%EXR0, linear address)
 _newline:
-    push .16bit <%exr1>
-    push .64bit <%dp>
-    push .64bit <%db>
-    push .64bit <%ep>
-    push .64bit <%eb>
-    push .64bit <%fer3>
+    push    .16bit      <%exr1>
+    push    .64bit      <%dp>
+    push    .64bit      <%db>
+    push    .64bit      <%ep>
+    push    .64bit      <%eb>
+    push    .64bit      <%fer3>
 
-    div .16bit  <$(80)>
+    div     .16bit      <$(80)>
     ; EXR0 quotient, EXR1 reminder
-    cmp .16bit  <%exr0>,    <$(24)>
-    je          <%cb>,      <.scroll>
+    cmp     .16bit      <%exr0>,                    <$(24)>
+    je                  <%cb>,                      <.scroll>
 
-    xor .16bit  <%exr1>,    <%exr1>
-    inc .16bit  <%exr0>
-    mul .16bit  <$(80)>
+    xor     .16bit      <%exr1>,                    <%exr1>
+    inc     .16bit      <%exr0>
+    mul     .16bit      <$(80)>
     SETCUSP
     REFRESH
     jmp         <%cb>,      <.exit>
@@ -144,13 +136,115 @@ _print_num:
     ret
 
     .cache:
-        .resvb < 256 >
+        .resvb < 16 >
 
+; read disk to 0x0000:0x0000, length returned by %fer0
 _reads:
     pushall
     in .64bit DISK_SIZE, <%fer3>
+    mov .64bit  <%dp>,  <.message.disk.size>
+    xor .64bit  <%db>,  <%db>
+    call        <%cb>,  <_puts>
+
+    mov .64bit <%fer0>, <%fer3>
+    call <%cb>, <_print_num>
+    mov .64bit  <%dp>,  <.message.sector>
+    xor .64bit  <%db>,  <%db>
+    call        <%cb>,  <_puts>
+
+    mov .64bit  <%dp>,  <.message.reading>
+    xor .64bit  <%db>,  <%db>
+    call        <%cb>,  <_puts>
+
+    out .64bit DISK_START_SEC, <$(0)>
+    out .64bit DISK_OPS_SEC_CNT, <%fer3>
+    mul .64bit <$(512)>
+    mov .64bit <%fer3>, <%fer0>
+    xor .64bit <%dp>, <%dp>
+    xor .64bit <%db>, <%db>
+    ins .64bit DISK_INPUT
+
+    mov .64bit <%fer0>, <.ret>
+    mov .64bit <*1&64(%fer0, $(0), $(0))>, <%fer3>
+
+    mov .64bit  <%dp>,  <.message.done>
+    xor .64bit  <%db>,  <%db>
+    call        <%cb>,  <_puts>
+
+    popall
+
+    mov .64bit <%fer0>, <.ret>
+    mov .64bit <%fer0>, <*1&64(%fer0, $(0), $(0))>
+
+    ret
+
+    .ret:
+    .64bit_data < 0 >
+
+    .message.disk.size:
+    .string < "Detected disk has " >
+    .8bit_data < 0 >
+
+    .message.sector:
+    .string < " sectors.\n" >
+    .8bit_data < 0 >
+
+    .message.reading:
+    .string < "Reading disk..." >
+    .8bit_data < 0 >
+    .message.done:
+    .string < "done.\n" >
+    .8bit_data < 0 >
+
+; _writes(%fer0)
+_writes:
+    pushall
+
+    in .64bit FDA_SIZE, <%fer3>
+    push .64bit <%fer0>
+
+    mov .64bit  <%dp>,  <.message.disk.size>
+    xor .64bit  <%db>,  <%db>
+    call        <%cb>,  <_puts>
+
+    mov .64bit <%fer0>, <%fer3>
+    call <%cb>, <_print_num>
+    mov .64bit  <%dp>,  <.message.sector>
+    xor .64bit  <%db>,  <%db>
+    call        <%cb>,  <_puts>
+
+    mov .64bit  <%dp>,  <.message.writing>
+    xor .64bit  <%db>,  <%db>
+    call        <%cb>,  <_puts>
+
+    pop .64bit <%fer0>
+    push .64bit <%fer0>
+    div .64bit <$(512)>
+
+    out .64bit FDA_START_SEC, <$(0)>
+    out .64bit FDA_OPS_SEC_CNT, <%fer0>
+    pop .64bit <%fer3>
+    xor .64bit <%dp>, <%dp>
+    xor .64bit <%db>, <%db>
+    outs .64bit FDA_OUTPUT
+
     popall
     ret
+
+    .message.disk.size:
+    .string < "Detected floppy A has " >
+    .8bit_data < 0 >
+
+    .message.sector:
+    .string < " sectors.\n" >
+    .8bit_data < 0 >
+
+    .message.writing:
+    .string < "Writing floppy disk..." >
+    .8bit_data < 0 >
+    .message.done:
+    .string < "done.\n" >
+    .8bit_data < 0 >
 
 _int_0x02_io_error:
     cmp .16bit <%exr0>, <$(0xF0)>
@@ -200,7 +294,25 @@ _start:
     mov .64bit  <%dp>,  <.reading_from_disk>
     call        <%cb>,  <_puts>
     call        <%cb>,  <_reads>
-    jmp         <%cb>,  <$(@)>
+    push .64bit <%fer0>
+
+    mov .64bit  <%dp>,  <.press_to_write_to_floppy>
+    call        <%cb>,  <_puts>
+
+    INTGETC
+
+    mov .64bit  <%dp>,  <.writint_to_floppy>
+    call        <%cb>,  <_puts>
+    pop .64bit <%fer0>
+    call        <%cb>,  <_writes>
+
+    mov .64bit  <%dp>,  <.exit.message>
+    xor .64bit  <%db>,  <%db>
+    call        <%cb>,  <_puts>
+
+    INTGETC
+    xor .64bit <%fer0>, <%fer0>
+    hlt
 
 .welcome:
     .string < "Hello!\nThis is Sysdarft!\nPress any key to read from disk\n" >
@@ -208,6 +320,18 @@ _start:
 
 .reading_from_disk:
     .string < "Reading from disk...\n" >
+    .8bit_data < 0 >
+
+.press_to_write_to_floppy:
+    .string < "Press any key to write to floppy disk A\n" >
+    .8bit_data < 0 >
+
+.writint_to_floppy:
+    .string < "Writing to floppy disk A...\n" >
+    .8bit_data < 0 >
+
+.exit.message:
+    .string < "Press any key to shutdown...\n" >
     .8bit_data < 0 >
 
 _stack_frame:

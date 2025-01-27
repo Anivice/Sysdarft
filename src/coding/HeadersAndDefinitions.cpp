@@ -30,13 +30,28 @@ const std::regex endif_pattern(R"(\s*\%endif\s*)");
 const std::regex warning_pattern(R"(\s*\%warning\s+(.*))");
 const std::regex error_pattern(R"(\s*\%error\s+(.*))");
 
-void process_include(std::string & line, header_file_list_t & file_list, const uint64_t line_number)
+void process_include(std::string &line, header_file_list_t &file_list, const uint64_t line_number,
+                     const std::vector < std::string > & include_path)
 {
     std::smatch match;
     std::regex_match(line, match, include_pattern);
     const std::string include_file = match[1].str();
 
-    std::fstream infile(include_file, std::ios::in);
+    std::fstream infile;
+    infile.open(include_file, std::ios::in);
+
+    if (!infile.is_open())
+    {
+        for (const auto& path : include_path)
+        {
+            const auto file_path = path + "/" + include_file;
+            infile.open(file_path, std::ios::in);
+            if (!infile.is_open()) {
+                break;
+            }
+        }
+    }
+
     if (!infile) {
         throw SysdarftPreProcessorError("Couldn't open include file " + include_file);
     }
@@ -108,10 +123,8 @@ std::string what_reported_by_by_warning(const std::string & line)
 
 std::string truncateAfterSemicolonOrHash(const std::string&);
 
-void HeadProcess(
-    std::vector < std::string > & file,
-    source_file_c_style_definition_t & definition,
-    header_file_list_t & header_files)
+void HeadProcess(std::vector<std::string> &file, source_file_c_style_definition_t &definition, header_file_list_t &header_files,
+                 const std::vector<std::string> & include_path)
 {
 
     uint64_t line_number = 0;
@@ -144,7 +157,7 @@ void HeadProcess(
         }
 
         if (std::regex_match(line, include_pattern)) {
-            process_include(line, header_files, line_number);
+            process_include(line, header_files, line_number, include_path);
         } else if (std::regex_match(line, define_pattern)) {
             process_define(line, definition);
         } else if (std::regex_match(line, ifdef_pattern)) {

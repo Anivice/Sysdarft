@@ -488,7 +488,7 @@ std::string initialize_error_msg(const std::string& msg, const int _errno)
         return err_msg.str();
     }
 
-    return ">>> " + msg + " (errno=" + std::to_string(_errno) + ") <<<";
+    return ">>> " + msg + " (errno=" + std::to_string(_errno) + ": " + strerror(_errno) + ") <<<";
 }
 #endif
 
