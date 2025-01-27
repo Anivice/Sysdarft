@@ -106,7 +106,8 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
     for (file_attr_t & file : files)
     {
         try {
-            PreProcess(file.file, file.symbol_table, org, file.header_files, regex);
+            std::map < std::string, std::string > equ_replacement;
+            PreProcess(file.file, file.symbol_table, org, file.header_files, regex, equ_replacement);
         } catch (const std::exception & err) {
             throw std::runtime_error("Error when processing file " + file.filename + ": " + err.what());
         }

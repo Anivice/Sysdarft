@@ -64,6 +64,18 @@ SysdarftCPUInterruption::SysdarftCPUInterruption(const uint64_t memory) :
     }
 }
 
+#ifdef __DEBUG__
+
+void clear_screen()
+{
+    const char clear[] = { 0x1b, 0x5b, 0x48, 0x1b, 0x5b, 0x32, 0x4a, 0x1b, 0x5b, 0x33, 0x4a };
+    write(STDOUT_FILENO, clear, sizeof(clear));
+}
+
+std::atomic_bool cleared{false};
+
+#endif
+
 void SysdarftCPUInterruption::do_interruption(const uint64_t code)
 {
     if (code > MAX_INTERRUPTION_ENTRY) {
@@ -115,9 +127,32 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
 
     if (code <= 0x1F)
     {
-        if (debug::verbose && code < 0x10) {
-            std::cerr << "Exception invoked with code " << code << std::endl;
+#ifdef __DEBUG__
+        if (code < 0x10)
+        {
+            // if (!cleared) {
+            //     clear_screen();
+            //     cleared = true;
+            // }
+
+            SysdarftCursesUI::cleanup();
+            log("[CPU INTERRUPT]: \033[31;6;7;1mWarning: Hardware exception thrown with code ", code, "\033[0m\n");
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            SysdarftCursesUI::start_again();
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            SysdarftCursesUI::cleanup();
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            SysdarftCursesUI::start_again();
         }
+#else
+        if (debug::verbose && code < 0x10) {
+            SysdarftCursesUI::cleanup();
+            std::cerr << "[CPU INTERRUPT]: \033[31;6;7;1mWarning: Hardware exception thrown with code "
+                      << code << "\033[0m" << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            SysdarftCursesUI::start_again();
+        }
+#endif
 
         // hardware interruptions, un-maskable
         switch (code) {

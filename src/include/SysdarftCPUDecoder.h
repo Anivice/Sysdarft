@@ -35,6 +35,7 @@
 #define INT_ABORT       (0x05)
 #define INT_ILLEGAL_INSTRUCTION (0x06)
 #define INT_STACKOVERFLOW (0x07)
+#define INT_ILLEGAL_MEMORY_ACCESS (0x08)
 
 #define INT_TELETYPE    (0x10)
 #define INT_SET_CUR_POS (0x11)
@@ -205,13 +206,13 @@ protected:
      *      [1-F], INVOKED BY HARDWARE TO INDICATE AN ERROR, NOT MASKABLE
      *  [0x00] FATAL ERROR (ErrorCode == %EXR0)
      *  [0x01] DIV/0
-     *  [0x02] IO ERROR
+     *  [0x02] IO ERROR, EXR0 == 0xF0, IO ERROR, EXR0 == 0xF1, NO SUCH DEVICE
      *  [0x03] DEBUG, BREAKPOINT RIGHT NEXT
      *  [0x04] BAD INTERRUPTION CALL
      *  [0x05] ABORT
      *  [0x06] ILLEGAL INSTRUCTION
      *  [0x07] STACK OVERFLOW
-     *  [0x08]
+     *  [0x08] MEMORY ACCESS OUT OF BOUNDARY
      *  [0x09]
      *  [0x0A]
      *  [0x0B]

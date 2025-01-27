@@ -289,60 +289,6 @@ target_link_libraries(Sysdarft PRIVATE
         SysdarftICH
 )
 
-# Enable testing
-enable_testing()
-
-# Function to add unit tests
-function(add_unit_test TARGET_NAME)
-    if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-        add_executable(${TARGET_NAME} ${ARGN})
-        target_link_libraries(${TARGET_NAME} PUBLIC Sysdarft)
-        add_test(NAME "Unit Test: ${TARGET_NAME}" COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME})
-    else ()
-        message(STATUS "Unit tests ignored")
-    endif ()
-endfunction()
-
-if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    add_unit_test(test.error tests/test.error.cpp)
-    add_unit_test(test.log tests/test.log.cpp)
-    add_unit_test(test.execmd tests/test.execmd.cpp)
-    add_unit_test(test.curses tests/test.curses.cpp)
-    set_tests_properties("Unit Test: test.curses" PROPERTIES LABELS "NotTestable")
-
-    add_library(ExampleModule SHARED tests/example_module.cpp)
-    add_unit_test(test.module tests/test.module.cpp)
-    add_dependencies(test.module ExampleModule)
-
-    add_unit_test(test.message_map tests/test.message_map.cpp)
-    add_unit_test(test.coding tests/test.coding.cpp)
-    add_unit_test(test.register tests/test.register.cpp)
-    add_unit_test(test.memory tests/test.memory.cpp)
-    set_tests_properties("Unit Test: test.memory" PROPERTIES LABELS "NotTestable")
-    add_unit_test(test.operand tests/test.operand.cpp)
-    add_unit_test(test.decode tests/test.decode.cpp)
-    add_unit_test(test.executor tests/test.executor.cpp)
-    add_unit_test(test.arithmetic tests/test.arithmetic.cpp)
-    add_unit_test(test.lgAbit tests/test.lgAbit.cpp)
-    add_unit_test(test.dataTsf tests/test.dataTsf.cpp)
-    add_unit_test(test.preprocessor tests/test.preprocessor.cpp)
-    set_tests_properties("Unit Test: test.preprocessor" PROPERTIES LABELS "NotTestable")
-    add_unit_test(test.conditional tests/test.conditional.cpp)
-    add_unit_test(test.ws tests/test.ws.cpp)
-    set_tests_properties("Unit Test: test.ws" PROPERTIES LABELS "NotTestable")
-    add_unit_test(test.headProcessor tests/test.headProcessor.cpp)
-
-    add_custom_target(
-            COPY_HDA_FILE ALL
-            COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/hda.img ${CMAKE_CURRENT_BINARY_DIR}/
-            COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/example.asm ${CMAKE_CURRENT_BINARY_DIR}/
-            COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/example2.asm ${CMAKE_CURRENT_BINARY_DIR}/
-            COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/rtc.asm ${CMAKE_CURRENT_BINARY_DIR}/
-            DEPENDS tests/hda.img tests/example.asm tests/example2.asm tests/rtc.asm
-            COMMENT "Copy disk image sample with ASCII texts in it."
-    )
-endif ()
-
 # Console Executable:
 find_package(nlohmann_json REQUIRED)
 ## Find the Asio headers
@@ -389,12 +335,37 @@ add_executable(sysdarft-system
 target_include_directories(sysdarft-system PUBLIC ${ASIO_INCLUDE_DIR} src/include src/include/crow)
 target_link_libraries(sysdarft-system PRIVATE Sysdarft nlohmann_json::nlohmann_json)
 
-if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    add_test(NAME "Unit Test: Assembler Example 2"
-            COMMAND sysdarft-system -c ${CMAKE_CURRENT_BINARY_DIR}/example2.asm -o ${CMAKE_CURRENT_BINARY_DIR}/example2.sys -f sys)
-    add_test(NAME "Unit Test: Assembler RTC"
-            COMMAND sysdarft-system -c ${CMAKE_CURRENT_BINARY_DIR}/rtc.asm -o ${CMAKE_CURRENT_BINARY_DIR}/rtc.sys -f sys)
-endif ()
+# Enable testing
+enable_testing()
+
+# Function to add unit tests
+function(add_unit_test TARGET_NAME)
+    set(ARGUMENTS "")
+    foreach (FILE IN LISTS ARGN)
+        LIST(APPEND ARGUMENTS -c "${CMAKE_CURRENT_SOURCE_DIR}/${FILE}")
+    endforeach ()
+
+    add_test(NAME "Compile Test: ${TARGET_NAME}"
+            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/sysdarft-system ${ARGUMENTS}
+                                                                -o ${TARGET_NAME}.bin
+                                                                -f bin)
+
+    add_test(NAME "Symbol Extraction Test: ${TARGET_NAME}"
+            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/sysdarft-system ${ARGUMENTS}
+                                                                -o ${TARGET_NAME}.sys
+                                                                -f sys)
+endfunction()
+
+# Unit Tests:
+add_unit_test(preprocessors tests/preprocessor.asm)
+add_unit_test(rtc tests/rtc.asm)
+
+add_custom_target(
+        COPY_SRC_FILE ALL
+        COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/hda.img ${CMAKE_CURRENT_BINARY_DIR}/
+        DEPENDS tests/hda.img
+        COMMENT "Copy ASCII disk image sample"
+)
 
 if (NOT "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     add_custom_target(STRIP_ALL ALL

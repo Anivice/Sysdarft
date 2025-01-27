@@ -8,7 +8,7 @@ _start:
     mov .64bit <*1&64($(0xA0000), $(16 * 128),  $(8))>,  <_int_rtc> ; set 128 as RTC interrupt
     mov .64bit <*1&64($(0xA0000), $(16 * 5), $(8))>, <_int_kb_abort>
 
-    out .64bit <$(RTC_INT)>, <$(0x9C4080)> ; 1s, 0x80
+    out .64bit <$(RTC_INT)>, <$(0x4E2080)> ; 1s, 0x80
 
     _inf_loop:
         int <$(0x14)>

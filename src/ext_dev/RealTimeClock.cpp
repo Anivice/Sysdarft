@@ -128,7 +128,9 @@ void SysdarftRealTimeClock::update_time(std::atomic<bool> & running)
                     std::chrono::system_clock::now() - m_machineTime).count();
             const auto average_operation_time = time_elapsed_since_boot / timestamp;
             scale = (float)TARGET_NS / (float)average_operation_time;
-            log("RTC lagged ", elapsed_ns - designed_duration, " nanoseconds\n");
+            if (debug::verbose) {
+                log("RTC lagged ", elapsed_ns - designed_duration, " nanoseconds\n");
+            }
         }
     }
 

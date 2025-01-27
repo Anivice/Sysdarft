@@ -121,17 +121,31 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
             }
 
             (this->*ExecutorMap.at(opcode))(timestamp, Arg);
-        } catch (SysdarftDeviceIOError&) {
+        }
+        catch (SysdarftDeviceIOError&) {
+            SysdarftRegister::store<ExtendedRegisterType, 0>(0xF0);
             do_interruption(INT_IO_ERROR);
-        } catch (SysdarftBadInterruption &){
+        }
+        catch (SysdarftBadInterruption &) {
             do_interruption(INT_BAD_INTR);
-        } catch (SysdarftInterruptionOutOfRange &) {
+        }
+        catch (SysdarftInterruptionOutOfRange &) {
             do_interruption(INT_BAD_INTR);
-        } catch (IllegalInstruction &) {
+        }
+        catch (IllegalInstruction &) {
             do_interruption(INT_ILLEGAL_INSTRUCTION);
-        } catch (StackOverflow &) {
+        }
+        catch (StackOverflow &) {
             do_interruption(INT_STACKOVERFLOW);
-        } catch (SysdarftBaseError &) {
+        }
+        catch (IllegalMemoryAccessException &) {
+            do_interruption(INT_ILLEGAL_MEMORY_ACCESS);
+        }
+        catch (SysdarftNoSuchDevice &) {
+            SysdarftRegister::store<ExtendedRegisterType, 0>(0xF1);
+            do_interruption(INT_IO_ERROR);
+        }
+        catch (SysdarftBaseError &) {
             do_interruption(INT_FATAL);
         }
     } catch (SysdarftCPUSubroutineRequestToAbortTheCurrentInstructionExecutionProcedureDueToError&) {

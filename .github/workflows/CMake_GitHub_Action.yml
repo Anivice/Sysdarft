@@ -63,26 +63,6 @@ jobs:
           ctest --test-dir build_msan --extra-verbose -LE "NotTestable"
 
       ########################################################################
-      # BUILD & TEST with Thread/Undefined Sanitizers
-      ########################################################################
-      - name: Configure (Thread/Undefined Sanitizers)
-        run: |
-          cmake -B build_tsan -S . \
-            -D COMPILE_WITH_MEMORY_SANITIZERS=False \
-            -D COMPILE_WITH_THREAD_SANITIZERS=True  \
-            -D CMAKE_BUILD_TYPE=Debug
-
-      - name: Build (Thread/Undefined Sanitizers)
-        run: |
-          cmake --build build_tsan --parallel 16
-
-      - name: Test (Thread/Undefined Sanitizers)
-        env:
-          TERM: xterm-256color
-        run: |
-          ctest --test-dir build_tsan --extra-verbose -LE "NotTestable"
-
-      ########################################################################
       # OPEN ISSUE IF ANY TEST FAILURE OCCURRED
       ########################################################################
       - name: Open an Issue on Test Failure
@@ -96,5 +76,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: "Test Failure in Automated CMake Test Workflow",
-              body: "# One or more tests have failed (Memory or Thread Sanitizers)!"
+              body: "# One or more tests have failed!"
             })

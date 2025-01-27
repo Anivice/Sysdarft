@@ -685,7 +685,8 @@ void SYSDARFT_EXPORT_SYMBOL PreProcess(std::vector < std::string > & file,
     defined_line_marker_t & defined_line_marker,
     uint64_t & org,
     const header_file_list_t & headers,
-    bool regex);
+    bool regex,
+    std::map < std::string, std::string > & equ_replacement);
 
 struct data_expression_identifier
 {
