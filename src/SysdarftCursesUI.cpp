@@ -25,6 +25,8 @@
 #include <SysdarftCursesUI.h>
 
 std::mutex bell_memory_access_mutex;
+std::vector < unsigned char > bell_sound_data_uncompressed;
+extern "C" unsigned char* decompress_data(const unsigned char* src, uint64_t len, uint64_t* decompressed_data_len);
 
 SysdarftCursesUI::SysdarftCursesUI(const uint64_t memory)
     :   SysdarftCPUMemoryAccess(memory),
@@ -37,6 +39,22 @@ SysdarftCursesUI::SysdarftCursesUI(const uint64_t memory)
     for (int i = 0; i < V_HEIGHT * V_WIDTH; i++) {
         video_memory[i] = ' ';
     }
+
+    log("Decompressing sound file...\n");
+
+    // uncompress sound
+    std::lock_guard<std::mutex> lock(bell_memory_access_mutex);
+    uint64_t bell_sound_data_len = 0;
+    const auto data = decompress_data(bell_sound, bell_sound_len, &bell_sound_data_len);
+    if (bell_sound_data_len != bell_sound_original_len) {
+        throw SysdarftBaseError("Sound file corrupted");
+    }
+
+    bell_sound_data_uncompressed.resize(bell_sound_data_len);
+    std::memcpy(bell_sound_data_uncompressed.data(), data, bell_sound_data_len);
+    free(data);
+
+    log("Sound file decompressed!\n");
 }
 
 SysdarftCursesUI::~SysdarftCursesUI()
@@ -226,7 +244,9 @@ void SysdarftCursesUI::play_bell_sound(const std::atomic < bool > & running_flag
     sf::SoundBuffer buffer;
     {
         std::lock_guard<std::mutex> guard(bell_memory_access_mutex);
-        if (!buffer.loadFromMemory(bell_wav, bell_wav_len)) {
+        if (!buffer.loadFromMemory(bell_sound_data_uncompressed.data(),
+                bell_sound_data_uncompressed.size()))
+        {
             log("Failed to load bell wav from memory");
             return;
         }

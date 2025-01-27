@@ -193,14 +193,24 @@ add_library(SysdarftGlobalEvents OBJECT src/GlobalEvents.cpp)
 target_include_directories(SysdarftGlobalEvents PUBLIC src/include)
 
 # Audio files
+find_package(ZLIB REQUIRED)
+add_executable(compress utils/compress.c src/coding/zlib.c)
+target_link_libraries(compress PRIVATE ZLIB::ZLIB)
+
 add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c
         COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/resources
-        COMMAND rm -f bell.wav
-        COMMAND mknod bell.wav p
-        COMMAND cat "${CMAKE_CURRENT_SOURCE_DIR}/resources/bell.wav" > bell.wav &
-        COMMAND xxd -i bell.wav > ${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c
-        DEPENDS resources/bell.wav
+        COMMAND rm -rf bell.wav
+        COMMAND cp "${CMAKE_CURRENT_SOURCE_DIR}/resources/bell.wav" bell.wav
+        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/compress
+                "${CMAKE_CURRENT_SOURCE_DIR}/resources/bell.wav"
+                "${CMAKE_CURRENT_BINARY_DIR}/resources/bell.bin"
+        COMMAND xxd -n bell_sound -i "${CMAKE_CURRENT_BINARY_DIR}/resources/bell.bin" > ${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c
+        COMMAND echo >> "${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c"
+        COMMAND echo -n "unsigned long long int bell_sound_original_len = " >> "${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c"
+        COMMAND stat --format=\"%s\" "${CMAKE_CURRENT_SOURCE_DIR}/resources/bell.wav" >> "${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c"
+        COMMAND echo "\;" >> "${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c"
+        DEPENDS resources/bell.wav compress
         COMMENT "Building audio resources.."
 )
 
@@ -211,7 +221,7 @@ add_library(SysdarftCursesUI OBJECT
         src/SysdarftCursesUI.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c)
 target_include_directories(SysdarftCursesUI PUBLIC src/include)
-target_link_libraries(SysdarftCursesUI PUBLIC ${CURSES_LIBRARIES} sfml-audio sfml-system)
+target_link_libraries(SysdarftCursesUI PUBLIC ${CURSES_LIBRARIES} sfml-audio sfml-system ZLIB::ZLIB)
 
 # CPU
 add_library(SysdarftCPU OBJECT
@@ -249,6 +259,7 @@ add_library(SysdarftCoding OBJECT
         src/coding/Linker.cpp
         src/coding/OperandSanity.cpp
         src/coding/HeadersAndDefinitions.cpp
+        src/coding/zlib.c
 )
 target_include_directories(SysdarftCoding PUBLIC src/include)
 
