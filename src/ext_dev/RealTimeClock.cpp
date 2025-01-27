@@ -19,6 +19,9 @@
  */
 
 #include <RealTimeClock.h>
+#include <ctime>
+#include <cerrno>
+#include <cstdint>
 
 SysdarftRealTimeClock::SysdarftRealTimeClock(SysdarftCPU & _instance)
 : m_cpu(_instance), update_time_worker(this, &SysdarftRealTimeClock::update_time)
@@ -51,7 +54,6 @@ bool SysdarftRealTimeClock::request_write(const uint64_t port)
     std::lock_guard<std::mutex> lock(m_mutex);
     if (port == RTC_CURRENT_TIME)
     {
-        // TODO: TEST NEEDED
         const auto epoch_seconds = device_buffer.at(port)->pop<uint64_t>();
         m_startTime = std::chrono::system_clock::time_point{std::chrono::seconds(epoch_seconds)};
         return true;
@@ -79,15 +81,22 @@ bool SysdarftRealTimeClock::request_write(const uint64_t port)
     return false;
 }
 
-void SysdarftRealTimeClock::update_time(std::atomic < bool > & running)
+void SysdarftRealTimeClock::update_time(std::atomic<bool> & running)
 {
     debug::set_thread_name("RTC");
     __uint128_t scale_count = interruption_scale;
+    __uint128_t timestamp = 0;
+    float scale = 1.0f;
+    constexpr auto TARGET_NS = 5000;
 
     while (running)
     {
-        const auto before = std::chrono::system_clock::now();
+
+        auto before = std::chrono::system_clock::now();
+
         {
+            timestamp++;
+
             if (scale_count != 0) {
                 scale_count--;
             } else {
@@ -97,24 +106,33 @@ void SysdarftRealTimeClock::update_time(std::atomic < bool > & running)
                         m_cpu.do_ext_dev_interruption(interruption_number);
                     }
                 } catch (...) {
-                    // TL;DR: error occurred, aborting further interruption notice.
-                    // Long comment:
-                    // note that this has nothing to do with internal software error.
-                    // this should only capture system instruction procedure abortion
-                    // and any unexpected errors.
-                    // either way, it will either damage stack frame and render the entire interruption useless.
-                    // or cause sysdarft to quit entirely
+                    // Handle exceptions appropriately
                     interruption_number = 0;
                 }
             }
         }
 
-        const auto after = std::chrono::system_clock::now();
+        const auto designed_duration = static_cast<int64_t>(TARGET_NS * scale);
+        auto after = std::chrono::system_clock::now();
 
-        if (const auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(after - before);
-            duration.count() < 5000) // TODO: I have no idea why, but apparently it triggers every 50,000ns, instead of 5,000.
+        const auto elapsed_ns =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(after - before).count();
+        if (elapsed_ns < designed_duration)
         {
-            std::this_thread::sleep_for(std::chrono::nanoseconds(5000 - duration.count()));
+            std::this_thread::sleep_for(std::chrono::nanoseconds(designed_duration - elapsed_ns));
+        }
+        else
+        {
+            const auto time_elapsed_since_boot =
+                std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    std::chrono::system_clock::now() - m_machineTime).count();
+            const auto average_operation_time = time_elapsed_since_boot / timestamp;
+            scale = (float)TARGET_NS / (float)average_operation_time;
+            log("RTC lagged ", elapsed_ns - designed_duration, " nanoseconds\n");
         }
     }
+
+    log("RTC updated time ", timestamp, " times in ",
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::system_clock::now() - m_machineTime).count(), " nanoseconds, scale=", scale, "\n");
 }

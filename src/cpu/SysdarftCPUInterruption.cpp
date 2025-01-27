@@ -150,6 +150,7 @@ void SysdarftCPUInterruption::do_ext_dev_interruption(const uint64_t code)
     if (code > 0x1F && code < MAX_INTERRUPTION_ENTRY)
     {
         if (!protector.try_lock()) {
+            log("External device interruption ignored, number ", code, "\n");
             return; // ignore this interruption, the system is currently masked
             // (the system processing other hardware interruptions, bus not free)
         }
