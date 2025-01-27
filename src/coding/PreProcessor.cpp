@@ -234,10 +234,11 @@ void sed_equ(std::string& input, std::map < std::string, std::string > & equ_rep
 void PreProcess(std::vector < std::string > & file,
     defined_line_marker_t & defined_line_marker,
     uint64_t & org,
+    const header_file_list_t & headers,
     const bool regex)
 {
     std::map < std::string, std::string > equ_replacement;
-    uint64_t line_numer = 0;
+    uint64_t line_number = 0;
 
     auto is_line_empty = [](std::string line)->bool {
         replace_all(line, " ", "");
@@ -253,6 +254,18 @@ void PreProcess(std::vector < std::string > & file,
         }
 
         return false;
+    };
+
+    auto is_header_in_this_line = [&](const uint64_t line, std::vector < std::string > & header_file)->std::string
+    {
+        for (const auto & header : headers) {
+            if (header.appearance_at_line_num == line) {
+                header_file = header.content;
+                return header.file_name;
+            }
+        }
+
+        return "";
     };
 
     // discard all comments
@@ -294,7 +307,19 @@ void PreProcess(std::vector < std::string > & file,
     // process declarative directives
     for (auto & line : file)
     {
-        line_numer++;
+        line_number++;
+
+        std::vector < std::string > header_file;
+        if (const auto filename = is_header_in_this_line(line_number, header_file);
+            !filename.empty())
+        {
+            try {
+                PreProcess(header_file, defined_line_marker, org, {}, regex);
+            } catch (const SysdarftPreProcessorError & e) {
+                throw SysdarftPreProcessorError("Error when processing file " + filename + ": " + e.what());
+            }
+        }
+
         line = truncateAfterSemicolonOrHash(line);
         if (is_line_empty(line)) {
             continue;
@@ -314,7 +339,7 @@ void PreProcess(std::vector < std::string > & file,
 
             line.clear(); // clear preprocessor directives
         } catch (const std::exception & e) {
-            throw SysdarftPreProcessorError("Line: " + std::to_string(line_numer)
+            throw SysdarftPreProcessorError("Line: " + std::to_string(line_number)
                 + ": Error occurred when processing " + line + ": " + e.what());
         }
     }

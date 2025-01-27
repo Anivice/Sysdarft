@@ -673,9 +673,18 @@ void encode_instruction(std::vector < uint8_t > & buffer,
 void SYSDARFT_EXPORT_SYMBOL decode_instruction(std::vector < std::string > & literal_buffer,
     std::vector<uint8_t> & code_buffer);
 
+struct include_file_t
+{
+    std::string file_name;
+    uint64_t appearance_at_line_num;
+    std::vector < std::string > content;
+};
+typedef std::vector < include_file_t > header_file_list_t;
+
 void SYSDARFT_EXPORT_SYMBOL PreProcess(std::vector < std::string > & file,
     defined_line_marker_t & defined_line_marker,
     uint64_t & org,
+    const header_file_list_t & headers,
     bool regex);
 
 struct data_expression_identifier
@@ -702,5 +711,12 @@ SysdarftAssemble(
 object_t SYSDARFT_EXPORT_SYMBOL SysdarftLink(std::vector < object_t > & objects);
 
 void OperandSanityCheck(uint8_t opcode, const std::vector < parsed_target_t > & operands);
+
+typedef std::map < std::string, std::string > source_file_c_style_definition_t;
+
+void SYSDARFT_EXPORT_SYMBOL HeadProcess(
+    std::vector < std::string > & file,
+    source_file_c_style_definition_t & definition,
+    header_file_list_t & header_files);
 
 #endif // INSTRUCTIONS_H

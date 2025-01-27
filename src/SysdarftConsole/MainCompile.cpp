@@ -62,6 +62,8 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
         std::vector < std::string > file;
         object_t object;
         std::string filename;
+        source_file_c_style_definition_t definition;
+        header_file_list_t header_files;
     };
 
     uint64_t org = 0;
@@ -90,17 +92,29 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
         }
     }
 
-    // preprocessing
-    for (file_attr_t & file : files) {
+    // extract % directives
+    for (file_attr_t & file : files)
+    {
         try {
-            PreProcess(file.file, file.symbol_table, org, regex);
+            HeadProcess(file.file, file.definition, file.header_files);
+        } catch (const std::exception & err) {
+            throw std::runtime_error("Error when processing file " + file.filename + ": " + err.what());
+        }
+    }
+
+    // preprocessing
+    for (file_attr_t & file : files)
+    {
+        try {
+            PreProcess(file.file, file.symbol_table, org, file.header_files, regex);
         } catch (const std::exception & err) {
             throw std::runtime_error("Error when processing file " + file.filename + ": " + err.what());
         }
     }
 
     // compiling
-    for (file_attr_t & file : files) {
+    for (file_attr_t & file : files)
+    {
         try {
             file.object = SysdarftAssemble(file.code, file.file, org, file.symbol_table);
         } catch (const std::exception & err) {

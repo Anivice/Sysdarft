@@ -156,7 +156,7 @@ bool process_string(std::string& input, std::vector <uint8_t> & code)
         }
 
         // process
-        const ssize_t length = last_of - first_of - 1;
+        const auto length = static_cast<ssize_t>(last_of - first_of - 1);
         if (length < 0) {
             throw SysdarftAssemblerError("Error encountered while parsing string: " + input);
         }

@@ -25,10 +25,12 @@ int main()
     uint64_t org = 0;
     defined_line_marker_t symbol1, symbol2;
     std::vector< std::vector< uint8_t > > data, data2;
+    source_file_c_style_definition_t definition;
+    header_file_list_t header_files, header_files2;
 
-    PreProcess(file, symbol1, org, false);
+    PreProcess(file, symbol1, org, header_files, false);
     auto object = SysdarftAssemble(data, file, org, symbol1);
-    PreProcess(file2, symbol2, org, false);
+    PreProcess(file2, symbol2, org, header_files2, false);
     auto object2 = SysdarftAssemble(data2, file2, org, symbol2);
 
     std::vector <object_t> objects;

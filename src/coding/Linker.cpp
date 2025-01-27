@@ -60,15 +60,38 @@ void replaceSequence(
 object_t SysdarftLink(std::vector < object_t > & objects)
 {
     object_t linked;
-    std::map < std::string /* marker */, uint64_t /* offset */ > unified_symbol_table;
+    struct symbol_t {
+        uint64_t address;
+        bool referenced;
+        bool defined;
+    };
+
+    std::map < std::string /* marker */, symbol_t /* offset */ > unified_symbol_table;
 
     // 1. unified symbol table, add all defined symbols
+    // 1.1 register all symbols
     for (const auto & object : objects)
     {
         for (const auto & symbol : object.symbol_table)
         {
-            if (symbol.is_defined) {
-                unified_symbol_table[symbol.line_marker_name] = symbol.marker_position;
+            if (symbol.is_defined)
+            {
+                if (unified_symbol_table.contains(symbol.line_marker_name)
+                    && unified_symbol_table.at(symbol.line_marker_name).defined) {
+                    throw SysdarftLinkerError("Multiple definitions of " + symbol.line_marker_name);
+                }
+
+                auto ref = unified_symbol_table[symbol.line_marker_name];
+                ref.address = symbol.marker_position;
+                ref.defined = true;
+                unified_symbol_table[symbol.line_marker_name] = ref;
+            }
+
+            if (symbol.referenced)
+            {
+                auto ref = unified_symbol_table[symbol.line_marker_name];
+                ref.referenced = true;
+                unified_symbol_table[symbol.line_marker_name] = ref;
             }
         }
     }
@@ -81,7 +104,11 @@ object_t SysdarftLink(std::vector < object_t > & objects)
         {
             std::vector < uint8_t > replacement;
             try {
-                encode_constant_from_uint64_t(replacement, unified_symbol_table.at(symbol.line_marker_name));
+                const auto symbol_ref_entry = unified_symbol_table.at(symbol.line_marker_name);
+                if (!symbol_ref_entry.defined) {
+                    throw SysdarftLinkerError("Undefined reference to " + symbol.line_marker_name);
+                }
+                encode_constant_from_uint64_t(replacement, symbol_ref_entry.address);
             } catch (const std::out_of_range &) {
                 throw SysdarftLinkerError("Undefined reference to " + symbol.line_marker_name);
             }
@@ -98,7 +125,7 @@ object_t SysdarftLink(std::vector < object_t > & objects)
             for (const auto & marker : object.symbol_table) {
                 try {
                     replace_all(expression, marker.line_marker_name,
-                        std::to_string(unified_symbol_table.at(marker.line_marker_name)));
+                        std::to_string(unified_symbol_table.at(marker.line_marker_name).address));
                 } catch (const std::out_of_range &) {
                     throw SysdarftLinkerError("Undefined reference to " + marker.line_marker_name);
                 }
@@ -133,14 +160,31 @@ object_t SysdarftLink(std::vector < object_t > & objects)
 
     std::vector < uint64_t > loc_it_appeared_in_cur_blk;
     // 3.2 add unified symbol table
-    for (const auto & [symbol, value] : unified_symbol_table) {
-        linked.symbol_table.emplace_back(line_marker_t {
-            .line_marker_name = symbol,
-            .marker_position = value,
-            .is_defined = false,
-            .referenced = false,
-            .loc_it_appeared_in_cur_blk = {}
-        });
+    for (const auto & [symbol, value] : unified_symbol_table)
+    {
+        if (debug::verbose)
+        {
+            linked.symbol_table.emplace_back(line_marker_t {
+                .line_marker_name = symbol,
+                .marker_position = value.address,
+                .is_defined = false,
+                .referenced = false,
+                .loc_it_appeared_in_cur_blk = {}
+            });
+        }
+        else
+        {
+            if (value.referenced)
+            {
+                linked.symbol_table.emplace_back(line_marker_t {
+                    .line_marker_name = symbol,
+                    .marker_position = value.address,
+                    .is_defined = false,
+                    .referenced = false,
+                    .loc_it_appeared_in_cur_blk = {}
+                });
+            }
+        }
     }
 
     return linked;

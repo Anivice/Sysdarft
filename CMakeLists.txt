@@ -248,6 +248,7 @@ add_library(SysdarftCoding OBJECT
         src/coding/PreProcessor.cpp
         src/coding/Linker.cpp
         src/coding/OperandSanity.cpp
+        src/coding/HeadersAndDefinitions.cpp
 )
 target_include_directories(SysdarftCoding PUBLIC src/include)
 
@@ -318,13 +319,15 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     add_unit_test(test.conditional tests/test.conditional.cpp)
     add_unit_test(test.ws tests/test.ws.cpp)
     set_tests_properties("Unit Test: test.ws" PROPERTIES LABELS "NotTestable")
+    add_unit_test(test.headProcessor tests/test.headProcessor.cpp)
 
     add_custom_target(
             COPY_HDA_FILE ALL
             COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/hda.img ${CMAKE_CURRENT_BINARY_DIR}/
             COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/example.asm ${CMAKE_CURRENT_BINARY_DIR}/
             COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/example2.asm ${CMAKE_CURRENT_BINARY_DIR}/
-            DEPENDS tests/hda.img tests/example.asm
+            COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/tests/rtc.asm ${CMAKE_CURRENT_BINARY_DIR}/
+            DEPENDS tests/hda.img tests/example.asm tests/example2.asm tests/rtc.asm
             COMMENT "Copy disk image sample with ASCII texts in it."
     )
 endif ()
@@ -374,6 +377,13 @@ add_executable(sysdarft-system
 )
 target_include_directories(sysdarft-system PUBLIC ${ASIO_INCLUDE_DIR} src/include src/include/crow)
 target_link_libraries(sysdarft-system PRIVATE Sysdarft nlohmann_json::nlohmann_json)
+
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    add_test(NAME "Unit Test: Assembler Example 2"
+            COMMAND sysdarft-system -c ${CMAKE_CURRENT_BINARY_DIR}/example2.asm -o ${CMAKE_CURRENT_BINARY_DIR}/example2.sys -f sys)
+    add_test(NAME "Unit Test: Assembler RTC"
+            COMMAND sysdarft-system -c ${CMAKE_CURRENT_BINARY_DIR}/rtc.asm -o ${CMAKE_CURRENT_BINARY_DIR}/rtc.sys -f sys)
+endif ()
 
 if (NOT "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     add_custom_target(STRIP_ALL ALL
