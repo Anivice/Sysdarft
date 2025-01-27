@@ -30,10 +30,30 @@ void encode_constant_from_uint64_t(std::vector < uint8_t > & code, uint64_t val)
     }
 }
 
-// TODO: Sanity check to prevent line marker and max uint64 value appear at the same line
 const std::vector < uint8_t > tmp_address_hex = {
     0x02, 0x64, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 }; // 33 bytes
+
+size_t countSequence(const std::vector<uint8_t>& data, const std::vector<uint8_t>& sequence)
+{
+    if (sequence.empty() || data.size() < sequence.size()) {
+        return 0;
+    }
+
+    size_t count = 0;
+    auto it = data.begin();
+
+    while (it != data.end())
+    {
+        it = std::search(it, data.end(), sequence.begin(), sequence.end());
+        if (it != data.end()) {
+            ++count;
+            it += static_cast<long>(sequence.size()); // Non-overlapping
+        }
+    }
+
+    return count;
+}
 
 void replaceSequence(
     std::vector<uint8_t>& original,
@@ -113,6 +133,11 @@ object_t SysdarftLink(std::vector < object_t > & objects)
                 throw SysdarftLinkerError("Undefined reference to " + symbol.line_marker_name);
             }
             for (const auto & each_instruction : symbol.loc_it_appeared_in_cur_blk) {
+                if (countSequence(object.code[each_instruction], tmp_address_hex) != 1) {
+                    throw SysdarftLinkerError("Overlapping or non-exist code references of the "
+                        + symbol.line_marker_name + ",\n"
+                        "possibly due to multiple noise data 0xFFFFFFFFFFFFFFFF within code disrupting normal sequence identification.");
+                }
                 replaceSequence(object.code[each_instruction], tmp_address_hex, replacement);
             }
         }

@@ -49,7 +49,7 @@ public:
 
     void set_abort_next() { do_abort_int = true; }
     void system_hlt() { SystemHalted = true; }
-    void Boot();
+    [[nodiscard]] uint64_t Boot();
 
     SysdarftCPU & operator = (const SysdarftCPU &) = delete;
     [[nodiscard]] uint64_t SystemTotalMemory() const { return TotalMemory; }

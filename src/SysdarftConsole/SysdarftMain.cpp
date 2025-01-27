@@ -126,7 +126,7 @@ void stop_handler(int)
     }
 }
 
-void boot_sysdarft(
+uint64_t boot_sysdarft(
     const uint64_t memory_size,
     const std::string & bios,
     const std::string & hdd,
@@ -140,6 +140,7 @@ void boot_sysdarft(
     std::ifstream file(bios, std::ios::in | std::ios::binary);
     std::vector<uint8_t> bios_code;
     const auto file_size = std::filesystem::file_size(bios);
+    uint64_t ret;
 
     // read
     if (!file.is_open()) {
@@ -168,13 +169,14 @@ void boot_sysdarft(
             debug_server = std::make_unique<RemoteDebugServer>(ip, port, CPUInstance, log_path);
         }
 
-        CPUInstance.Boot();
+        ret = CPUInstance.Boot();
     } catch (...) {
         g_cpu_instance = nullptr;
         throw;
     }
 
     g_cpu_instance = nullptr;
+    return ret;
 }
 
 int main(int argc, char** argv)
@@ -390,8 +392,7 @@ int main(int argc, char** argv)
             }
 
             // boot system
-            boot_sysdarft(memory_size, bios_path, hdd, fda, fdb, debug, ip, port, log_file);
-            return EXIT_SUCCESS;
+            return static_cast<int>(boot_sysdarft(memory_size, bios_path, hdd, fda, fdb, debug, ip, port, log_file));
         }
 
         std::cout   << "If you see this message, that means you have provided one or more arguments,\n"

@@ -73,6 +73,10 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
     for (const std::string & source_file : source_files)
     {
         try {
+            if (debug::verbose) {
+                std::cout << "Loading " << source_file << "..." << std::endl;
+            }
+
             file_attr_t file;
             std::fstream filestream(source_file, std::ios::in | std::ios::out);
             if (!filestream.is_open()) {
@@ -93,6 +97,10 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
     }
 
     // extract % directives
+    if (debug::verbose) {
+        std::cout << "Extracting symbols ..." << std::endl;
+    }
+
     for (file_attr_t & file : files)
     {
         try {
@@ -103,6 +111,10 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
     }
 
     // preprocessing
+    if (debug::verbose) {
+        std::cout << "PreProcessing ..." << std::endl;
+    }
+
     for (file_attr_t & file : files)
     {
         try {
@@ -114,6 +126,10 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
     }
 
     // compiling
+    if (debug::verbose) {
+        std::cout << "Compiling ..." << std::endl;
+    }
+
     for (file_attr_t & file : files)
     {
         try {
@@ -126,13 +142,26 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
     std::vector <object_t> objects;
 
     // archiving
+    if (debug::verbose) {
+        std::cout << "Archiving ..." << std::endl;
+    }
+
     for (file_attr_t & file : files) {
         objects.push_back(file.object);
+    }
+
+    // Link
+    if (debug::verbose) {
+        std::cout << "Linking ..." << std::endl;
     }
 
     object_t linked_object = SysdarftLink(objects);
 
     try {
+        if (debug::verbose) {
+            std::cout << "Writing to file ..." << std::endl;
+        }
+
         std::ofstream file(binary_filename, std::ios::out | std::ios::binary);
         if (!file.is_open()) {
             throw SysdarftAssemblerError("Could not open file " + binary_filename);

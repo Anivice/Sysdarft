@@ -60,7 +60,7 @@ SysdarftCPU::SysdarftCPU(const uint64_t memory,
     timestamp = 0;
 }
 
-void SysdarftCPU::Boot()
+uint64_t SysdarftCPU::Boot()
 {
     SystemHalted = false;
     do_abort_int = false;
@@ -100,4 +100,6 @@ void SysdarftCPU::Boot()
     }
 
     SysdarftCursesUI::cleanup();
+
+    return SysdarftRegister::load<FullyExtendedRegisterType, 0>();
 }

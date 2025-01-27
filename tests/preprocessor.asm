@@ -153,13 +153,33 @@ _reads:
     ret
 
 _int_0x02_io_error:
-    mov .64bit  <%dp>,  <.message>
+    cmp .16bit <%exr0>, <$(0xF0)>
+    je <%cb>, <.io_error>
+
+    ; no such device
+    mov .64bit  <%dp>,  <.message.no.such.dev>
     xor .64bit  <%db>,  <%db>
     call        <%cb>,  <_puts>
     INTGETC
+    mov .64bit <%fer0>, <$(6)>
+    jmp <%cb>, <.error.type.end>
+
+    .io_error:
+    mov .64bit  <%dp>,  <.message.io.error>
+    xor .64bit  <%db>,  <%db>
+    call        <%cb>,  <_puts>
+    INTGETC
+    mov .64bit <%fer0>, <$(5)>
+
+    .error.type.end:
     hlt
-    .message:
+
+    .message.io.error:
     .string < "IO ERROR!\nPress any key to shutdown..." >
+    .8bit_data < 0 >
+
+    .message.no.such.dev:
+    .string < "Disk NOT present!\nPress any key to shutdown..." >
     .8bit_data < 0 >
 
 _start:
