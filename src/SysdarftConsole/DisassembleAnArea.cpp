@@ -84,6 +84,17 @@ std::string disassemble_code(std::vector < uint8_t > assembled_code,
         concussive_nop_appearances_offset = 0;
     };
 
+    auto auto_insert_symbol_in_literal = [&](std::string & literal)->void
+    {
+        for (const auto & symbol : symbol_table)
+        {
+            std::stringstream offset_literal;
+            offset_literal << "0x" << std::hex << std::uppercase << symbol.first;
+            const std::string rep = offset_literal.str() + " /* " + symbol.second + " */";
+            replace_whole_word(literal, offset_literal.str(), rep);
+        }
+    };
+
     while (!assembled_code.empty())
     {
         std::vector < std::string > disassembled_code_literals;
@@ -162,8 +173,9 @@ std::string disassemble_code(std::vector < uint8_t > assembled_code,
             // write current offset
             ret << std::hex << std::setfill('0') << std::setw(16) << std::uppercase << current_pos << ": ";
 
-            // first, we need a binary view of the data
+            auto_insert_symbol_in_literal(disassembled_code_literals[0]);
 
+            // first, we need a binary view of the data
             // then, we need to bend it into multiple lines
             if (std::string disassembled_data_literal = linear_binary_to_string(decoded_literal_binary);
                 disassembled_data_literal.size() > 24)

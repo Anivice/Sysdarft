@@ -714,4 +714,6 @@ void OperandSanityCheck(uint8_t opcode, const std::vector < parsed_target_t > & 
 void SYSDARFT_EXPORT_SYMBOL HeadProcess(std::vector<std::string> &file, source_file_c_style_definition_t &definition,
                                         header_file_list_t &header_files, const std::vector<std::string> &include_path);
 
+void SYSDARFT_EXPORT_SYMBOL replace_whole_word(std::string& text, std::string target, const std::string& replacement);
+
 #endif // INSTRUCTIONS_H
