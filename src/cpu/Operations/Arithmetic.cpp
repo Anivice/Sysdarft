@@ -173,9 +173,9 @@ void SysdarftCPUInstructionExecutor::div(__uint128_t, WidthAndOperandsType & Wid
 {
     uint64_t TargetRegister0;
     switch (WidthAndOperands.first) {
-    case _8bit_prefix:  TargetRegister0 = SysdarftRegister::load<RegisterType, 0>()             | 0xFFFFFFFFFFFFFF00; break;
-    case _16bit_prefix: TargetRegister0 = SysdarftRegister::load<ExtendedRegisterType, 0>()     | 0xFFFFFFFFFFFF0000; break;
-    case _32bit_prefix: TargetRegister0 = SysdarftRegister::load<HalfExtendedRegisterType, 0>() | 0xFFFFFFFF00000000; break;
+    case _8bit_prefix:  TargetRegister0 = SysdarftRegister::load<RegisterType, 0>()             ; break;
+    case _16bit_prefix: TargetRegister0 = SysdarftRegister::load<ExtendedRegisterType, 0>()     ; break;
+    case _32bit_prefix: TargetRegister0 = SysdarftRegister::load<HalfExtendedRegisterType, 0>() ; break;
     case _64bit_prefix: TargetRegister0 = SysdarftRegister::load<FullyExtendedRegisterType, 0>(); break;
     default: throw IllegalInstruction("Unknown width");
     }

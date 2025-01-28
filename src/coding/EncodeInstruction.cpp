@@ -112,14 +112,15 @@ void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> & buffer, co
             throw InstructionExpressionError(
                 "Expected " + std::to_string(argument_count) +
                         " operands, but found " + std::to_string(cleaned_line.size() - operand_index_begin) +
-                        ": " + instruction + ".\n"
-                        "NOTE:\nIf the missing operand is provided, it's possibly due to a malformed operand expression which,\n"
-                        "in turn, leads to the operand not being detected.\n"
-                        "Specially, if the operand is a line marker (symbol), it is not defined,\n"
-                        "thus the assembler has no knowledge of this symbol, and cannot capture it as a valid operand.\n"
-                        "If the operand present has <(0xFFFFFFFFFFFFFFFF)>, and it was a line marker (symbol),\n"
-                        "it is not a malformed operand or an internal error.\n"
-                        "Assembler has captured it as a valid symbol, and is waiting for linker to link the symbol correctly.");
+                        ": " + instruction + "\n"
+                        "NOTE:\n"
+                        "    If the missing operand is indeed provided, it's possibly due to a malformed operand expression which, in turn,\n"
+                        "    leads to the operand not being detected. Specially, if the operand is a line marker (symbol), then it is\n"
+                        "    highly possible that this symbol is not defined, nor being clearly declared, thus the assembler has no\n"
+                        "    knowledge of this symbol, and cannot capture it as a valid operand. If one of the operand present above\n"
+                        "    is <(0xFFFFFFFFFFFFFFFF)>, and it is a line marker (symbol) in the source code, it is not a malformed operand\n"
+                        "    nor an internal error. Assembler has successfully captured it as a valid symbol, and is waiting for linker to\n"
+                        "    link the symbol location correctly.");
         }
 
         if (provided_args > argument_count) {

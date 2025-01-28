@@ -36,6 +36,7 @@ private:
     std::function<void(std::atomic<bool>&, const std::vector<std::any>&)> method_;
     std::atomic<bool> running = false;
     std::thread WorkerThreadInstance;
+    std::string workerThreadName;
 
 public:
     template <typename InstanceType, typename... Args>
@@ -58,6 +59,10 @@ public:
             // The return value (std::any) is ignored since method_ expects void
             invoke_with_any<decltype(bound_function), Args...>(bound_function, args);
         };
+
+#ifdef __DEBUG__
+        workerThreadName = std::string(typeid(InstanceType).name()) + "::" + typeid(method).name();
+#endif
     }
 
     // Delete copy constructor and copy assignment operator
@@ -73,7 +78,7 @@ public:
             return;
         }
 
-        log("[Worker] Starting worker thread...\n");
+        log("[Worker] Starting worker thread ", workerThreadName, "...\n");
         running = true;
 
         // Prepare the arguments as a vector of std::any
@@ -81,7 +86,7 @@ public:
 
         // Start the thread with the correct arguments
         WorkerThreadInstance = std::thread(method_, std::ref(running), any_args);
-        log("[Worker] Worker thread detached...\n");
+        log("[Worker] Worker thread ", workerThreadName, " detached...\n");
     }
 
     void stop()
@@ -90,21 +95,21 @@ public:
             return;
         }
 
-        log("[Worker] Stopping worker thread...\n");
+        log("[Worker] Stopping worker thread ", workerThreadName, "...\n");
         running = false;
         if (WorkerThreadInstance.joinable()) {
             WorkerThreadInstance.join();
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        log("[Worker] Worker thread stopped...\n");
+        log("[Worker] Worker thread ", workerThreadName, " stopped...\n");
     }
 
     ~WorkerThread()
     {
         if (running)
         {
-            log("[Worker] Stopping worker thread automatically...\n");
+            log("[Worker] Stopping worker thread ", workerThreadName, " automatically...\n");
             stop();
         }
     }

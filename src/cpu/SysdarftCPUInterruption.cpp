@@ -29,24 +29,11 @@
 #include <SysdarftCursesUI.h>
 #include <SysdarftInstructionExec.h>
 
-int my_getch()
+void flush_stdin()
 {
-    termios oldt{}, newt{};
-
-    // Get current terminal settings
-    tcgetattr(STDIN_FILENO, &oldt);
-    newt = oldt;
-
-    // Disable canonical mode and echo
-    newt.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
-    const int ch = getchar();
-
-    // Restore original settings
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-
-    return ch;
+    if (tcflush(STDIN_FILENO, TCIFLUSH) != 0) {
+        log("Error flushing stdin: ", strerror(errno), "\n");
+    }
 }
 
 SysdarftCPUInterruption::SysdarftCPUInterruption(const uint64_t memory) :
@@ -168,6 +155,7 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
         case 0x16: do_get_system_hardware_info_0x16();      return;
         case 0x17: do_ring_bell_0x17();                     return;
         case 0x18: do_refresh_screen_0x18();                return;
+        case 0x19: do_clear_user_input_stream_0x19();       return;
         default:
             // do interruption, but doesn't check interruption mask since
             // this is not maskable interruptions
@@ -371,4 +359,9 @@ void SysdarftCPUInterruption::do_ring_bell_0x17()
 void SysdarftCPUInterruption::do_refresh_screen_0x18()
 {
     SysdarftCursesUI::render_screen();
+}
+
+void SysdarftCPUInterruption::do_clear_user_input_stream_0x19()
+{
+    flush_stdin();
 }

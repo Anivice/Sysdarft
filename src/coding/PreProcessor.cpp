@@ -55,6 +55,25 @@ std::string truncateAfterSemicolonOrHash(const std::string& input)
     return input;
 }
 
+// Function to replace whole words based on custom allowed characters
+void replace_whole_word(std::string& text,
+                                std::string target,
+                                const std::string& replacement)
+{
+    replace_all(target, ".", "\\.");
+    const std::string target_reg_literal = R"((^|[^A-Za-z0-9._]))" + target + R"(([^A-Za-z0-9._]|$))";
+    const std::regex rep_tag(target_reg_literal);
+    std::smatch match;
+    std::regex_search(text, match, rep_tag);
+    if (!match.empty())
+    {
+        auto matched = match[0].str();
+        matched.pop_back();
+        matched.erase(matched.begin());
+        replace_all(text, matched, replacement);
+    }
+}
+
 std::vector < std::string >
 line_marker_register(std::vector<std::string> & file)
 {
@@ -100,7 +119,7 @@ line_marker_register(std::vector<std::string> & file)
                 for (std::string & cursf_line : current_file_section)
                 {
                     for (const auto & [marker, rep] : sub_linemarkers) {
-                        replace_all(cursf_line, marker, rep);
+                        replace_whole_word(cursf_line, marker, rep);
                     }
                 }
 

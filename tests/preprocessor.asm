@@ -32,24 +32,36 @@ _newline:
     push    .64bit      <%fer3>
 
     div     .16bit      <$(80)>
-    ; EXR0 quotient, EXR1 reminder
+    ; EXR0 quotient(row), EXR1 reminder(col)
     cmp     .16bit      <%exr0>,                    <$(24)>
-    je                  <%cb>,                      <.scroll>
+    jbe                 <%cb>,                      <.scroll>
 
     xor     .16bit      <%exr1>,                    <%exr1>
     inc     .16bit      <%exr0>
     mul     .16bit      <$(80)>
     SETCUSP
     REFRESH
-    jmp         <%cb>,      <.exit>
+    jmp         <%cb>,      < .exit>
 
     .scroll:
+        ; move content (scroll up)
         mov .64bit <%db>,   <$(0xB8000)>
         xor .64bit <%dp>,   <%dp>
-        mov .64bit <%eb>,   <$(0xB8000 + 25)>
+        mov .64bit <%eb>,   <$(0xB8000 + 80)>
         xor .64bit <%ep>,   <%ep>
         mov .64bit <%fer3>, <$(2000 - 80)>
         movs
+
+        ; clear last line
+        mov .64bit <%fer3>, <$(80)>
+        mov .64bit <%eb>, <$(0xB8000)>
+        mov .64bit <%ep>, <$(2000 - 80)>
+        xor .64bit <%dp>, <%dp>
+        .scroll.loop:
+            mov .8bit <*1&8(%eb, %ep, %dp)>, <$(' ')>
+            inc .64bit <%dp>
+            loop <%cb>, <.scroll.loop>
+
         mov .16bit <%exr0>, <$(2000 - 80)>
         SETCUSP
         REFRESH
@@ -75,6 +87,7 @@ _puts:
         cmp .8bit   <%r2>,      <$(0x0A)>
         jne         <%cb>,      <.skip_newline>
 
+        .newline :
         call        <%cb>,      <_newline>
         mov .64bit  <%fer3>,    <.last_offset>
         mov .16bit  <*1&16($(0), %fer3, $(0))>, <%exr0>
@@ -85,7 +98,11 @@ _puts:
         mov .64bit  <%fer3>,    <.last_offset>
         mov .16bit  <%exr0>,    <*1&16($(0), %fer3, $(0))>
         call        <%cb>,      <_putc>
+
         inc .16bit  <%exr0>
+        cmp .16bit  <%exr7>,    <$(2000)>
+        je  <%cb>,  <.newline>
+
         mov .16bit  <*1&16($(0), %fer3, $(0))>, <%exr0>
         SETCUSP
 
@@ -142,6 +159,28 @@ _print_num:
 _reads:
     pushall
     in .64bit DISK_SIZE, <%fer3>
+    ; max 640 KB, meaning 1280 sectors
+    cmp .64bit <%fer3>, <$(1280)>
+    jl <%cb>, <.skip.trunc>
+
+    mov .64bit  <%dp>,  < .message.disk.too.big>
+    xor .64bit  <%db>,  <%db>
+    call        <%cb>,  <_puts>
+    mov .64bit <%fer0>, <%fer3>
+    call <%cb>, <_print_num>
+    mov .64bit  <%dp>,  < .message.disk.too.big.tail >
+    call        <%cb>,  <_puts>
+
+    mov .64bit <%fer3>, <$(1280)>
+
+    mov .64bit  <%dp>,  <.message.disk.resize>
+    call        <%cb>,  <_puts>
+    mov .64bit <%fer0>, <%fer3>
+    call <%cb>, <_print_num>
+    mov .64bit  <%dp>,  <.message.disk.resize.tail>
+    call        <%cb>,  <_puts>
+
+    .skip.trunc:
     mov .64bit  <%dp>,  <.message.disk.size>
     xor .64bit  <%db>,  <%db>
     call        <%cb>,  <_puts>
@@ -196,6 +235,20 @@ _reads:
     .string < "done.\n" >
     .8bit_data < 0 >
 
+    .message.disk.too.big:
+    .string < "Size of C: too big (" >
+    .8bit_data < 0 >
+    .message.disk.too.big.tail:
+    .string < " sectors).\n" >
+    .8bit_data < 0 >
+
+    .message.disk.resize:
+    .string < "Resized read length to " >
+    .8bit_data < 0 >
+    .message.disk.resize.tail:
+    .string < " sectors.\n" >
+    .8bit_data < 0 >
+
 ; _writes(%fer0)
 _writes:
     pushall
@@ -203,6 +256,30 @@ _writes:
     in .64bit FDA_SIZE, <%fer3>
     push .64bit <%fer0>
 
+    ; %fer0 ==> %fer4 == .reads size
+    mov .64bit <%fer4>, <%fer0>
+
+    ; %fer0 <== A: size
+    mov .64bit <%fer0>, <%fer3>
+    mul .64bit <$(512)>
+
+    ; compare %fer0 and %fer4
+    cmp .64bit <%fer0>, <%fer4>
+    jbe <%cb>, <.skip.trunc>
+    add .64bit <%sp>, <$(8)>
+    push .64bit <%fer0>
+
+    mov .64bit  <%dp>,  <.message.disk.too.small>
+    xor .64bit  <%db>,  <%db>
+    call        <%cb>,  <_puts>
+
+    mov .64bit  <%dp>,  <.message.disk.resize>
+    call        <%cb>,  <_puts>
+    call <%cb>, <_print_num>
+    mov .64bit  <%dp>,  <.message.disk.resize.tail>
+    call        <%cb>,  <_puts>
+
+    .skip.trunc:
     mov .64bit  <%dp>,  <.message.disk.size>
     xor .64bit  <%db>,  <%db>
     call        <%cb>,  <_puts>
@@ -240,10 +317,21 @@ _writes:
     .8bit_data < 0 >
 
     .message.writing:
-    .string < "Writing floppy disk..." >
+    .string < "Writing floppy disk...\n" >
     .8bit_data < 0 >
     .message.done:
     .string < "done.\n" >
+    .8bit_data < 0 >
+
+    .message.disk.too.small:
+    .string < "Size of A: too small\n" >
+    .8bit_data < 0 >
+
+    .message.disk.resize:
+    .string < "Resized write length to " >
+    .8bit_data < 0 >
+    .message.disk.resize.tail:
+    .string < " bytes.\n" >
     .8bit_data < 0 >
 
 _int_0x02_io_error:
@@ -254,6 +342,7 @@ _int_0x02_io_error:
     mov .64bit  <%dp>,  <.message.no.such.dev>
     xor .64bit  <%db>,  <%db>
     call        <%cb>,  <_puts>
+    KBFLUSH
     INTGETC
     mov .64bit <%fer0>, <$(6)>
     jmp <%cb>, <.error.type.end>
@@ -262,6 +351,7 @@ _int_0x02_io_error:
     mov .64bit  <%dp>,  <.message.io.error>
     xor .64bit  <%db>,  <%db>
     call        <%cb>,  <_puts>
+    KBFLUSH
     INTGETC
     mov .64bit <%fer0>, <$(5)>
 
@@ -288,6 +378,7 @@ _start:
     xor .64bit  <%db>,  <%db>
     call        <%cb>,  <_puts>
 
+    KBFLUSH
     INTGETC
 
     ; read from disk
@@ -299,6 +390,7 @@ _start:
     mov .64bit  <%dp>,  <.press_to_write_to_floppy>
     call        <%cb>,  <_puts>
 
+    KBFLUSH
     INTGETC
 
     mov .64bit  <%dp>,  <.writint_to_floppy>
@@ -310,12 +402,18 @@ _start:
     xor .64bit  <%db>,  <%db>
     call        <%cb>,  <_puts>
 
+    KBFLUSH
     INTGETC
     xor .64bit <%fer0>, <%fer0>
     hlt
 
 .welcome:
-    .string < "Hello!\nThis is Sysdarft!\nPress any key to read from disk\n" >
+    .string < "Hello!\n\nThis is Sysdarft Example A!\n\n\n" >
+    .string < "Sysdarft is a hypothetical architecture that offers simplified instructions " >
+    .string < "with potency for creating functional programs and even operating systems. " >
+    .string < "By eliminating the need to maintain compatibility with historical designs, " >
+    .string < "Sysdarft aims to be straightforward, avoiding complex details while maintaining " >
+    .string < "consistency and functionality.\n\n\nPress any key to read from disk\n" >
     .8bit_data < 0 >
 
 .reading_from_disk:

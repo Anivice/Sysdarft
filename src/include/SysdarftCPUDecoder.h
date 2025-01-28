@@ -230,7 +230,7 @@ protected:
      *  [0x16] GET SYSTEM HARDWARE INFO [TOTAL MEMORY == FER0]
      *  [0x17] RING BELL
      *  [0x18] REFRESH
-     *  [0x19]
+     *  [0x19] CLEAR USER KEYBOARD INPUT STREAM
      *  [0x1A]
      *  [0x1B]
      *  [0x1C]
@@ -257,6 +257,7 @@ protected:
     void do_get_system_hardware_info_0x16();
     void do_ring_bell_0x17();
     void do_refresh_screen_0x18();
+    void do_clear_user_input_stream_0x19();
 
     std::atomic<bool> hd_int_flag = false;
 

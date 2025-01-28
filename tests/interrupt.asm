@@ -5,4 +5,6 @@
 .equ 'SETCUSP', 'int < $(0x11) >'
 .equ 'INTGETC', 'int < $(0x14) >'
 
+%define KBFLUSH int < $(0x19) >
+
 %endif ; _INTERRUPT_ASM_
