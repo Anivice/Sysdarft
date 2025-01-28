@@ -86,12 +86,15 @@ std::string disassemble_code(std::vector < uint8_t > assembled_code,
 
     auto auto_insert_symbol_in_literal = [&](std::string & literal)->void
     {
-        for (const auto & symbol : symbol_table)
+        if (debug::verbose)
         {
-            std::stringstream offset_literal;
-            offset_literal << "0x" << std::hex << std::uppercase << symbol.first;
-            const std::string rep = offset_literal.str() + " /* " + symbol.second + " */";
-            replace_whole_word(literal, offset_literal.str(), rep);
+            for (const auto & symbol : symbol_table)
+            {
+                std::stringstream offset_literal;
+                offset_literal << "0x" << std::hex << std::uppercase << symbol.first;
+                const std::string rep = offset_literal.str() + " /* " + symbol.second + " */";
+                replace_whole_word(literal, offset_literal.str(), rep);
+            }
         }
     };
 
