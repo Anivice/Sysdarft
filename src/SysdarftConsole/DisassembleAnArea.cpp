@@ -68,6 +68,21 @@ std::string disassemble_code(std::vector < uint8_t > assembled_code,
     const auto assembled_code_space = assembled_code.size();
     std::vector < std::vector < uint8_t > > bad_8bit_data;
     uint64_t bad_8bit_data_offset = 0;
+    uint64_t concussive_nop_appearances = 0;
+    uint64_t concussive_nop_appearances_offset = 0;
+
+    auto clear_concussive_nop_appearances = [&]()->void
+    {
+        if (concussive_nop_appearances > 3)
+        {
+            ret << "\n ... PADDLING 0x00 APPEARED " << std::dec << concussive_nop_appearances << " TIMES SINCE "
+                << std::hex << std::setfill('0') << std::setw(16) << std::uppercase
+                << concussive_nop_appearances_offset << "..." << std::endl << std::endl;
+        }
+
+        concussive_nop_appearances = 0;
+        concussive_nop_appearances_offset = 0;
+    };
 
     while (!assembled_code.empty())
     {
@@ -105,6 +120,7 @@ std::string disassemble_code(std::vector < uint8_t > assembled_code,
                 bad_8bit_data_offset = current_pos; // record current position for later use
             }
             bad_8bit_data.emplace_back(decoded_literal_binary);
+            clear_concussive_nop_appearances();
             continue;
         }
 
@@ -126,27 +142,47 @@ std::string disassemble_code(std::vector < uint8_t > assembled_code,
             bad_8bit_data_offset = 0;
         }
 
+        if (!disassembled_code_literals.empty() && disassembled_code_literals[0] == "NOP")
+        {
+            if (concussive_nop_appearances == 0) {
+                concussive_nop_appearances_offset = current_pos;
+            }
+
+            concussive_nop_appearances++;
+        } else {
+            clear_concussive_nop_appearances();
+        }
+
         if (symbol_table.contains(current_pos)) {
             ret << std::endl << std::endl << "<" << symbol_table.at(current_pos) << "> :" << std::endl;
         }
-        // write current offset
-        ret << std::hex << std::setfill('0') << std::setw(16) << std::uppercase << current_pos << ": ";
 
-        // first, we need a binary view of the data
-        std::string disassembled_data_literal = linear_binary_to_string(decoded_literal_binary);
+        if (concussive_nop_appearances <= 3)
+        {
+            // write current offset
+            ret << std::hex << std::setfill('0') << std::setw(16) << std::uppercase << current_pos << ": ";
 
-        // then, we need to bend it into multiple lines
-        if (disassembled_data_literal.size() > 24) {
-            disassembled_data_literal = insert_newlines_every_24(disassembled_data_literal);
-            // insert instruction after first '\n'
-            auto pos = disassembled_data_literal.find_first_of('\n');
-            disassembled_data_literal.insert(pos, "    " + disassembled_code_literals[0]);
-            replace_all(disassembled_data_literal, "\n", "\n" + std::string(18, ' '));
-            ret << disassembled_data_literal << std::endl;
-        } else {
-            ret << disassembled_data_literal << std::string(28 - disassembled_data_literal.size(), ' ')
-                << disassembled_code_literals[0] << std::endl;
+            // first, we need a binary view of the data
+
+            // then, we need to bend it into multiple lines
+            if (std::string disassembled_data_literal = linear_binary_to_string(decoded_literal_binary);
+                disassembled_data_literal.size() > 24)
+            {
+                disassembled_data_literal = insert_newlines_every_24(disassembled_data_literal);
+                // insert instruction after first '\n'
+                auto pos = disassembled_data_literal.find_first_of('\n');
+                disassembled_data_literal.insert(pos, "    " + disassembled_code_literals[0]);
+                replace_all(disassembled_data_literal, "\n", "\n" + std::string(18, ' '));
+                ret << disassembled_data_literal << std::endl;
+            } else {
+                ret << disassembled_data_literal << std::string(28 - disassembled_data_literal.size(), ' ')
+                    << disassembled_code_literals[0] << std::endl;
+            }
         }
+    }
+
+    if (concussive_nop_appearances != 0) {
+        clear_concussive_nop_appearances();
     }
 
     return ret.str();

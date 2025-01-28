@@ -409,10 +409,10 @@ _start:
 
 .welcome:
     .string < "Hello!\n\nThis is Sysdarft Example A!\n\n\n" >
-    .string < "Sysdarft is a hypothetical architecture that offers simplified instructions " >
-    .string < "with potency for creating functional programs and even operating systems. " >
-    .string < "By eliminating the need to maintain compatibility with historical designs, " >
-    .string < "Sysdarft aims to be straightforward, avoiding complex details while maintaining " >
+    .string < "Sysdarft is a hypothetical architecture that offers simplified instructions\n" >
+    .string < "with potency for creating functional programs and even operating systems.\n" >
+    .string < "By eliminating the need to maintain compatibility with historical designs,\n" >
+    .string < "Sysdarft aims to be straightforward, avoiding complex details while maintaining\n" >
     .string < "consistency and functionality.\n\n\nPress any key to read from disk\n" >
     .8bit_data < 0 >
 
