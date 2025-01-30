@@ -3531,12 +3531,12 @@ _print_num:
         .resvb < 16 >
 
 _start:
-    mov .64bit          <%sp>,                                      <$(0xFFF)>      ; setup stack frame size
-    mov .64bit          <%sb>,                                      <_stack_frame>  ; setup stack frame location
-    mov .64bit          <*1&64($(0xA0000), $(16 * 128),  $(8))>,    <_int_rtc>      ; set 128 as RTC interrupt
+    mov .64bit          <%sp>,                                      <$(0xFFF)>      
+    mov .64bit          <%sb>,                                      <_stack_frame>  
+    mov .64bit          <*1&64($(0xA0000), $(16 * 128),  $(8))>,    <_int_rtc>      
     mov .64bit          <*1&64($(0xA0000), $(16 * 5), $(8))>,       <_int_kb_abort>
 
-    out .64bit          <$(RTC_INT)>,                               <$(0x4E2080)>   ; 1s, 0x80
+    out .64bit          <$(RTC_INT)>,                               <$(0x4E2080)>   ; 1s, int 0x80
 
     .inf_loop:
         int             <$(0x14)>
