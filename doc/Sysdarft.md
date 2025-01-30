@@ -1965,10 +1965,10 @@ while `EXR0` being `0xF1` indicates no external device provides communication on
 %endif ; _INT_AND_PORT_ASM
 ```
 
-#### File `example_a.asm`
+#### File `disk_io.asm`
 
 ```
-; example_a.asm
+; disk_io.asm
 ;
 ; Copyright 2025 Anivice Ives
 ;
@@ -2031,7 +2031,7 @@ _newline:
     mul     .16bit      <$(80)>
     SETCUSP
     REFRESH
-    jmp         <%cb>,      < .exit>
+    jmp                 <%cb>,                      < .exit>
 
     .scroll:
         ; move content (scroll up)
@@ -2111,7 +2111,7 @@ _puts:
 _print_num:
     pushall
 
-    xor .64bit          <%fer2>,                    <%fer2>       ; record occurances of digits
+    xor .64bit          <%fer2>,                    <%fer2>       ; record occurrences of digits
     .loop:
         div .64bit      <$(10)>
         ; %fer0 ==> ori

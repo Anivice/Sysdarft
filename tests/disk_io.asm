@@ -1,4 +1,4 @@
-; example_a.asm
+; disk_io.asm
 ;
 ; Copyright 2025 Anivice Ives
 ;
@@ -22,7 +22,7 @@
 
 %include "./int_and_port.asm"
 
-jmp <%cb>, <_start>
+jmp                     <%cb>,                      <_start>
 
 ; _putc(%EXR0, linear position, %EXR1, ASCII Code)
 _putc:
@@ -44,13 +44,8 @@ _putc:
 
 ; _newline(%EXR0, linear address)
 _newline:
-    push    .16bit      <%exr1>
-    push    .64bit      <%dp>
-    push    .64bit      <%db>
-    push    .64bit      <%ep>
-    push    .64bit      <%eb>
-    push    .64bit      <%fer3>
-
+    pushall
+    int                 <$(0x15)>
     div     .16bit      <$(80)>
     ; EXR0 quotient(row), EXR1 reminder(col)
     cmp     .16bit      <%exr0>,                    <$(24)>
@@ -87,12 +82,8 @@ _newline:
         REFRESH
     .exit:
 
-    pop .64bit          <%fer3>
-    pop .64bit          <%eb>
-    pop .64bit          <%ep>
-    pop .64bit          <%db>
-    pop .64bit          <%dp>
-    pop .16bit          <%exr1>
+    popall
+    int                 <$(0x15)>
     ret
 
 ; _puts(%DB:%DP), null terminated string
@@ -141,7 +132,7 @@ _puts:
 _print_num:
     pushall
 
-    xor .64bit          <%fer2>,                    <%fer2>       ; record occurances of digits
+    xor .64bit          <%fer2>,                    <%fer2>       ; record occurrences of digits
     .loop:
         div .64bit      <$(10)>
         ; %fer0 ==> ori

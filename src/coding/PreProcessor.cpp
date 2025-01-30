@@ -144,6 +144,13 @@ line_marker_register(std::vector<std::string> & file)
     }
 
     if (!current_file_section.empty()) {
+        for (std::string & cursf_line : current_file_section)
+        {
+            for (const auto & [marker, rep] : sub_linemarkers) {
+                replace_whole_word(cursf_line, marker, rep);
+            }
+        }
+
         processed_file_sections.emplace_back(current_file_section);
     }
 

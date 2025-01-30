@@ -309,6 +309,7 @@ std::string show_context(SysdarftCPU &CPUInstance,
     ////////////////////////////////////////////////////////////////////////////////
     // SHOW DB:DP (128 bytes)
     ////////////////////////////////////////////////////////////////////////////////
+    try
     {
         ss << "==============================================================================\n";
         ss << "[DB:DP]:\n";
@@ -321,11 +322,14 @@ std::string show_context(SysdarftCPU &CPUInstance,
             data_buffer.push_back(c);
         }
         ss << xxd_like_dump(data_off, data_buffer) << "\n";
+    } catch (const std::exception&) {
+        ss << "[DB:DP]: [INVALID]\n";
     }
 
     ////////////////////////////////////////////////////////////////////////////////
     // SHOW EB:EP (128 bytes)
     ////////////////////////////////////////////////////////////////////////////////
+    try
     {
         ss << "==============================================================================\n";
         ss << "[EB:EP]:\n";
@@ -338,11 +342,14 @@ std::string show_context(SysdarftCPU &CPUInstance,
             ext_buffer.push_back(c);
         }
         ss << xxd_like_dump(ext_off, ext_buffer) << "\n";
+    } catch (const std::exception&) {
+        ss << "[EB:EP]: [INVALID]\n";
     }
 
     ////////////////////////////////////////////////////////////////////////////////
     // SHOW SB:SP (128 bytes)
     ////////////////////////////////////////////////////////////////////////////////
+    try
     {
         ss << "==============================================================================\n";
         ss << "[SB:SP]:\n";
@@ -355,6 +362,8 @@ std::string show_context(SysdarftCPU &CPUInstance,
             stack_buffer.push_back(c);
         }
         ss << xxd_like_dump(stack_off, stack_buffer) << "\n";
+    } catch (const std::exception&) {
+        ss << "[EB:SP]: [INVALID]\n";
     }
 
     ss << "==============================================================================\n";
