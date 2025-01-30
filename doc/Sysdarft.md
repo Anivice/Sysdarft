@@ -4,46 +4,51 @@
 
 # **Notation Conventions**
 
-This manual uses specific notation for data-structure formats,
-for symbolic representation of instructions,
-and for hexadecimal and binary numbers.
-This notation is described below.
+This manual employs specialized notational conventions to delineate data structure formats,
+symbolically represent instructions,
+and articulate hexadecimal and binary numerical systems.
+A comprehensive exposition of these notational frameworks is provided in the sections that follow.
 
 ## Bit and Byte Order
 
-In illustrations of data structures in memory,
-unlike Intel architecture manuals,
-smaller addresses appear toward the *top* of the figure;
-addresses increase toward the *bottom*.
-Similarly, however,
-bit positions are numbered from right to left,
-with the leftmost bit being LSB (Least Significant Bit) and the rightmost bit being MSB (Most Significant Bit),
-and the numerical value of a set bit is equal to two raised to the power of the bit position,
-same ways identical to Intel architectures as well as that of most ARM and RISC.
+In the representation of data structures within memory,
+this manual diverges from the conventions typically found in Intel architecture documentation.
+Specifically, lower memory addresses are depicted at the **top** of the illustration,
+with addresses incrementing progressively toward the **bottom**.
+
+Furthermore, bit positions are systematically numbered from right to left,
+designating the leftmost bit as the **Least Significant Bit (LSB)**
+and the rightmost bit as the **Most Significant Bit (MSB)**.
+The numerical value associated with an active bit is determined
+by two raised to the power of its respective bit position.
+This methodology aligns consistently with the standards employed in Intel architectures,
+as well as those prevalent in most ARM and RISC architectures.
 
 ![Bit and Byte Order](BitAndByteOrder.png)
 
-Exactly identical to Intel 64 and IA-32 processors,
-who are "little endian"[^LittleEndian] machines,
-that is, the bytes of a word are numbered starting from the least significant byte (byte with the smallest address),
-Sysdarft operates in a same way without a complicated protected mode and multitask support.
+The architecture of Sysdarft is meticulously congruent with that of Intel 64 and IA-32 processors,
+which are characterized as **little endian**[^LittleEndian] systems.
+In this context, the byte ordering within a word commences with the least significant byte,
+corresponding to the smallest memory address, and progresses sequentially to the most significant byte.
+Furthermore, Sysdarft operates in an analogous manner,
+eschewing the complexities associated with protected modes and foregoing support for multitasking functionalities.
 
 [^LittleEndian]:
-Endianness is the order
-in which bytes within a word
-(a given computer architecture's native unit of data,
-a $64\text{-bit}$ system typically has $64\text{-bit}$ words (8-byte),
-which is called the native word size in which a computer executes many operations rather than a byte at a time,
-[@Intel64AndIA32ArchitecturesSoftwareDevelopersManualCombinedVolumes]
-though not the case for Sysdarft who operates in an $8\text{-bit}$ data stream)
-of digital data are transmitted over a data communication medium or addressed in computer memory,
-counting only byte significance compared to earliness[@OnHolyWarsAndAPleaForPeace].
-Danny Cohen adopted the term endianness from Jonathan Swift's Gulliver's Travels
-[@GulliversTravels],
-where Swift described a conflict between sects of Lilliputians
-divided into those breaking the shell of a boiled egg from the big end or from the little end.
-Little-endian system recognizes that the least significant byte is the byte whose address is the smallest in memory,
-and data is traversed from the smallest address towards larger ones.
+Endianness refers to the sequence in which bytes within a word - defined as the native unit of data
+for a given computer architecture - are arranged and transmitted over a data communication medium
+or addressed in computer memory.
+In a 64-bit system, for example, words typically consist of 64 bits (8 bytes),
+representing the native word size through which a computer performs multiple operations simultaneously,
+as opposed to processing data one byte at a time
+[@Intel64AndIA32ArchitecturesSoftwareDevelopersManualCombinedVolumes].
+However, this does not apply to Sysdarft, which operates using an 8-bit data stream.    
+The term "endianness" was coined by Danny Cohen,
+drawing inspiration from *Gulliver's Travels* [@GulliversTravels],
+wherein Swift depicted a conflict among the Lilliputians
+over whether to crack eggshells from the big end or the little end.
+In a little-endian system, the least significant byte occupies the smallest memory address,
+and data is processed sequentially from the smallest address to larger ones
+[@OnHolyWarsAndAPleaForPeace].
 
 ## Hexadecimal and Binary Numbers
 
@@ -64,133 +69,152 @@ usually memory or some other data stream[@OxfordEnglishDictionary].
 
 ## Registers 
 
-*Registers are primitives used in hardware design that
-are also visible to the programmer when the computer is completed,
-so you can think of registers as the bricks of computer construction.*
-[@ComputerOrganizationAndDesign]
+Registers are fundamental primitives utilized in hardware design
+and are accessible to programmers upon the completion of the computer system,
+thereby serving as the foundational elements of computer construction [^Registers].
 
-CPU relies on registers to perform most of the tasks.
-Registers are fix-sized data storages inside the CPU.
+The CPU relies on registers to execute the majority of its operations,
+with registers functioning as fixed-size data storage units within the CPU.
+
+[^Registers]:
+Registers are primitives used in hardware design that
+are also visible to the programmer when the computer is completed,
+so you can think of registers as the bricks of computer construction.
+[@ComputerOrganizationAndDesign]
 
 ## Memory
 
-Memory is accessible space outside the CPU.
-The amount of memory a system can access is called *Accessible Memory*.
-The maximum memory space a typical $64$-bit system can access is named *Addressable Memory*.
-The minimum memory unit is called *byte*.
-A typical single byte consists of $8$ binary bits.
-Each byte is assigned an address in memory space,
-from `0x0000000000000000` to the maximum value `0xFFFFFFFFFFFFFFFF`.
+Memory constitutes the accessible storage space external to the Central Processing Unit (CPU).
+The total volume of memory that a system can access is designated as *Accessible Memory*.
+In contrast,
+the maximum memory capacity that a standard 64-bit system can address is referred to as *Addressable Memory*.
+The smallest unit of memory is known as a *byte*, typically comprising eight binary bits.
+Each byte within the memory space is assigned a unique address,
+ranging from `0x0000000000000000` to the maximum value of `0xFFFFFFFFFFFFFFFF`.
 
 ## Exceptions
 
 An exception is an event that typically occurs when an instruction causes an error
 [@Intel64AndIA32ArchitecturesSoftwareDevelopersManualCombinedVolumes].
-An exception is a specific error type.
-For example, an attempt to divide by zero causes an exception.
-Reporting an exception is called *throw*,
-or *an exception of `DIV/0` (divided by `0`) being thrown*,
-which typically aborts any process followed by the position where exception occurs.
+It represents a specific type of error.
+For example, an attempt to divide by zero results in an exception.
+Reporting an exception is referred to as *throwing* an exception,
+such as *a `DIV/0` (division by zero) exception being thrown*,
+which typically aborts the procedure following the location where the exception occurred.
 
 # **CPU Registers**
 
-Registers are generally preferred compared to accessing memory directly,
-since the average time of reading/writing to registers is much lower than that
-of the memory.
-
-For Sysdarft, there are two register types:
+Registers are preferentially utilized over direct memory access
+due to their substantially lower latency in read and write operations compared to memory.
+Within the Sysdarft architecture, registers are systematically categorized into two distinct types:
 **General-Purpose Registers** and **Special-Purpose Registers**.
 
 ## General-Purpose Registers
 
-There exist sixteen general-purpose registers.
-Each of the sixteen general-purpose registers is $64\text{-bit}$ in width,
-meaning each has $64$ binary bits to store data.
+The Sysdarft architecture comprises sixteen general-purpose registers,
+each configured with a width of 64 bits.
 
 ### Fully Extended Registers
 
-Fully extended registers (FERs) are the sixteen $64\text{-bit}$ general-purpose registers
-mentioned above, named `%FER0`, `%FER1`, ..., `%FER15`.
+Fully Extended Registers (FERs) constitute the sixteen 64-bit general-purpose registers previously delineated,
+each uniquely designated as `%FER0`, `%FER1`, ..., `%FER15`.
 
 ### Half-Extended Registers
 
-Half-extended registers, or HERs, are $32\text{-bit}$ registers for general purposes.
-There are eight HERs, named `HER0`, `HER1`, ..., `HER7`.
+**Half-Extended Registers (HERs)** are 32-bit general-purpose registers within the Sysdarft architecture,
+encompassing eight distinct entities designated as `HER0`, `HER1`, ..., `HER7`.
 
-The eight $32\text{-bit}$ registers are actually split from the first four $64\text{-bit}$ registers,
+These eight 32-bit registers are derived by bifurcating the initial four 64-bit Fully Extended Registers (FERs),
 specifically `FER0` through `FER3`.
-This means that modifying the contents of *either* of the $32\text{-bit}$ or $64\text{-bit}$
-versions of these registers affects content of *both* of the $32\text{-bit}$ and $64\text{-bit}$ registers,
-as they share the same underlying space.
+Consequently,
+any modification to the contents of either the 32-bit HERs or their corresponding 64-bit FERs
+concurrently affects both versions,
+as they occupy the same underlying storage space.
 
 ### Extended Registers
 
-Extended registers[^EXR], or EXRs, are $16\text{-bit}$ registers used for general purposes.
-There are 8 EXRs, named `EXR0`, `EXR1`, ..., `EXR7`.
-Similar to *Half-Extended Registers*,
-these $16\text{-bit}$ registers are split from the first four $32\text{-bit}$ registers,
+**Extended Registers (EXRs[^EXR])** are 16-bit general-purpose registers within the Sysdarft architecture,
+comprising eight distinct entities designated as `EXR0`, `EXR1`, ..., `EXR7`.
+Analogous to *Half-Extended Registers*,
+these 16-bit registers are derived by partitioning the first four 32-bit registers,
 specifically `HER0` through `HER3`.
 
 [^EXR]:
-The reason why $16\text{-bit}$ registers are referred to as *Extended Registers*
-while $32\text{-bit}$ registers are *Half-Extended Registers*
-is that Extended Registers extend the original $8\text{-bit}$ registers
-while the *Half* in Half-Extended Registers is an indication of their sizes being
-half the size of *Fully Extended Registers*, which are $64\text{-bit}$ in width.
-This naming crisis arises due to the lack of communication during the development,
-and the scope of the project has grown so enormous that revising the code base is painful and seemingly unnecessary.
+The designation of the 16-bit registers as *Extended Registers*
+and the 32-bit registers as *Half-Extended Registers* originates
+from their hierarchical relationship to the original 8-bit and Fully Extended 64-bit registers, respectively.
+Specifically, the *Extended Registers* serve as extensions of the initial 8-bit registers,
+thereby expanding their functionality and capacity.
+Conversely,
+the prefix *Half* in *Half-Extended Registers* signifies
+that these 32-bit registers are precisely half the size of the *Fully Extended Registers*,
+which are 64 bits in width.
 
-Similarly,
-this means that modifying the contents of either type of registers affects content inside
-all types of registers.
+Similarly, this implies that altering the contents of any register type affects the contents of all register types.
 
 ### Registers
 
-Registers are $8\text{-bit}$ CPU registers used for general purposes.
-There are eight Registers, named `R0`, `R1`, ..., `R7`.
-These $8\text{-bit}$ registers are derived from the first four $16\text{-bit}$ registers,
+**Registers** constitute 8-bit general-purpose registers within the Sysdarft architecture,
+encompassing eight distinct entities designated as `R0`, `R1`, ..., `R7`.
+These 8-bit registers are derived from the initial four 16-bit Extended Registers (EXRs),
 specifically `EXR0` through `EXR3`.
-And modifying *any* of the $8\text{-bit}$ registers affects *all* types of registers sharing
-the same space.
+Consequently,
+any modification to the contents of an 8-bit register concurrently impacts all associated register types
+that share the same underlying memory space.
 
-*The reason behind designing different width types of registers sharing the same area is that
-it enables splitting data into width-specific pieces through register related operations alone
-without relying on complicated bitwise operations or accessing external memory space.*
+The rationale for designing registers of varying widths that occupy the same physical space is
+to facilitate the partitioning of data into width-specific segments exclusively through register-related operations.
+This approach obviates the necessity for complex bitwise manipulations or the need to access external memory spaces,
+thereby streamlining data handling within the CPU architecture.
 
 ## Special-Purpose Registers
 
 ### Segmentation and Segmented Addressing
 
+Segmentation and segmented addressing were initially implemented in the 1970s with the introduction of the Intel 8086,
+the first widely accessible processor for practical use case
+without the necessity for deploying extensive electronic infrastructure,
+therefore, popularly deployed in personal use.
+Segmented addressing was employed to extend the processor's 16-bit memory bus to a 20-bit width,
+while maintaining the internal registers at 16 bits to minimize the manufactory cost.
+Consequently, the actual physical address, the linear address not segmentally referenced in memory,
+is computed using the following formula:
+
+$\text{Physical Address} = (\text{Segment Address} \ll 4) + \text{Segment Offset}$
+
+**Where:**
+
+- **Physical Address** refers to the address as recognized by the memory unit [@OperatingSystemConcepts].
+- **Segment Address** denotes the address of the segment, which is derived by shifting the physical address four bits to the right, effectively calculating $\text{Physical Address} \div 2^{4}$ [@INTEL80386PROGRAMMERSREFERENCEMANUAL].
+- **Segment Offset** represents the displacement from the current position to the beginning of the segment.
+- **$x \ll n$** signifies the bitwise left shift operation, wherein the value $x$ is shifted $n$ bits to the left, equivalent to multiplying $x$ by $2^n$.
+
+Usually, segmented address is denoted by `[Segmnet Address]:[Segment Offset]`[^SegmentNotation]
+
+[^SegmentDenoting]
 *A chunk of memory is known as a segment and hence the phrase
 'segmented memory architecture.'
 ...,
 A memory location is identified with a segment and an offset address
 and the standard notation is `segment:offset`.*[@SoftwareDevelopmentForEngineers]
 
+In the context of Sysdarft, a 64-bit wide memory bus is utilized,
+the segment is no longer shifted four bits toward the left, and is instead added by offset directly
+to compute the physical address, identical to later Intel IA-32 architectures[^IA32Segmentation]:
+
+$\text{Physical Address} = \text{Segment Address} + \text{Segment Offset}$
+
+
+Although segmented addressing may appear superfluous given the expansive width of the memory bus,
+there exists at least one pertinent application for segmentation: program relocation.
+This functionality underscores the continued relevance of segmented addressing within the Sysdarft architecture,
+facilitating the dynamic movement and management of program segments
+without necessitating complex memory manipulation techniques.
+
+[^IA32Segmentation]:
 *In segmentation, an address consists of two parts: a segment number and a segment offset.
 The segment number is mapped to a physical address,
 and the offset is added to find the actual physical address.*[@ComputerOrganizationAndDesign]
-
-Segmentation and segmented addressing were firstly used back in the 1970s,
-in Intel 8086, the first usable processor at home to avoid installing an electronic giant.
-Segmented addressing was used to extend its $16\text{-bit}$ memory bus to $20\text{-bit}$ in width,
-with its internal registers remaining at $16\text{-bit}$.
-This means the actual physical address is calculated by the following formula:
-
-$\text{Physical Address} = \text{Segment Address} \ll 4 + \text{Segment Offset}$ 
-
-*where*
-
-- *Physical Address* is an address seen by the memory unit[@OperatingSystemConcepts].
-- *Segment Address* being the address of the segment, which is its physical address shifting four bits
-                    to the right ($\text{Physical Address} \over 2^{4}$)[@INTEL80386PROGRAMMERSREFERENCEMANUAL].
-- *Segment Offset* being the length from the current position to the start of the segment.
-- *$x \ll n$* being the bit left shifting operation, value $x$ shifting $n$ bits towards the left ($x \times 2^n$).
-
-In Sysdarft, it uses a $64\text{-bit}$ wide memory bus.
-A segmented addressing may seem unnecessary,
-but there exists at least one use case where segmentation is relevant,
-and this is program relocation.
 
 ### Program Relocation
 
@@ -209,24 +233,30 @@ absolute code in that PIC can be loaded into any memory location.
 The advantage of PIC over absolute code is that PIC does not require you to
 reserve a specific block of memory[@iRMX86ApplicationLoaderReferenceManual].
 
-If the code is PIC, like BIOS, then its position and size in the memory is static and known.
-However, As a user program, which would not be able to and should not assume which specific part of memory is free,
+If the position of the code is absolute, like BIOS, then its position and size in the memory is static and known.
+However, as a user program, which would not be able to and should not assume which specific part of memory is free,
 as its location in memory is arbitrary and should not be predetermined.
 The operating system loads it wherever it deems appropriate.
 Using absolute code eliminates the flexibility of user programs;
 thus, position-independent code should be employed instead.
 
-Segmentation can easily solve this issue.
-While the segment location remains unclear until a loader like DOS loads it into the memory,
-the segment offset, the length from a position inside the code to the start,
-is known to the programmer.
-Each program is a position independent code segment inside the memory,
-and is managed using special-purpose registers.
+Segmentation effectively addresses the aforementioned issue.
+Specifically, while the exact **segment location** remains undetermined until a loader,
+such as DOS, allocates it within memory,
+the **segment offset** - defined as the displacement from a specific position
+within the code to the segment's commencement - is predetermined and known to the programmer.
+
+Each program operates as a **position-independent code segment** within the memory space.
+This design ensures that the program's functionality is not tied to a fixed memory address,
+thereby enhancing flexibility and portability.
+The management of these position-independent code segments is facilitated
+through the use of **special-purpose registers**,
+which oversee the dynamic allocation and referencing of memory segments during program execution.
 
 ### Code Segment
 
 The code segment is typically managed by the operating system rather than the user.
-The pointer for this segment, the instruction pointer (`%IP`), is inaccessible,
+The offset for this segment, the instruction pointer (`%IP`), is inaccessible,
 even to the operating system.
 However, the Code Base (`%CB`) register is accessible and can be used to set up a code segment.
 
@@ -245,7 +275,7 @@ like a long call or long jump.
 There are four registers that can be used together to reference two data segments:
 Data Base (`%DB`), Data Pointer (`%DP`), Extended Base (`%EB`), and Extended Pointer (`%EP`).
 These registers function in pairs, i.e., `%DB` with `%DP` and `%EB` with `%EP`, to address and access
-two data segments simultaneously.
+two data segments simultaneously, though general-purpose registers can be used to perform the function.
 
 ### Stack Management
 
@@ -266,19 +296,16 @@ Stack base, or `%SB`, is a $64\text{-bit}$ register that stores the start point 
 
 Stack pointer, or `%SP`, is a $64\text{-bit}$ register that stores the *end* of the *usable* stack space.
 
-The stack grows downwards, meaning data is stored from the end toward the start.
+The stack grows upwards, meaning data is stored from the end toward the start.
 This design simplifies stack allocation:
 by setting the pointer to a specific size, the stack is automatically sized accordingly.
+
+![Stack](stack.png)
 
 The following is a demonstration illustrating how a stack is managed
 (Push and Pop Data onto the Stack):
 
-![Stack](stack.png)
-
 Suppose the stack pointer `%SP` initially points to address `0x1000` and `%SB` points to `0xFFFF`.
-
-When a value is pushed onto the stack, the `%SP` is decreased (since the stack grows downward),
-and the value is stored at the new address.
 
 ```
    (Stack End)        (Stack Pointer)      (Stack Base)
@@ -288,8 +315,8 @@ and the value is stored at the new address.
   0xFFFF:0x1000       0xFFFF:0x0FF8       0xFFFF:0x0000
 ```
 
-When a value is popped from the stack, the `%SP` is increased and the stack grows back up,
-freeing the space in the process.
+When a value is pushed onto the stack, `%SP` is decreased (since the stack grows upward),
+and the value is stored at the new address.
 
 ```
    (Stack End)    (Stack Pointer After Pop)                      (Stack Base)
@@ -301,6 +328,9 @@ freeing the space in the process.
         |                    |                   |                   |
   0xFFFF:0x1000        0xFFFF:0x0FF9       0xFFFF:0x0FF8       0xFFFF:0x0000
 ```
+
+When a value is popped from the stack, `%SP` is increased and the stack grows back down,
+freeing the space in the process.
 
 #### Stack Overflow
 
@@ -332,11 +362,11 @@ Invert the bits to get `1111 1110`, then add one to obtain `1111 1111`.
 This final value, `1111 1111`, represents `-1` in an $8\text{-bit}$ two's complement system.
 
 In the two's complement system, signed integers represent both positive and negative values.
-For each binary number, the radix complement is called the two’s complement
+For each binary number, the radix complement is called the two's complement
 (since radix is `2` for binary).
 The MSB (Most Significant Bit) of a number in this system serves as the sign bit;
 a number is negative if and only if its MSB is `1`.
-The decimal equivalent for a two’s-complement binary number is computed the same way as for an unsigned number,
+The decimal equivalent for a two's-complement binary number is computed the same way as for an unsigned number,
 except that the weight of the MSB is $-2^(n-1)$, instead of $+2^(n-1)$.
 The range of representable numbers is $-2^(n-1)$ through $+2^(n-1)$[@DigitalDesignPrinciplesAndPractices]
 
@@ -364,6 +394,8 @@ or `1111111111111111111111111111111111111111111111111111111111111111`,
 where every bit in the stack pointer is set to `1` which, when assumed as unsigned,
 is the maximum value a $64\text{-bit}$ register can represent ($18446744073709551615_10$).
 
+---
+
 As a result, the stack pointer points to an address that
 even a $64\text{-bit}$ system may not be able to access.
 This occurs because the pointer, when combined with its base address,
@@ -386,7 +418,7 @@ Flag register is a user-inaccessible register containing the following flags:
 | *Equal*, *EQ*            | Set by `CMP`, when $\text{Operand1} = \text{Operand2}$                                                                |
 | *InterruptionMask*, *IM* | Set and cleared by CPU automatically when an interruption triggered, can manually set by `ALWI` and cleared by `IGNI` |
 
-### Current Procedure Stack Preservation Space
+### Current Procedure Stack Preservation Space, `CPS`
 
 Current procedure stack preservation space is a user-inaccessible register,
 preservable only through `PUSHALL`[^PUSHALL] and recoverable by `POPALL`[^POPALL] indirectly,
@@ -405,7 +437,7 @@ Refer to *Assembler Syntax* and *Appendix A* for more information.
 `ENTER [Width] [Number]` preserves a stack space to allocate spaces for local variables.
 Procedure of `ENTER` can be described as:
 ```
-    CBS = Number;   // CBS is Current Procedure Stack Preservation Space
+    CPS = Number;   // CBS is Current Procedure Stack Preservation Space
     SP = SP - CPS;  // SP is stack pointer
 ```
 Refer to *Assembler Syntax* and *Appendix A* for more information.
@@ -415,7 +447,7 @@ Refer to *Assembler Syntax* and *Appendix A* for more information.
 Procedure of `LEAVE` can be described as:
 ```
     SP = SP + CPS;  // SP is stack pointer
-    CBS = 0;        // CBS is Current Procedure Stack Preservation Space  
+    CPS = 0;        // CBS is Current Procedure Stack Preservation Space  
 ```
 Refer to *Assembler Syntax* and *Appendix A* for more information.
 
@@ -428,31 +460,44 @@ Sysdarft assembler, like many other assemblers, is case-insensitive.
 ## Preprocessor directives
 
 Preprocessor directives are not program statements but directives for the preprocessor.
-The preprocessor examines the code before actual compilation of code begins
-and resolves all these directives before any code is actually generated by regular statements[@CPPPrimer].
+The preprocessor examines the code before actual compilation of the code begins.
 
 ### Declarative PreProcessor Directives
 
 Declarative PreProcessor Directives are used to manipulate the code assembling process.
 
-#### .org
+### `.org [Decimal or Hexadecimal]`
 
 `.org`, or origin, defines the starting offset for code in memory.
 While the default origin is `0x00`, some absolute code (like BIOS) loads at specific addresses such as `0xC1800`.
 If the assembler assumed an origin of `0x00`,
-all line markers starts at `0x00` and would be inconsistent with the actual location of the code
+all line markers (symbols[^symbols]) start at `0x00` and would be inconsistent with the actual location of the code
 (like `0xC1800`).
 `.org` can manually specify the correct starting address,
 ensuring proper offset calculations for absolute code.
 
-#### Syntax and Example
+[^symbols]:
+A symbol, identifier, line marker, or label, is a name associated with some particular value.
+This value can be an offset within a segment, a constant, a string, a segment address,
+an offset within a record, or even an operand for an instruction.
+In any case,
+a label provides us with the ability to represent some otherwise
+incomprehensible value with a familiar, mnemonic, name.     
+A symbolic name consists of a sequence of letters, digits, and special characters, with
+the following restrictions:
+- A symbol cannot begin with a numeric digit.
+- A name can have any combination of upper and lower case alphabetic characters.
+- A symbol may contain any number of characters.
+- The '_' and '.' symbols may appear anywhere within a symbol.
+[@TheArtOfAssemblyLanguage]
+
+#### Example
 
 ```
-    .org [Decimal or Hexadecimal]
     .org 0xC1800
 ```
 
-#### .equ
+### `.equ '[Search Target]', '[Replacement]'`
 
 In assembly or low-level programming, the `.equ` directive is used to
 *replace occurrences of a string* with another, similar to how macros work in C.
@@ -472,11 +517,9 @@ It is essentially a way to define *symbolic constants* or *aliases* for values o
   the `.equ` directive can behave like a regular expression search-and-replace.
   This means assembler can capture string groups and modify them using regular expression.
 
-#### Syntax and Example
+#### Example
 
 ```
-    .equ '[Search Target]', '[Replacement]'
-    
     ; regular expression not enabled
     .equ 'HDD_IO', '0x1234'
     ; regular expression enabled
@@ -484,18 +527,17 @@ It is essentially a way to define *symbolic constants* or *aliases* for values o
     .equ 'ADD\s*\((.*), (.*)\)', 'ADD .64bit <\1>, <\2>'
 ```
 
-#### .lab (*deprecated*)
+### `.lab marker1, [marker2, ...]`
 
-Define one or more line markers.
-This directive is deprecated.
-Line markers can be auto scanned and defined without relying on this directive.
-This directive has no effect unless it is meant to serve as a pre-definition
+Declare one or more line markers.
+Line markers can be auto scanned and defined without relying on this directive,
+unless its presence is not in the current file.
+This directive has no effect unless it is meant to serve as a declaration
 for a cross-referencing symbol for multiple files.
 
-#### Syntax and Example
+#### Example
 
 ```
-    .lab marker1, [marker2, ...]
     .lab _start, _end
 ```
 
@@ -511,34 +553,33 @@ for a cross-referencing symbol for multiple files.
 Content directives are directives can be used to insert data into the code region,
 apart from the instruction sets.
 
-#### `@` and `@@`
+### `@` and `@@`
 
 `@` and `@@` are code offset references.
 `@` means the segment offset of the current instruction.
 `@@` means the code origin, if `.org` is not specified, its value is `0x00`.
 Both `@` and `@@` are constant value, and should be treated as one.
 
-#### Syntax and Example
+#### Example
 
 ```
     JMP <%CB>, <$(@)>
 ```
 
-#### .resvb
+### `.resvb < [Mathematical Expression] >`
 
 `.resvb` is short for `reserve bytes`.
 It reserves a fixed size of a data region inside the code area.
 This is essential when it comes to size alignment or padding.
 It supports mathematical expressions like `+, -, * ,/, %, etc.`.
 
-#### Syntax and Example
+#### Example
 
 ```
-    .resvb < [Mathematical Expression] >
     .resvb < 16 - ( (@ - @@) % 16 ) > ; ensure 16 byte alignment
 ```
 
-#### .string
+### `.string < "STRING" >`
 
 `.string` is an easy way to insert a continuous string of ASCII code.
 It is useful if one were to store data in the code area, especially by BIOS code.
@@ -555,14 +596,13 @@ Among the others that C provides are
 `\"` for the double quote,
 and `\\` for the backslash itself[@TheCProgrammingLanguage].
 
-#### Syntax and Example
+#### Example
 
 ```
-    .string < "ASCII String" >
     .string < "Hello World!!\n" > 
 ```
 
-#### .8bit_data, .16bit_data, .32bit_data, and .64bit_data
+### `.8bit_data`, `.16bit_data`, `.32bit_data`, and `.64bit_data` `< Expression >`
 
 `.8bit_data`, `.16bit_data`, `.32bit_data`, and `.64bit_data`
 are preprocessor directives used to insert width-specific data into the code region.
@@ -573,22 +613,81 @@ Unlike what is shown by the disassembler, where `.[N]bit_data` can accept contin
 value of the segment offset of the corresponding instructions following them.
 It also accepts `@` and `@@` directives, as well as normal mathematical expressions.
 
-#### Syntax and Example
+#### Example
 
 ```
-    .[N]bit_data < Expression >
     .64bit_data < @ - @@ > 
 ```
 
-### Control Flow Directives
+### Assembling Control Flow and Conditional Compilation Directives
 
-Control flow directives affect how the code assembling process is carried out.
+This type of directives is meant to control the compiling behavior of the assembler.
 
-#### %include
+### `%include "[FILE PATH]"`
 
-`%include` directive will include a file and extract its symbols
+Include a file, and passes it onto preprocessor to record its directives and symbols,
+but not the actual assembler.
+Any actual code inside the included files is not assembled.
 
-## Instruction Statements
+### `%define [DEFINITION] [Replacement]`
+
+A *definition* comprises a `[DEFINITION]` identifier
+and an optional `[Replacement]` value.
+During the processing of a source file,
+a `.equ '[DEFINITION]', '[Replacement]'` directive is generated to substitute
+the original definition directive.
+This mechanism results in the addition of an assembler definition
+for `[DEFINITION]` within the assembler,
+thereby facilitating conditional compilation
+based on the presence or absence of specific definitions.
+
+### `%ifdef [DEFINITION], %ifndef [DEFINITION], %else, %endif`
+
+*Conditional Compilation Directives* within the Sysdarft architecture encompass `%ifdef` and `%ifndef`,
+which enable the selective inclusion or exclusion of code segments
+based on the definition status of specific `[DEFINITION]`s.
+
+- **`%ifdef [DEFINITION]`**: This directive initiates a conditional block
+  that processes the subsequent code only if `[DEFINITION]` is defined.
+  The processing continues until a `%else` or `%endif` directive is encountered.
+  If a `%else` is present, the code following `%else` is disregarded, and processing resumes after `%endif`.
+
+- **`%ifndef [DEFINITION]`**: Conversely,
+  this directive processes the ensuing code block only if `[DEFINITION]` is not defined.
+  Similar to `%ifdef`, the processing continues until a `%else` or `%endif` is reached.
+  In the presence of a `%else`, the code following it is ignored, and execution continues post-`%endif`.
+
+This mechanism ensures that when `%ifdef` is employed,
+the associated code is active only under defined conditions,
+whereas `%ifndef` activates code in the absence of such definitions.
+This bidirectional conditional structure facilitates modular and adaptable code architecture
+by allowing developers to manage code inclusion dynamically based on predefined conditions.
+
+### `%warning STRING`
+
+The `%warning` directive enables the assembler
+to emit a specified warning message encapsulated within the `STRING` parameter.
+Upon encountering this directive,
+the assembler will display the provided warning message to inform the developer of potential issues,
+noteworthy conditions, or other relevant information pertinent to the assembly process.
+Importantly, the invocation of `%warning` does not interrupt or terminate the assembly workflow;
+instead, it serves as a non-intrusive notification mechanism
+that allows the assembly process to continue unabated while still alerting the developer to significant considerations.
+
+### `%error STRING`
+
+The `%error` directive serves as a critical exception mechanism within the assembly process.
+When this directive is encountered,
+the assembler interprets it as an exception event and generates the specified `STRING` as an error message.
+Unlike the `%warning` directive,
+which issues non-intrusive notifications, `%error` mandates the immediate termination of the assembly process.
+This behavior ensures that any unresolved or severe issues are promptly addressed by halting the assembly workflow,
+thereby preventing the creation of potentially flawed or incomplete machine code.
+The `%error` directive is instrumental in enforcing stringent error handling protocols,
+ensuring the integrity and reliability of the assembly process by unequivocally
+aborting operations upon the detection of critical conditions or irrecoverable errors.
+
+## Assembler Instruction Statements
 
 Instruction statements are actions performed by processor.
 
@@ -669,7 +768,7 @@ Memory references are a complicated expression:
 
 *and*
 
-$\text{Memory Reference Physical Address} = \text{\%DB} + \text{Ratio} \times (\text{Base} + \text{Offset1} + \text{Offset2})$
+$\text{Memory Reference Physical Address} = \text{Ratio} \times (\text{Base} + \text{Offset1} + \text{Offset2})$
 
 *where*
 
@@ -677,7 +776,6 @@ $\text{Memory Reference Physical Address} = \text{\%DB} + \text{Ratio} \times (\
 - *Base*, *Offset1*, *Offset2* can be and can only be either constant expressions or registers.
 - *Width* specifies data width of the memory location, which can be `8`, `16`, `32`, `64`,
               representing $8\text{-bit}$, $16\text{-bit}$, $32\text{-bit}$, and $64\text{-bit}$ data respectively.
-- *`%DB`* being Data Segment Base Register.
 
 The following is an example of a memory reference:
 
@@ -686,9 +784,9 @@ The following is an example of a memory reference:
 ```
 
 This address points to a $64\text{-bit}$ data width space at the address
-$(\text{\%FER1} + \text{0xFC} + \text{0xBC}) \times 2 + \text{\%DB}$
+$(\text{\%FER1} + \text{0xFC} + \text{0xBC}) \times 2$
 
-#### Line Markers
+#### Line Markers, or Symbols
 
 Line markers are special operands that record the offset of their corresponding code.
 
@@ -701,18 +799,21 @@ For example:
         XOR .32bit <%HER0>, <%HER0>
 ```
 
-`_start` is identified as a line marker by its tailing `":."`
+`_start` is identified as a line marker by its tailing `':'`.
 Only spaces and tabs may appear after the colon, any other elements like instructions are considered as errors.
 
 If `.org` is not specified, line markers are calculated as offsets from the beginning of the file, starting at `0`.
 If `.org` is specified, the offset is calculated from $\text{the offset within the file} + \text{specified origin}$.
+
+Line markers are ineligible for utilization within constant calculations or memory reference operations.
+Instead, they must be initially stored within a register before being referenced subsequently.
 
 # **Memory Layout**
 
 Sysdarft reserves memory from `0xA0000` to `0xFFFFF`.
 This part contains the crucial code that ensures the functionality of the system.
 
-#### `0xA0000` - `0xA0FFF`
+### `0xA0000` - `0xA0FFF`
 
 Memory from `0xA0000` to `0xA0FFF` is *interruption vector*,
 or *interruption jump table*[^InterruptionVector].
@@ -738,13 +839,13 @@ If there is a requirement to be specific, *interrupt vector* is preferred.
 But it is not a strict requirement in most cases,
 since *jump table* is very much as self-explanatory, if not more, as *interrupt vector*.
 
-#### `0xB8000` - `0xB87CF`
+### `0xB8000` - `0xB87CF`
 
 From `0xB8000` to `0xB87CF` is a `2000` bytes linear memory used as video memory.
 Sysdarft offers a `80x25` screen, which can hold up to `2000` characters in total.
 Modifying this region directly affects the content on the screen.
 
-#### `0xC1800` - `0xFFFFF`
+### `0xC1800` - `0xFFFFF`
 
 This `250 KB` region is used to hold system firmware, which is what we know as Basic Input Output System (BIOS).
 Modifying this region is always discouraged, since this region contains crucial code for specific use cases.
@@ -760,8 +861,13 @@ Interrupt, or interruption, usually caused by some exceptional situations[@TheJa
 An interrupt is simply a signal that the hardware or software can send when it wants the processor's attention
 [@LinuxDeviceDriversThirdEdition].
 Interruption is a way to inform CPU that a specific request is sent and needs to be processed.
+Should the CPU consent to processing the request,
+the currently executing task will be temporarily suspended
+and subsequently resumed upon the completion of the request handler.
 
 #### Interruption Routine
+
+Interruption routine is a code subroutine (function) for a specific interruption type.
 
 Before the CPU enters an interruption routine, CPU preserves all registers,
 including `%CB` (Code Base) and `%IP` (Instruction Pointer), by pushing them onto the stack.
@@ -781,39 +887,49 @@ meaning that CPU will accept interruptions with code under or equals to `0x1F` r
 
 The following is a table describing each non-maskable interruption:
 
-| Interruption Code | Interruption Description                                                                                                                                                                                                                                                                                                                                                                                           |
-|-------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `0x00 `           | Fatal Error                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `0x01 `           | Divided by `0`                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `0x02`            | I/O Error                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `0x03`            | debug, indicating breakpoint reached                                                                                                                                                                                                                                                                                                                                                                               |
-| `0x04`            | Bad interruption                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `0x05`            | Keyboard interruption caused by `Ctrl+C`, usually indicating aborting current program                                                                                                                                                                                                                                                                                                                              |
-| `0x06`            | Illegal Instruction                                                                                                                                                                                                                                                                                                                                                                                                |
-| `0x07`            | Stack Overflow                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `0x10`            | Teletype (show character at cursor position, then move cursor to the position of next character, with `%EXR0` being the ASCII code)                                                                                                                                                                                                                                                                                |
-| `0x11`            | Set cursor position, with `%EXR0` being the linear position ($\text{\%EXR0} \in [0, 1999]$, `2000` characters)                                                                                                                                                                                                                                                                                                     | 
-| `0x12`            | Set Cursor Visibility, with `%EXR0` $= 1$ means visible and `%EXR0` $= 0$ means invisible                                                                                                                                                                                                                                                                                                                          |
-| `0x13`            | New line (Move cursor to the start of the next line, and scroll the content on the screen upwards one line if cursor is already at the bottom                                                                                                                                                                                                                                                                      |
-| `0x14`            | Get input. This interruption does not return unless: *a.* A valid user input from keyboard is captured, and `%EXR0` will record the key pressed on keyboard. *b.* System halt captured from keyboard, which is `Ctrl+Z` *c.* Keyboard interruption invoked by `Ctrl+C` *d.* Can be stopped by an interruption sent from an external device, and resumed to waiting for user input when interruption routine ended. |
-| `0x15`            | Get current cursor position, with `%EXR0` being cursor's linear offset ($\text{\%EXR0} \in [0, 1999]$)                                                                                                                                                                                                                                                                                                             |
-| `0x16`            | Get current physical memory size (`%FER0` being the total memory)                                                                                                                                                                                                                                                                                                                                                  |
-| `0x17`            | Ring the bell. There is a bell in Sysdarft and can be ringed by this interruption                                                                                                                                                                                                                                                                                                                                  |
-| `0x18`            | Refresh the screen with the video memory. Useful when modifying the video directly without using teletype                                                                                                                                                                                                                                                                                                          |
+| Interruption Code | Interruption Description                                                                                                                                                                                                                                                                                                                                                                                                    |
+|-------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `0x00 `           | Fatal Error                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `0x01 `           | Divided by `0`                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `0x02`            | I/O Error                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `0x03`            | Debug, indicating breakpoint reached                                                                                                                                                                                                                                                                                                                                                                                        |
+| `0x04`            | Bad interruption                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `0x05`            | Keyboard Interruption, caused by `Ctrl+C`, usually indicating aborting current program                                                                                                                                                                                                                                                                                                                                      |
+| `0x06`            | Illegal Instruction                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `0x07`            | Stack Overflow                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `0x08`            | Memory Access Out of Boundary                                                                                                                                                                                                                                                                                                                                                                                               |
+| `0x10`            | Teletype (show character at cursor position, then move cursor to the position of next character, with `%EXR0` being the ASCII code)                                                                                                                                                                                                                                                                                         |
+| `0x11`            | Set Cursor Position, with `%EXR0` being the linear position ($\text{\%EXR0} \in [0, 1999]$, `2000` characters)                                                                                                                                                                                                                                                                                                              | 
+| `0x12`            | Set Cursor Visibility, with `%EXR0` $= 1$ means visible and `%EXR0` $= 0$ means invisible                                                                                                                                                                                                                                                                                                                                   |
+| `0x13`            | New Line (Move cursor to the start of the next line, and scroll the content on the screen upwards one line if cursor is already at the bottom                                                                                                                                                                                                                                                                               |
+| `0x14`            | Get Keyboard Input. This interruption does not return unless: *a.* A valid user input from keyboard is captured, and `%EXR0` will record the key pressed on keyboard. *b.* System halt captured from keyboard, which is `Ctrl+Z` *c.* Keyboard interruption invoked by `Ctrl+C` *d.* Can be stopped by an interruption sent from an external device, and resumed to waiting for user input when interruption routine ended. |
+| `0x15`            | Get Current Cursor Position, with `%EXR0` being cursor's linear offset ($\text{\%EXR0} \in [0, 1999]$)                                                                                                                                                                                                                                                                                                                      |
+| `0x16`            | Get Current Accessible Memory Size (`%FER0` being the total memory)                                                                                                                                                                                                                                                                                                                                                         |
+| `0x17`            | Ring the Bell. There is a bell in Sysdarft and can be ringed by this interruption                                                                                                                                                                                                                                                                                                                                           |
+| `0x18`            | Refresh the Screen with the Video Memory. Useful when modifying the video memory directly without using teletype                                                                                                                                                                                                                                                                                                            |
+| `0x19`            | Clear Keyboard Input. All previously unhandled user input will be flushed and ignored                                                                                                                                                                                                                                                                                                                                       |
 
 As is shown above, $\text{interruptions code} \in [\text{0x00}, \text{0x0F}]$ are used to handle system errors,
-with `8` major hardware errors and possible `8` unassigned errors for the operating system to use.
+with `9` major hardware errors and possible `7` unassigned errors for the operating system to use.
 $\text{Interruptions code} \in [\text{0x10}, \text{0x1F}]$ are utility interruption used to perform certain actions,
-with `9` major hardware functions and possible `7` unassigned ones for the operating system to use as system calls.
+with `10` major hardware functions and possible `6` unassigned ones for the operating system to use as system calls.
 
 #### Maskable Interruptions
 
-For interruptions code larger than `0x1F`, lower than `0xFF`,
-they are usually used by users to set up specific interruptions for many use cases.
-This type of interruption can be ignored if `IM` is set to `0`.
-This is either because currently CPU is in an interruption routine,
-which sets `IM` to `1` automatically,
-or `IM` is specifically set to `0` using `ALWI` (Allow Interruption) instruction.
+Interrupts with identifiers exceeding `0x1F` and up to `0xFF` are typically employed by users
+to configure specific interrupt mechanisms for a diverse range of applications.
+These interrupts can be selectively ignored when the Interrupt Mask (`IM`) is set to `0`.
+The modification of the `IM` flag occurs under the following circumstances:
+
+1. *Automatic Adjustment by the CPU*: When the CPU enters an interrupt handling routine,
+                                      it autonomously sets the `IM` flag to `1` to prevent the occurrence of nested interrupts,
+                                      thereby ensuring orderly and efficient interrupt processing.
+
+2. *Explicit Instruction-Based Control*:
+  - **`ALWI` (Allow Interruptions) Instruction**: Executing the `ALWI` instruction explicitly sets the `IM` flag to `0`,
+                                                     thereby permitting interrupts to be recognized and processed.
+  - **`IGNI` (Ignore Interruptions) Instruction**: Conversely, the `IGNI` instruction sets the `IM` flag to `1`, 
+                                                     effectively disabling the processing of interrupts.
 
 # External Devices
 
@@ -882,15 +998,20 @@ When writing, it updates the current time to the provided timestamp.
 #### *Port `0x71`*
 
 RTC provides a way to trigger interruption periodically.
-RTC updates its internal clock every `50,000ns`,
+RTC updates its internal clock at a constant frequency[^RTCFreq],
 and if periodical interruption is set up,
 RTC can periodically trigger a maskable interruption.
 
+[^RTCFreq]:
+The designed frequency is 50,000 ns, but the CPU itself runs at a much slower frequency.
+This leads to concussive interruption request being ignored.
+RTC frequency can vary based on host OS time resolution, and an average update interval is `53,000` ns.
+
 This is a $64$-bit port, and it has the following format:
 
-| [37-8]                                                                                            | `8-0`                                            |
-|---------------------------------------------------------------------------------------------------|--------------------------------------------------|
-| Periodical Scale, Interruption is triggered every $50000\text{ns} \times \text{Periodical Scale}$ | Interruption Number, must be larger than `0x1F`  |
+| [37-8]                                                                                             | `7-0`                                           |
+|----------------------------------------------------------------------------------------------------|-------------------------------------------------|
+| Periodical Scale, Interruption is triggered every $50,000\text{ns} \times \text{Periodical Scale}$ | Interruption Number, must be larger than `0x1F` |
 
 Interruption number is user defined.
 
@@ -982,7 +1103,7 @@ Instruction is an $8$-bit wide byte code.
 There are far less than $256$ instructions in Sysdarft CPU, so a single byte is sufficient.
 Instruction is encoded as the following format:
 
-| Byte 0, Instruction Opcode | Operands (If Implied by Instruction)                                                            | 
+| Byte 0, Instruction Opcode | Operands (Implied by Instruction)                                                               | 
 |----------------------------|-------------------------------------------------------------------------------------------------|
 | Opcode                     | Acceptable operands implied by Instruction Opcode. $0$, $1$ or $2$ operands are all acceptable. | 
 
@@ -1215,7 +1336,6 @@ Negation of `Operand1`, and store the result to `Operand1`.
 | Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand | Operation Width Enforcement |
 |--------|-------------|-----------------------------------|-----------------------------------|-----------------------------|
 | `0x09` | `NEG`       | Register, Memory Reference        | None                              | Yes                         |
-
 
 
 #### **CMP**
@@ -1460,7 +1580,7 @@ Reserve a stack space.
 
 #### **MOVS**
 
-Move `%FER0` bytes from `%EB:%EP` to `%DB:DP`.
+Move `%FER3` bytes from `%EB:%EP` to `%DB:DP`.
 
 
 | Opcode | Instruction | Acceptable Type for First Operand | Acceptable Type for First Operand | Operation Width Enforcement |
@@ -1741,10 +1861,572 @@ Write `%FER3` length of bytes from `%DB:%DP` to a port whose number is specified
 If the device provides data buffer not equal to the provided data space,
 which is specified through register `%FER3`,
 exception `I/O ERROR` will be triggered.
+When `EXR0` equals to `0xF0`, it means I/O error occurred inside the external device,
+while `EXR0` being `0xF1` indicates no external device provides communication on the requested port.
 
 # **Appendix B: Examples**
 
 ## **Example A, Disk I/O**
+
+### Source Code
+
+#### File `interrupt.asm`
+
+```
+; interrupt.asm
+;
+; Copyright 2025 Anivice Ives
+;
+; This program is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+;
+; SPDX-License-Identifier: GPL-3.0-or-later
+;
+
+%ifndef _INTERRUPT_ASM_
+%define _INTERRUPT_ASM_
+
+.equ 'REFRESH', 'int < $(0x18) >'
+.equ 'SETCUSP', 'int < $(0x11) >'
+.equ 'INTGETC', 'int < $(0x14) >'
+
+%define KBFLUSH int < $(0x19) >
+
+%endif ; _INTERRUPT_ASM_
+```
+
+#### File `io_port.asm`
+
+```
+; io_port.asm
+;
+; Copyright 2025 Anivice Ives
+;
+; This program is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+;
+; SPDX-License-Identifier: GPL-3.0-or-later
+;
+
+%ifndef _IO_PORT_ASM_
+%define _IO_PORT_ASM_
+
+.equ 'DISK_SIZE',           '< $(0x136) >'
+.equ 'DISK_START_SEC',      '< $(0x137) >'
+.equ 'DISK_OPS_SEC_CNT',    '< $(0x138) >'
+.equ 'DISK_INPUT',          '< $(0x139) >'
+
+.equ 'FDA_SIZE',            '< $(0x116) >'
+.equ 'FDA_START_SEC',       '< $(0x117) >'
+.equ 'FDA_OPS_SEC_CNT',     '< $(0x118) >'
+.equ 'FDA_OUTPUT',          '< $(0x11A) >'
+
+; floppy disk B
+
+%define FDB_SIZE            0x126
+%define FDB_START_SEC       0x127
+%define FDB_OPS_SEC_CONT    0x128
+%define FDB_INPUT           0x129
+%define FDB_OUTPUT          0x12A
+
+%endif ; _IO_PORT_ASM_
+```
+
+#### File `int_and_port.asm`
+
+```
+; int_and_port.asm
+%ifndef _INT_AND_PORT_ASM
+%define _INT_AND_PORT_ASM
+
+%include "./interrupt.asm"
+%include "./io_port.asm"
+
+%endif ; _INT_AND_PORT_ASM
+```
+
+#### File `example_a.asm`
+
+```
+; example_a.asm
+;
+; Copyright 2025 Anivice Ives
+;
+; This program is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+;
+; SPDX-License-Identifier: GPL-3.0-or-later
+;
+
+.org 0xC1800
+
+%include "./int_and_port.asm"
+
+jmp                     <%cb>,                      <_start>
+
+; _putc(%EXR0, linear position, %EXR1, ASCII Code)
+_putc:
+    pushall
+    mov     .64bit      <%db>,                      <$(0xB8000)>    
+    push    .16bit      <%exr1>                                     
+    xor     .16bit      <%exr1>,                    <%exr1>         
+    xor     .32bit      <%her1>,                    <%her1>         
+    mov     .64bit      <%dp>,                      <%fer0>         
+                                                                    
+                                                                    
+    pop     .16bit      <%exr0>                                     
+    mov     .8bit       <*1&8(%db, %dp, $(0))>,     <%r0>           
+
+    REFRESH
+
+    popall
+    ret
+
+; _newline(%EXR0, linear address)
+_newline:
+    push    .16bit      <%exr1>
+    push    .64bit      <%dp>
+    push    .64bit      <%db>
+    push    .64bit      <%ep>
+    push    .64bit      <%eb>
+    push    .64bit      <%fer3>
+
+    div     .16bit      <$(80)>
+    ; EXR0 quotient(row), EXR1 reminder(col)
+    cmp     .16bit      <%exr0>,                    <$(24)>
+    jbe                 <%cb>,                      <.scroll>
+
+    xor     .16bit      <%exr1>,                    <%exr1>
+    inc     .16bit      <%exr0>
+    mul     .16bit      <$(80)>
+    SETCUSP
+    REFRESH
+    jmp         <%cb>,      < .exit>
+
+    .scroll:
+        ; move content (scroll up)
+        mov .64bit      <%db>,                      <$(0xB8000)>
+        xor .64bit      <%dp>,                      <%dp>
+        mov .64bit      <%eb>,                      <$(0xB8000 + 80)>
+        xor .64bit      <%ep>,                      <%ep>
+        mov .64bit      <%fer3>,                    <$(2000 - 80)>
+        movs
+
+        ; clear last line
+        mov .64bit      <%fer3>,                    <$(80)>
+        mov .64bit      <%eb>,                      <$(0xB8000)>
+        mov .64bit      <%ep>,                      <$(2000 - 80)>
+        xor .64bit      <%dp>,                      <%dp>
+        .scroll.loop:
+            mov .8bit   <*1&8(%eb, %ep, %dp)>,      <$(' ')>
+            inc .64bit  <%dp>
+            loop        <%cb>,                      <.scroll.loop>
+
+        mov .16bit      <%exr0>,                    <$(2000 - 80)>
+        SETCUSP
+        REFRESH
+    .exit:
+
+    pop .64bit          <%fer3>
+    pop .64bit          <%eb>
+    pop .64bit          <%ep>
+    pop .64bit          <%db>
+    pop .64bit          <%dp>
+    pop .16bit          <%exr1>
+    ret
+
+; _puts(%DB:%DP), null terminated string
+_puts:
+    pushall
+    .loop:
+        mov .8bit       <%r2>,                      <*1&8(%db, %dp, $(0))>      
+
+        cmp .8bit       <%r2>,                      <$(0)>
+        je              <%cb>,                      <.exit>
+
+        cmp .8bit       <%r2>,                      <$(0x0A)>
+        jne             <%cb>,                      <.skip_newline>
+
+        .newline:
+        call            <%cb>,                      <_newline>
+        mov .64bit      <%fer3>,                    <.last_offset>
+        mov .16bit      <*1&16($(0), %fer3, $(0))>, <%exr0>
+        jmp             <%cb>,      <.end>
+
+        .skip_newline:
+        xor .8bit       <%r3>,                      <%r3>
+        mov .64bit      <%fer3>,                    <.last_offset>
+        mov .16bit      <%exr0>,                    <*1&16($(0), %fer3, $(0))>
+        call            <%cb>,                      <_putc>
+
+        inc .16bit      <%exr0>
+        cmp .16bit      <%exr7>,                    <$(2000)>
+        je              <%cb>,                      <.newline>
+
+        mov .16bit      <*1&16($(0), %fer3, $(0))>, <%exr0>
+        SETCUSP
+
+        .end:
+        inc .64bit      <%dp>
+        jmp             <%cb>,                      <.loop>
+
+    .exit:
+    popall
+    ret
+
+.last_offset:
+    .16bit_data < 0 >
+
+; _print_num(%fer0)
+_print_num:
+    pushall
+
+    xor .64bit          <%fer2>,                    <%fer2>       ; record occurances of digits
+    .loop:
+        div .64bit      <$(10)>
+        ; %fer0 ==> ori
+        ; %fer1 ==> reminder
+        mov  .64bit     <%fer3>,                    <%fer1>
+        add  .64bit     <%fer3>,                    <$('0')>
+        push .64bit     <%fer3>
+
+        inc .64bit      <%fer2>
+
+        cmp .64bit      <%fer0>,                    <$(0x00)>
+        jne             <%cb>,                      <.loop>
+
+    xor .64bit          <%db>,                      <%db>
+    mov .64bit          <%dp>,                      <.cache>
+
+    mov .64bit          <%fer3>,                    <%fer2>
+    .loop_pop:
+        pop .64bit      <%fer0>
+        mov .8bit       <*1&8(%db, %dp, $(0))>,     <%r0>
+        inc .64bit      <%dp>
+        loop            <%cb>,                      <.loop_pop>
+
+    mov .8bit           <*1&8(%db, %dp, $(0))>,     <$(0)>
+    mov .64bit          <%dp>,                      <.cache>
+    call                <%cb>,                      <_puts>
+
+    popall
+    ret
+
+    .cache:
+        .resvb < 16 >
+
+; read disk to 0x0000:0x0000, length returned by %fer0
+_reads:
+    pushall
+    in .64bit           DISK_SIZE,                  <%fer3>
+    ; max 640 KB, meaning 1280 sectors
+    cmp .64bit          <%fer3>,                    <$(1280)>
+    jl                  <%cb>,                      <.skip.trunc>
+
+    mov .64bit          <%dp>,                      <.message.disk.too.big>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
+    mov .64bit          <%fer0>,                    <%fer3>
+    call                <%cb>,                      <_print_num>
+    mov .64bit          <%dp>,                      < .message.disk.too.big.tail >
+    call                <%cb>,                      <_puts>
+
+    mov .64bit          <%fer3>,                    <$(1280)>
+
+    mov .64bit          <%dp>,                      <.message.disk.resize>
+    call                <%cb>,                      <_puts>
+    mov .64bit          <%fer0>,                    <%fer3>
+    call                <%cb>,                      <_print_num>
+    mov .64bit          <%dp>,                      <.message.disk.resize.tail>
+    call                <%cb>,                      <_puts>
+
+    .skip.trunc:
+    mov .64bit          <%dp>,                      <.message.disk.size>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
+
+    mov .64bit          <%fer0>,                    <%fer3>
+    call                <%cb>,                      <_print_num>
+    mov .64bit          <%dp>,                      <.message.sector>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
+
+    mov .64bit          <%dp>,                      <.message.reading>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
+
+    out .64bit          DISK_START_SEC,             <$(0)>
+    out .64bit          DISK_OPS_SEC_CNT,           <%fer3>
+    mul .64bit          <$(512)>
+    mov .64bit          <%fer3>,                    <%fer0>
+    xor .64bit          <%dp>,                      <%dp>
+    xor .64bit          <%db>,                      <%db>
+    ins .64bit          DISK_INPUT
+
+    mov .64bit          <%fer0>,                    <.ret>
+    mov .64bit          <*1&64(%fer0, $(0), $(0))>, <%fer3>
+
+    mov .64bit          <%dp>,                      <.message.done>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
+
+    popall
+
+    mov .64bit          <%fer0>,                    <.ret>
+    mov .64bit          <%fer0>,                    <*1&64(%fer0, $(0), $(0))>
+
+    ret
+
+    .ret:
+    .64bit_data < 0 >
+
+    .message.disk.size:
+    .string < "Detected disk has " >
+    .8bit_data < 0 >
+
+    .message.sector:
+    .string < " sectors.\n" >
+    .8bit_data < 0 >
+
+    .message.reading:
+    .string < "Reading disk..." >
+    .8bit_data < 0 >
+    .message.done:
+    .string < "done.\n" >
+    .8bit_data < 0 >
+
+    .message.disk.too.big:
+    .string < "Size of C: too big (" >
+    .8bit_data < 0 >
+    .message.disk.too.big.tail:
+    .string < " sectors).\n" >
+    .8bit_data < 0 >
+
+    .message.disk.resize:
+    .string < "Resized read length to " >
+    .8bit_data < 0 >
+    .message.disk.resize.tail:
+    .string < " sectors.\n" >
+    .8bit_data < 0 >
+
+; _writes(%fer0)
+_writes:
+    pushall
+
+    in .64bit           FDA_SIZE,                   <%fer3>
+    push .64bit         <%fer0>
+
+    ; %fer0 ==> %fer4 == .reads size
+    mov .64bit          <%fer4>,                    <%fer0>
+
+    ; %fer0 <== A: size
+    mov .64bit          <%fer0>,                    <%fer3>
+    mul .64bit          <$(512)>
+
+    ; compare %fer0 and %fer4
+    cmp .64bit          <%fer0>,                    <%fer4>
+    jbe                 <%cb>,                      <.skip.trunc>
+    add .64bit          <%sp>,                      <$(8)>
+    push .64bit         <%fer0>
+
+    mov .64bit          <%dp>,                      <.message.disk.too.small>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
+
+    mov .64bit          <%dp>,                      <.message.disk.resize>
+    call                <%cb>,                      <_puts>
+    call                <%cb>,                      <_print_num>
+    mov .64bit          <%dp>,                      <.message.disk.resize.tail>
+    call                <%cb>,                      <_puts>
+
+    .skip.trunc:
+    mov .64bit          <%dp>,                      <.message.disk.size>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
+
+    mov .64bit          <%fer0>,                    <%fer3>
+    call                <%cb>,                      <_print_num>
+    mov .64bit          <%dp>,                      <.message.sector>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
+
+    mov .64bit          <%dp>,                      <.message.writing>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
+
+    pop .64bit          <%fer0>
+    push .64bit         <%fer0>
+    div .64bit          <$(512)>
+
+    out .64bit          FDA_START_SEC,              <$(0)>
+    out .64bit          FDA_OPS_SEC_CNT,            <%fer0>
+    pop .64bit          <%fer3>
+    xor .64bit          <%dp>,                      <%dp>
+    xor .64bit          <%db>,                      <%db>
+    outs .64bit         FDA_OUTPUT
+
+    popall
+    ret
+
+    .message.disk.size:
+    .string < "Detected floppy A has " >
+    .8bit_data < 0 >
+
+    .message.sector:
+    .string < " sectors.\n" >
+    .8bit_data < 0 >
+
+    .message.writing:
+    .string < "Writing floppy disk...\n" >
+    .8bit_data < 0 >
+    .message.done:
+    .string < "done.\n" >
+    .8bit_data < 0 >
+
+    .message.disk.too.small:
+    .string < "Size of A: too small\n" >
+    .8bit_data < 0 >
+
+    .message.disk.resize:
+    .string < "Resized write length to " >
+    .8bit_data < 0 >
+    .message.disk.resize.tail:
+    .string < " bytes.\n" >
+    .8bit_data < 0 >
+
+_int_0x02_io_error:
+    cmp .16bit          <%exr0>,                    <$(0xF0)>
+    je                  <%cb>,                      <.io_error>
+
+    ; no such device
+    mov .64bit          <%dp>,                      <.message.no.such.dev>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
+    KBFLUSH
+    INTGETC
+    mov .64bit          <%fer0>,                    <$(6)>
+    jmp                 <%cb>,                      <.error.type.end>
+
+    .io_error:
+    mov .64bit          <%dp>,                      <.message.io.error>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
+    KBFLUSH
+    INTGETC
+    mov .64bit          <%fer0>,                    <$(5)>
+
+    .error.type.end:
+    hlt
+
+    .message.io.error:
+    .string < "IO ERROR!\nPress any key to shutdown..." >
+    .8bit_data < 0 >
+
+    .message.no.such.dev:
+    .string < "Disk NOT present!\nPress any key to shutdown..." >
+    .8bit_data < 0 >
+
+_start:
+    mov .64bit          <%sb>,                      <_stack_frame>
+    mov .64bit          <%sp>,                      <$(0xFFF)>
+
+    ; install error handler
+    mov .64bit          <*1&64($(0xA0000), $(0x02 * 16), $(8))>, <_int_0x02_io_error>
+
+    ; show welcome message
+    mov .64bit          <%dp>,                      <.welcome>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
+
+    KBFLUSH
+    INTGETC
+
+    ; read from disk
+    mov .64bit          <%dp>,                      <.reading_from_disk>
+    call                <%cb>,                      <_puts>
+    call                <%cb>,                      <_reads>
+    push .64bit         <%fer0>
+
+    mov .64bit          <%dp>,                      <.press_to_write_to_floppy>
+    call                <%cb>,                      <_puts>
+
+    KBFLUSH
+    INTGETC
+
+    mov .64bit          <%dp>,                      <.writint_to_floppy>
+    call                <%cb>,                      <_puts>
+    pop .64bit          <%fer0>
+    call                <%cb>,                      <_writes>
+
+    mov .64bit          <%dp>,                      <.exit.message>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
+
+    KBFLUSH
+    INTGETC
+    xor .64bit          <%fer0>,                    <%fer0>
+    hlt
+
+.welcome:
+    .string < "Hello!\n\nThis is Sysdarft Example A!\n\n\n" >
+    .string < "Sysdarft is a hypothetical architecture that offers simplified instructions\n" >
+    .string < "with potency for creating functional programs and even operating systems.\n" >
+    .string < "By eliminating the need to maintain compatibility with historical designs,\n" >
+    .string < "Sysdarft aims to be straightforward, avoiding complex details while maintaining\n" >
+    .string < "consistency and functionality.\n\n\nPress any key to read from disk\n" >
+    .8bit_data < 0 >
+
+.reading_from_disk:
+    .string < "Reading from disk...\n" >
+    .8bit_data < 0 >
+
+.press_to_write_to_floppy:
+    .string < "Press any key to write to floppy disk A\n" >
+    .8bit_data < 0 >
+
+.writint_to_floppy:
+    .string < "Writing to floppy disk A...\n" >
+    .8bit_data < 0 >
+
+.exit.message:
+    .string < "Press any key to shutdown...\n" >
+    .8bit_data < 0 >
+
+_stack_frame:
+    .resvb < 0xFFF >
+```
+
+### Disassembled Symbol File
 
 ```
 Example A, Disk IO.sys        FORMAT    SYS
@@ -2375,6 +3057,231 @@ SYMBOL TABLE - SIZE 47:
 
  ... PADDLING 0x00 APPEARED 4095 TIMES SINCE 00000000000C256B...
 
+```
+
+### Raw Binary Data
+
+```
+00000000: 3001 64a2 0264 fb21 0c00 0000 0000 2420  0.d..d.!......$ 
+00000010: 6401 64a3 0264 0080 0b00 0000 0000 2216  d.d..d........".
+00000020: 0116 0112 1601 1601 0116 0112 3201 3201  ............2.2.
+00000030: 0132 0120 6401 64a4 0164 0023 1601 1600  .2. d.d..d.#....
+00000040: 2008 0308 0164 a301 64a4 0264 0000 0000   ....d..d..d....
+00000050: 0000 0000 0101 0800 3902 6418 0000 0000  ........9.d.....
+00000060: 0000 0025 3222 1601 1601 2264 0164 a422  ...%2"...."d.d."
+00000070: 6401 64a3 2264 0164 a622 6401 64a5 2264  d.d."d.d."d.d."d
+00000080: 0164 0308 1602 6450 0000 0000 0000 000a  .d....dP........
+00000090: 1601 1600 0264 1800 0000 0000 0000 3701  .....d........7.
+000000a0: 64a2 0264 e918 0c00 0000 0000 1216 0116  d..d............
+000000b0: 0101 1601 0b16 0116 0006 1602 6450 0000  ............dP..
+000000c0: 0000 0000 0039 0264 1100 0000 0000 0000  .....9.d........
+000000d0: 3902 6418 0000 0000 0000 0030 0164 a202  9.d........0.d..
+000000e0: 64ac 190c 0000 0000 0020 6401 64a3 0264  d........ d.d..d
+000000f0: 0080 0b00 0000 0000 1264 0164 a401 64a4  .........d.d..d.
+00000100: 2064 0164 a502 6450 800b 0000 0000 0012   d.d..dP........
+00000110: 6401 64a6 0164 a620 6401 6403 0264 8007  d.d..d. d.d..d..
+00000120: 0000 0000 0000 2820 6401 6403 0264 5000  ......( d.d..dP.
+00000130: 0000 0000 0000 2064 0164 a502 6400 800b  ...... d.d..d...
+00000140: 0000 0000 0020 6401 64a6 0264 8007 0000  ..... d.d..d....
+00000150: 0000 0000 1264 0164 a401 64a4 2008 0308  .....d.d..d. ...
+00000160: 0164 a501 64a6 0164 a401 0264 2000 0000  .d..d..d...d ...
+00000170: 0000 0000 0b64 0164 a460 0164 a202 645c  .....d.d.`.d..d\
+00000180: 190c 0000 0000 0020 1601 1600 0264 8007  ....... .....d..
+00000190: 0000 0000 0000 3902 6411 0000 0000 0000  ......9.d.......
+000001a0: 0039 0264 1800 0000 0000 0000 2364 0164  .9.d........#d.d
+000001b0: 0323 6401 64a5 2364 0164 a623 6401 64a3  .#d.d.#d.d.#d.d.
+000001c0: 2364 0164 a423 1601 1601 3224 2008 0108  #d.d.#....2$ ...
+000001d0: 0203 0801 64a3 0164 a402 6400 0000 0000  ....d..d..d.....
+000001e0: 0000 0001 0a08 0108 0202 6400 0000 0000  ..........d.....
+000001f0: 0000 0033 0164 a202 640b 1b0c 0000 0000  ...3.d..d.......
+00000200: 000a 0801 0802 0264 0a00 0000 0000 0000  .......d........
+00000210: 3401 64a2 0264 681a 0c00 0000 0000 3101  4.d..dh.......1.
+00000220: 64a2 0264 6518 0c00 0000 0000 2064 0164  d..de....... d.d
+00000230: 0302 640d 1b0c 0000 0000 0020 1603 1602  ..d........ ....
+00000240: 6400 0000 0000 0000 0001 6403 0264 0000  d.........d..d..
+00000250: 0000 0000 0000 0101 1600 3001 64a2 0264  ..........0.d..d
+00000260: f81a 0c00 0000 0000 1208 0108 0301 0803  ................
+00000270: 2064 0164 0302 640d 1b0c 0000 0000 0020   d.d..d........ 
+00000280: 1601 1600 0316 0264 0000 0000 0000 0000  .......d........
+00000290: 0164 0302 6400 0000 0000 0000 0001 3101  .d..d.........1.
+000002a0: 64a2 0264 0e18 0c00 0000 0000 0b16 0116  d..d............
+000002b0: 000a 1601 1607 0264 d007 0000 0000 0000  .......d........
+000002c0: 3301 64a2 0264 1e1a 0c00 0000 0000 2016  3.d..d........ .
+000002d0: 0316 0264 0000 0000 0000 0000 0164 0302  ...d.........d..
+000002e0: 6400 0000 0000 0000 0001 0116 0039 0264  d............9.d
+000002f0: 1100 0000 0000 0000 0b64 0164 a430 0164  .........d.d.0.d
+00000300: a202 64cc 190c 0000 0000 0025 3200 0024  ..d........%2..$
+00000310: 1264 0164 0201 6402 0864 0264 0a00 0000  .d.d..d..d.d....
+00000320: 0000 0000 2064 0164 0301 6401 0164 0164  .... d.d..d..d.d
+00000330: 0302 6430 0000 0000 0000 0022 6401 6403  ..d0......."d.d.
+00000340: 0b64 0164 020a 6401 6400 0264 0000 0000  .d.d..d.d..d....
+00000350: 0000 0000 3401 64a2 0264 181b 0c00 0000  ....4.d..d......
+00000360: 0000 1264 0164 a301 64a3 2064 0164 a402  ...d.d..d. d.d..
+00000370: 64ef 1b0c 0000 0000 0020 6401 6403 0164  d........ d.d..d
+00000380: 0223 6401 6400 2008 0308 0164 a301 64a4  .#d.d. ....d..d.
+00000390: 0264 0000 0000 0000 0000 0101 0800 0b64  .d.............d
+000003a0: 0164 a460 0164 a202 6481 1b0c 0000 0000  .d.`.d..d.......
+000003b0: 0020 0803 0801 64a3 0164 a402 6400 0000  . ....d..d..d...
+000003c0: 0000 0000 0001 0264 0000 0000 0000 0000  .......d........
+000003d0: 2064 0164 a402 64ef 1b0c 0000 0000 0031   d.d..d........1
+000003e0: 0164 a202 64cb 190c 0000 0000 0025 3200  .d..d........%2.
+000003f0: 0000 0000 0000 0000 0000 0000 0000 0024  ...............$
+00000400: 5064 0264 3601 0000 0000 0000 0164 030a  Pd.d6........d..
+00000410: 6401 6403 0264 0005 0000 0000 0000 3601  d.d..d........6.
+00000420: 64a2 0264 e31c 0c00 0000 0000 2064 0164  d..d........ d.d
+00000430: a402 647d 1e0c 0000 0000 0012 6401 64a3  ..d}........d.d.
+00000440: 0164 a331 0164 a202 64cb 190c 0000 0000  .d.1.d..d.......
+00000450: 0020 6401 6400 0164 0331 0164 a202 640f  . d.d..d.1.d..d.
+00000460: 1b0c 0000 0000 0020 6401 64a4 0264 921e  ....... d.d..d..
+00000470: 0c00 0000 0000 3101 64a2 0264 cb19 0c00  ......1.d..d....
+00000480: 0000 0000 2064 0164 0302 6400 0500 0000  .... d.d..d.....
+00000490: 0000 0020 6401 64a4 0264 9e1e 0c00 0000  ... d.d..d......
+000004a0: 0000 3101 64a2 0264 cb19 0c00 0000 0000  ..1.d..d........
+000004b0: 2064 0164 0001 6403 3101 64a2 0264 0f1b   d.d..d.1.d..d..
+000004c0: 0c00 0000 0000 2064 0164 a402 64b6 1e0c  ...... d.d..d...
+000004d0: 0000 0000 0031 0164 a202 64cb 190c 0000  .....1.d..d.....
+000004e0: 0000 0020 6401 64a4 0264 481e 0c00 0000  ... d.d..dH.....
+000004f0: 0000 1264 0164 a301 64a3 3101 64a2 0264  ...d.d..d.1.d..d
+00000500: cb19 0c00 0000 0000 2064 0164 0001 6403  ........ d.d..d.
+00000510: 3101 64a2 0264 0f1b 0c00 0000 0000 2064  1.d..d........ d
+00000520: 0164 a402 645b 1e0c 0000 0000 0012 6401  .d..d[........d.
+00000530: 64a3 0164 a331 0164 a202 64cb 190c 0000  d..d.1.d..d.....
+00000540: 0000 0020 6401 64a4 0264 661e 0c00 0000  ... d.d..df.....
+00000550: 0000 1264 0164 a301 64a3 3101 64a2 0264  ...d.d..d.1.d..d
+00000560: cb19 0c00 0000 0000 5164 0264 3701 0000  ........Qd.d7...
+00000570: 0000 0000 0264 0000 0000 0000 0000 5164  .....d........Qd
+00000580: 0264 3801 0000 0000 0000 0164 0306 6402  .d8........d..d.
+00000590: 6400 0200 0000 0000 0020 6401 6403 0164  d........ d.d..d
+000005a0: 0012 6401 64a4 0164 a412 6401 64a3 0164  ..d.d..d..d.d..d
+000005b0: a352 6402 6439 0100 0000 0000 0020 6401  .Rd.d9....... d.
+000005c0: 6400 0264 401e 0c00 0000 0000 2064 0364  d..d@....... d.d
+000005d0: 0164 0002 6400 0000 0000 0000 0002 6400  .d..d.........d.
+000005e0: 0000 0000 0000 0001 0164 0320 6401 64a4  .........d. d.d.
+000005f0: 0264 761e 0c00 0000 0000 1264 0164 a301  .dv........d.d..
+00000600: 64a3 3101 64a2 0264 cb19 0c00 0000 0000  d.1.d..d........
+00000610: 2520 6401 6400 0264 401e 0c00 0000 0000  % d.d..d@.......
+00000620: 2064 0164 0003 6401 6400 0264 0000 0000   d.d..d.d..d....
+00000630: 0000 0000 0264 0000 0000 0000 0000 0132  .....d.........2
+00000640: 0000 0000 0000 0000 4465 7465 6374 6564  ........Detected
+00000650: 2064 6973 6b20 6861 7320 0020 7365 6374   disk has . sect
+00000660: 6f72 732e 0a00 5265 6164 696e 6720 6469  ors...Reading di
+00000670: 736b 2e2e 2e00 646f 6e65 2e0a 0053 697a  sk....done...Siz
+00000680: 6520 6f66 2043 3a20 746f 6f20 6269 6720  e of C: too big 
+00000690: 2800 2073 6563 746f 7273 292e 0a00 5265  (. sectors)...Re
+000006a0: 7369 7a65 6420 7265 6164 206c 656e 6774  sized read lengt
+000006b0: 6820 746f 2000 2073 6563 746f 7273 2e0a  h to . sectors..
+000006c0: 0024 5064 0264 1601 0000 0000 0000 0164  .$Pd.d.........d
+000006d0: 0322 6401 6400 2064 0164 0401 6400 2064  ."d.d. d.d..d. d
+000006e0: 0164 0001 6403 0664 0264 0002 0000 0000  .d..d..d.d......
+000006f0: 0000 0a64 0164 0001 6404 3701 64a2 0264  ...d.d..d.7.d..d
+00000700: 891f 0c00 0000 0000 0164 0164 a102 6408  .........d.d..d.
+00000710: 0000 0000 0000 0022 6401 6400 2064 0164  ......."d.d. d.d
+00000720: a402 64ad 200c 0000 0000 0012 6401 64a3  ..d. .......d.d.
+00000730: 0164 a331 0164 a202 64cb 190c 0000 0000  .d.1.d..d.......
+00000740: 0020 6401 64a4 0264 c320 0c00 0000 0000  . d.d..d. ......
+00000750: 3101 64a2 0264 cb19 0c00 0000 0000 3101  1.d..d........1.
+00000760: 64a2 0264 0f1b 0c00 0000 0000 2064 0164  d..d........ d.d
+00000770: a402 64dc 200c 0000 0000 0031 0164 a202  ..d. ......1.d..
+00000780: 64cb 190c 0000 0000 0020 6401 64a4 0264  d........ d.d..d
+00000790: 6c20 0c00 0000 0000 1264 0164 a301 64a3  l .......d.d..d.
+000007a0: 3101 64a2 0264 cb19 0c00 0000 0000 2064  1.d..d........ d
+000007b0: 0164 0001 6403 3101 64a2 0264 0f1b 0c00  .d..d.1.d..d....
+000007c0: 0000 0000 2064 0164 a402 6483 200c 0000  .... d.d..d. ...
+000007d0: 0000 0012 6401 64a3 0164 a331 0164 a202  ....d.d..d.1.d..
+000007e0: 64cb 190c 0000 0000 0020 6401 64a4 0264  d........ d.d..d
+000007f0: 8e20 0c00 0000 0000 1264 0164 a301 64a3  . .......d.d..d.
+00000800: 3101 64a2 0264 cb19 0c00 0000 0000 2364  1.d..d........#d
+00000810: 0164 0022 6401 6400 0864 0264 0002 0000  .d."d.d..d.d....
+00000820: 0000 0000 5164 0264 1701 0000 0000 0000  ....Qd.d........
+00000830: 0264 0000 0000 0000 0000 5164 0264 1801  .d........Qd.d..
+00000840: 0000 0000 0000 0164 0023 6401 6403 1264  .......d.#d.d..d
+00000850: 0164 a401 64a4 1264 0164 a301 64a3 5364  .d..d..d.d..d.Sd
+00000860: 0264 1a01 0000 0000 0000 2532 4465 7465  .d........%2Dete
+00000870: 6374 6564 2066 6c6f 7070 7920 4120 6861  cted floppy A ha
+00000880: 7320 0020 7365 6374 6f72 732e 0a00 5772  s . sectors...Wr
+00000890: 6974 696e 6720 666c 6f70 7079 2064 6973  iting floppy dis
+000008a0: 6b2e 2e2e 0a00 646f 6e65 2e0a 0053 697a  k.....done...Siz
+000008b0: 6520 6f66 2041 3a20 746f 6f20 736d 616c  e of A: too smal
+000008c0: 6c0a 0052 6573 697a 6564 2077 7269 7465  l..Resized write
+000008d0: 206c 656e 6774 6820 746f 2000 2062 7974   length to . byt
+000008e0: 6573 2e0a 000a 1601 1600 0264 f000 0000  es.........d....
+000008f0: 0000 0000 3301 64a2 0264 5a21 0c00 0000  ....3.d..dZ!....
+00000900: 0000 2064 0164 a402 64cc 210c 0000 0000  .. d.d..d.!.....
+00000910: 0012 6401 64a3 0164 a331 0164 a202 64cb  ..d.d..d.1.d..d.
+00000920: 190c 0000 0000 0039 0264 1900 0000 0000  .......9.d......
+00000930: 0000 3902 6414 0000 0000 0000 0020 6401  ..9.d........ d.
+00000940: 6400 0264 0600 0000 0000 0000 3001 64a2  d..d........0.d.
+00000950: 0264 a421 0c00 0000 0000 2064 0164 a402  .d.!...... d.d..
+00000960: 64a5 210c 0000 0000 0012 6401 64a3 0164  d.!.......d.d..d
+00000970: a331 0164 a202 64cb 190c 0000 0000 0039  .1.d..d........9
+00000980: 0264 1900 0000 0000 0000 3902 6414 0000  .d........9.d...
+00000990: 0000 0000 0020 6401 6400 0264 0500 0000  ..... d.d..d....
+000009a0: 0000 0000 4049 4f20 4552 524f 5221 0a50  ....@IO ERROR!.P
+000009b0: 7265 7373 2061 6e79 206b 6579 2074 6f20  ress any key to 
+000009c0: 7368 7574 646f 776e 2e2e 2e00 4469 736b  shutdown....Disk
+000009d0: 204e 4f54 2070 7265 7365 6e74 210a 5072   NOT present!.Pr
+000009e0: 6573 7320 616e 7920 6b65 7920 746f 2073  ess any key to s
+000009f0: 6875 7464 6f77 6e2e 2e2e 0020 6401 64a0  hutdown.... d.d.
+00000a00: 0264 6b25 0c00 0000 0000 2064 0164 a102  .dk%...... d.d..
+00000a10: 64ff 0f00 0000 0000 0020 6403 6402 6400  d........ d.d.d.
+00000a20: 000a 0000 0000 0002 6420 0000 0000 0000  ........d ......
+00000a30: 0002 6408 0000 0000 0000 0001 0264 e520  ..d..........d. 
+00000a40: 0c00 0000 0000 2064 0164 a402 6458 230c  ...... d.d..dX#.
+00000a50: 0000 0000 0012 6401 64a3 0164 a331 0164  ......d.d..d.1.d
+00000a60: a202 64cb 190c 0000 0000 0039 0264 1900  ..d........9.d..
+00000a70: 0000 0000 0000 3902 6414 0000 0000 0000  ......9.d.......
+00000a80: 0020 6401 64a4 0264 f124 0c00 0000 0000  . d.d..d.$......
+00000a90: 3101 64a2 0264 cb19 0c00 0000 0000 3101  1.d..d........1.
+00000aa0: 64a2 0264 ff1b 0c00 0000 0000 2264 0164  d..d........"d.d
+00000ab0: 0020 6401 64a4 0264 0725 0c00 0000 0000  . d.d..d.%......
+00000ac0: 3101 64a2 0264 cb19 0c00 0000 0000 3902  1.d..d........9.
+00000ad0: 6419 0000 0000 0000 0039 0264 1400 0000  d........9.d....
+00000ae0: 0000 0000 2064 0164 a402 6430 250c 0000  .... d.d..d0%...
+00000af0: 0000 0031 0164 a202 64cb 190c 0000 0000  ...1.d..d.......
+00000b00: 0023 6401 6400 3101 64a2 0264 c11e 0c00  .#d.d.1.d..d....
+00000b10: 0000 0000 2064 0164 a402 644d 250c 0000  .... d.d..dM%...
+00000b20: 0000 0012 6401 64a3 0164 a331 0164 a202  ....d.d..d.1.d..
+00000b30: 64cb 190c 0000 0000 0039 0264 1900 0000  d........9.d....
+00000b40: 0000 0000 3902 6414 0000 0000 0000 0012  ....9.d.........
+00000b50: 6401 6400 0164 0040 4865 6c6c 6f21 0a0a  d.d..d.@Hello!..
+00000b60: 5468 6973 2069 7320 5379 7364 6172 6674  This is Sysdarft
+00000b70: 2045 7861 6d70 6c65 2041 210a 0a0a 5379   Example A!...Sy
+00000b80: 7364 6172 6674 2069 7320 6120 6879 706f  sdarft is a hypo
+00000b90: 7468 6574 6963 616c 2061 7263 6869 7465  thetical archite
+00000ba0: 6374 7572 6520 7468 6174 206f 6666 6572  cture that offer
+00000bb0: 7320 7369 6d70 6c69 6669 6564 2069 6e73  s simplified ins
+00000bc0: 7472 7563 7469 6f6e 730a 7769 7468 2070  tructions.with p
+00000bd0: 6f74 656e 6379 2066 6f72 2063 7265 6174  otency for creat
+00000be0: 696e 6720 6675 6e63 7469 6f6e 616c 2070  ing functional p
+00000bf0: 726f 6772 616d 7320 616e 6420 6576 656e  rograms and even
+00000c00: 206f 7065 7261 7469 6e67 2073 7973 7465   operating syste
+00000c10: 6d73 2e0a 4279 2065 6c69 6d69 6e61 7469  ms..By eliminati
+00000c20: 6e67 2074 6865 206e 6565 6420 746f 206d  ng the need to m
+00000c30: 6169 6e74 6169 6e20 636f 6d70 6174 6962  aintain compatib
+00000c40: 696c 6974 7920 7769 7468 2068 6973 746f  ility with histo
+00000c50: 7269 6361 6c20 6465 7369 676e 732c 0a53  rical designs,.S
+00000c60: 7973 6461 7266 7420 6169 6d73 2074 6f20  ysdarft aims to 
+00000c70: 6265 2073 7472 6169 6768 7466 6f72 7761  be straightforwa
+00000c80: 7264 2c20 6176 6f69 6469 6e67 2063 6f6d  rd, avoiding com
+00000c90: 706c 6578 2064 6574 6169 6c73 2077 6869  plex details whi
+00000ca0: 6c65 206d 6169 6e74 6169 6e69 6e67 0a63  le maintaining.c
+00000cb0: 6f6e 7369 7374 656e 6379 2061 6e64 2066  onsistency and f
+00000cc0: 756e 6374 696f 6e61 6c69 7479 2e0a 0a0a  unctionality....
+00000cd0: 5072 6573 7320 616e 7920 6b65 7920 746f  Press any key to
+00000ce0: 2072 6561 6420 6672 6f6d 2064 6973 6b0a   read from disk.
+00000cf0: 0052 6561 6469 6e67 2066 726f 6d20 6469  .Reading from di
+00000d00: 736b 2e2e 2e0a 0050 7265 7373 2061 6e79  sk.....Press any
+00000d10: 206b 6579 2074 6f20 7772 6974 6520 746f   key to write to
+00000d20: 2066 6c6f 7070 7920 6469 736b 2041 0a00   floppy disk A..
+00000d30: 5772 6974 696e 6720 746f 2066 6c6f 7070  Writing to flopp
+00000d40: 7920 6469 736b 2041 2e2e 2e0a 0050 7265  y disk A.....Pre
+00000d50: 7373 2061 6e79 206b 6579 2074 6f20 7368  ss any key to sh
+00000d60: 7574 646f 776e 2e2e 2e0a 0000 0000 0000  utdown..........
+00000d70: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+
+... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ...
+
+00001d60: 0000 0000 0000 0000 0000                 ..........
 ```
 
 # Result of Example A

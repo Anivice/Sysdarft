@@ -1,3 +1,23 @@
+; example_a.asm
+;
+; Copyright 2025 Anivice Ives
+;
+; This program is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+;
+; SPDX-License-Identifier: GPL-3.0-or-later
+;
+ 
 .org 0xC1800
 
 %include "./int_and_port.asm"
@@ -7,15 +27,15 @@ jmp <%cb>, <_start>
 ; _putc(%EXR0, linear position, %EXR1, ASCII Code)
 _putc:
     pushall
-    mov     .64bit      <%db>,                      <$(0xB8000)>    ; set data base to base of video memory
-    push    .16bit      <%exr1>                                     ; preserve %exr1, which is ASCII code
-    xor     .16bit      <%exr1>,                    <%exr1>         ; clear %exr1
-    xor     .32bit      <%her1>,                    <%her1>         ; clear %her1
-    mov     .64bit      <%dp>,                      <%fer0>         ; by clearing these registers
-                                                                    ; %fer0 is the linear address of the display location
-                                                                    ; so we load it to %dp
-    pop     .16bit      <%exr0>                                     ; pop ASCII code to %exr0
-    mov     .8bit       <*1&8(%db, %dp, $(0))>,     <%r0>           ; move the ASCII code to video memory
+    mov     .64bit      <%db>,                      <$(0xB8000)>    
+    push    .16bit      <%exr1>                                     
+    xor     .16bit      <%exr1>,                    <%exr1>         
+    xor     .32bit      <%her1>,                    <%her1>         
+    mov     .64bit      <%dp>,                      <%fer0>         
+                                                                    
+                                                                    
+    pop     .16bit      <%exr0>                                     
+    mov     .8bit       <*1&8(%db, %dp, $(0))>,     <%r0>           
 
     REFRESH
 
@@ -45,70 +65,70 @@ _newline:
 
     .scroll:
         ; move content (scroll up)
-        mov .64bit <%db>,   <$(0xB8000)>
-        xor .64bit <%dp>,   <%dp>
-        mov .64bit <%eb>,   <$(0xB8000 + 80)>
-        xor .64bit <%ep>,   <%ep>
-        mov .64bit <%fer3>, <$(2000 - 80)>
+        mov .64bit      <%db>,                      <$(0xB8000)>
+        xor .64bit      <%dp>,                      <%dp>
+        mov .64bit      <%eb>,                      <$(0xB8000 + 80)>
+        xor .64bit      <%ep>,                      <%ep>
+        mov .64bit      <%fer3>,                    <$(2000 - 80)>
         movs
 
         ; clear last line
-        mov .64bit <%fer3>, <$(80)>
-        mov .64bit <%eb>, <$(0xB8000)>
-        mov .64bit <%ep>, <$(2000 - 80)>
-        xor .64bit <%dp>, <%dp>
+        mov .64bit      <%fer3>,                    <$(80)>
+        mov .64bit      <%eb>,                      <$(0xB8000)>
+        mov .64bit      <%ep>,                      <$(2000 - 80)>
+        xor .64bit      <%dp>,                      <%dp>
         .scroll.loop:
-            mov .8bit <*1&8(%eb, %ep, %dp)>, <$(' ')>
-            inc .64bit <%dp>
-            loop <%cb>, <.scroll.loop>
+            mov .8bit   <*1&8(%eb, %ep, %dp)>,      <$(' ')>
+            inc .64bit  <%dp>
+            loop        <%cb>,                      <.scroll.loop>
 
-        mov .16bit <%exr0>, <$(2000 - 80)>
+        mov .16bit      <%exr0>,                    <$(2000 - 80)>
         SETCUSP
         REFRESH
     .exit:
 
-    pop .64bit <%fer3>
-    pop .64bit <%eb>
-    pop .64bit <%ep>
-    pop .64bit <%db>
-    pop .64bit <%dp>
-    pop .16bit <%exr1>
+    pop .64bit          <%fer3>
+    pop .64bit          <%eb>
+    pop .64bit          <%ep>
+    pop .64bit          <%db>
+    pop .64bit          <%dp>
+    pop .16bit          <%exr1>
     ret
 
 ; _puts(%DB:%DP), null terminated string
 _puts:
     pushall
     .loop:
-        mov .8bit   <%r2>,      <*1&8(%db, %dp, $(0))>      ; R2 is in EXR1
+        mov .8bit       <%r2>,                      <*1&8(%db, %dp, $(0))>      
 
-        cmp .8bit   <%r2>,      <$(0)>
-        je          <%cb>,      <.exit>
+        cmp .8bit       <%r2>,                      <$(0)>
+        je              <%cb>,                      <.exit>
 
-        cmp .8bit   <%r2>,      <$(0x0A)>
-        jne         <%cb>,      <.skip_newline>
+        cmp .8bit       <%r2>,                      <$(0x0A)>
+        jne             <%cb>,                      <.skip_newline>
 
-        .newline :
-        call        <%cb>,      <_newline>
-        mov .64bit  <%fer3>,    <.last_offset>
-        mov .16bit  <*1&16($(0), %fer3, $(0))>, <%exr0>
-        jmp         <%cb>,      <.end>
+        .newline:
+        call            <%cb>,                      <_newline>
+        mov .64bit      <%fer3>,                    <.last_offset>
+        mov .16bit      <*1&16($(0), %fer3, $(0))>, <%exr0>
+        jmp             <%cb>,      <.end>
 
         .skip_newline:
-        xor .8bit   <%r3>,      <%r3>
-        mov .64bit  <%fer3>,    <.last_offset>
-        mov .16bit  <%exr0>,    <*1&16($(0), %fer3, $(0))>
-        call        <%cb>,      <_putc>
+        xor .8bit       <%r3>,                      <%r3>
+        mov .64bit      <%fer3>,                    <.last_offset>
+        mov .16bit      <%exr0>,                    <*1&16($(0), %fer3, $(0))>
+        call            <%cb>,                      <_putc>
 
-        inc .16bit  <%exr0>
-        cmp .16bit  <%exr7>,    <$(2000)>
-        je  <%cb>,  <.newline>
+        inc .16bit      <%exr0>
+        cmp .16bit      <%exr7>,                    <$(2000)>
+        je              <%cb>,                      <.newline>
 
-        mov .16bit  <*1&16($(0), %fer3, $(0))>, <%exr0>
+        mov .16bit      <*1&16($(0), %fer3, $(0))>, <%exr0>
         SETCUSP
 
         .end:
-        inc .64bit  <%dp>
-        jmp         <%cb>,      <.loop>
+        inc .64bit      <%dp>
+        jmp             <%cb>,                      <.loop>
 
     .exit:
     popall
@@ -121,33 +141,33 @@ _puts:
 _print_num:
     pushall
 
-    xor .64bit <%fer2>, <%fer2>       ; record how many digits
+    xor .64bit          <%fer2>,                    <%fer2>       ; record occurances of digits
     .loop:
-        div .64bit <$(10)>
+        div .64bit      <$(10)>
         ; %fer0 ==> ori
         ; %fer1 ==> reminder
-        mov .64bit <%fer3>, <%fer1>
-        add .64bit <%fer3>, <$('0')>
-        push .64bit <%fer3>
+        mov  .64bit     <%fer3>,                    <%fer1>
+        add  .64bit     <%fer3>,                    <$('0')>
+        push .64bit     <%fer3>
 
-        inc .64bit <%fer2>
+        inc .64bit      <%fer2>
 
-        cmp .64bit <%fer0>, <$(0x00)>
-        jne <%cb>, <.loop>
+        cmp .64bit      <%fer0>,                    <$(0x00)>
+        jne             <%cb>,                      <.loop>
 
-    xor .64bit <%db> ,<%db>
-    mov .64bit <%dp>, <.cache>
+    xor .64bit          <%db>,                      <%db>
+    mov .64bit          <%dp>,                      <.cache>
 
-    mov .64bit <%fer3>, <%fer2>
+    mov .64bit          <%fer3>,                    <%fer2>
     .loop_pop:
-        pop .64bit <%fer0>
-        mov .8bit <*1&8(%db, %dp, $(0))>, <%r0>
-        inc .64bit <%dp>
-        loop <%cb>, <.loop_pop>
+        pop .64bit      <%fer0>
+        mov .8bit       <*1&8(%db, %dp, $(0))>,     <%r0>
+        inc .64bit      <%dp>
+        loop            <%cb>,                      <.loop_pop>
 
-    mov .8bit <*1&8(%db, %dp, $(0))>, <$(0)>
-    mov .64bit <%dp>, <.cache>
-    call <%cb>, <_puts>
+    mov .8bit           <*1&8(%db, %dp, $(0))>,     <$(0)>
+    mov .64bit          <%dp>,                      <.cache>
+    call                <%cb>,                      <_puts>
 
     popall
     ret
@@ -158,62 +178,62 @@ _print_num:
 ; read disk to 0x0000:0x0000, length returned by %fer0
 _reads:
     pushall
-    in .64bit DISK_SIZE, <%fer3>
+    in .64bit           DISK_SIZE,                  <%fer3>
     ; max 640 KB, meaning 1280 sectors
-    cmp .64bit <%fer3>, <$(1280)>
-    jl <%cb>, <.skip.trunc>
+    cmp .64bit          <%fer3>,                    <$(1280)>
+    jl                  <%cb>,                      <.skip.trunc>
 
-    mov .64bit  <%dp>,  < .message.disk.too.big>
-    xor .64bit  <%db>,  <%db>
-    call        <%cb>,  <_puts>
-    mov .64bit <%fer0>, <%fer3>
-    call <%cb>, <_print_num>
-    mov .64bit  <%dp>,  < .message.disk.too.big.tail >
-    call        <%cb>,  <_puts>
+    mov .64bit          <%dp>,                      <.message.disk.too.big>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
+    mov .64bit          <%fer0>,                    <%fer3>
+    call                <%cb>,                      <_print_num>
+    mov .64bit          <%dp>,                      < .message.disk.too.big.tail >
+    call                <%cb>,                      <_puts>
 
-    mov .64bit <%fer3>, <$(1280)>
+    mov .64bit          <%fer3>,                    <$(1280)>
 
-    mov .64bit  <%dp>,  <.message.disk.resize>
-    call        <%cb>,  <_puts>
-    mov .64bit <%fer0>, <%fer3>
-    call <%cb>, <_print_num>
-    mov .64bit  <%dp>,  <.message.disk.resize.tail>
-    call        <%cb>,  <_puts>
+    mov .64bit          <%dp>,                      <.message.disk.resize>
+    call                <%cb>,                      <_puts>
+    mov .64bit          <%fer0>,                    <%fer3>
+    call                <%cb>,                      <_print_num>
+    mov .64bit          <%dp>,                      <.message.disk.resize.tail>
+    call                <%cb>,                      <_puts>
 
     .skip.trunc:
-    mov .64bit  <%dp>,  <.message.disk.size>
-    xor .64bit  <%db>,  <%db>
-    call        <%cb>,  <_puts>
+    mov .64bit          <%dp>,                      <.message.disk.size>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
 
-    mov .64bit <%fer0>, <%fer3>
-    call <%cb>, <_print_num>
-    mov .64bit  <%dp>,  <.message.sector>
-    xor .64bit  <%db>,  <%db>
-    call        <%cb>,  <_puts>
+    mov .64bit          <%fer0>,                    <%fer3>
+    call                <%cb>,                      <_print_num>
+    mov .64bit          <%dp>,                      <.message.sector>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
 
-    mov .64bit  <%dp>,  <.message.reading>
-    xor .64bit  <%db>,  <%db>
-    call        <%cb>,  <_puts>
+    mov .64bit          <%dp>,                      <.message.reading>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
 
-    out .64bit DISK_START_SEC, <$(0)>
-    out .64bit DISK_OPS_SEC_CNT, <%fer3>
-    mul .64bit <$(512)>
-    mov .64bit <%fer3>, <%fer0>
-    xor .64bit <%dp>, <%dp>
-    xor .64bit <%db>, <%db>
-    ins .64bit DISK_INPUT
+    out .64bit          DISK_START_SEC,             <$(0)>
+    out .64bit          DISK_OPS_SEC_CNT,           <%fer3>
+    mul .64bit          <$(512)>
+    mov .64bit          <%fer3>,                    <%fer0>
+    xor .64bit          <%dp>,                      <%dp>
+    xor .64bit          <%db>,                      <%db>
+    ins .64bit          DISK_INPUT
 
-    mov .64bit <%fer0>, <.ret>
-    mov .64bit <*1&64(%fer0, $(0), $(0))>, <%fer3>
+    mov .64bit          <%fer0>,                    <.ret>
+    mov .64bit          <*1&64(%fer0, $(0), $(0))>, <%fer3>
 
-    mov .64bit  <%dp>,  <.message.done>
-    xor .64bit  <%db>,  <%db>
-    call        <%cb>,  <_puts>
+    mov .64bit          <%dp>,                      <.message.done>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
 
     popall
 
-    mov .64bit <%fer0>, <.ret>
-    mov .64bit <%fer0>, <*1&64(%fer0, $(0), $(0))>
+    mov .64bit          <%fer0>,                    <.ret>
+    mov .64bit          <%fer0>,                    <*1&64(%fer0, $(0), $(0))>
 
     ret
 
@@ -253,57 +273,57 @@ _reads:
 _writes:
     pushall
 
-    in .64bit FDA_SIZE, <%fer3>
-    push .64bit <%fer0>
+    in .64bit           FDA_SIZE,                   <%fer3>
+    push .64bit         <%fer0>
 
     ; %fer0 ==> %fer4 == .reads size
-    mov .64bit <%fer4>, <%fer0>
+    mov .64bit          <%fer4>,                    <%fer0>
 
     ; %fer0 <== A: size
-    mov .64bit <%fer0>, <%fer3>
-    mul .64bit <$(512)>
+    mov .64bit          <%fer0>,                    <%fer3>
+    mul .64bit          <$(512)>
 
     ; compare %fer0 and %fer4
-    cmp .64bit <%fer0>, <%fer4>
-    jbe <%cb>, <.skip.trunc>
-    add .64bit <%sp>, <$(8)>
-    push .64bit <%fer0>
+    cmp .64bit          <%fer0>,                    <%fer4>
+    jbe                 <%cb>,                      <.skip.trunc>
+    add .64bit          <%sp>,                      <$(8)>
+    push .64bit         <%fer0>
 
-    mov .64bit  <%dp>,  <.message.disk.too.small>
-    xor .64bit  <%db>,  <%db>
-    call        <%cb>,  <_puts>
+    mov .64bit          <%dp>,                      <.message.disk.too.small>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
 
-    mov .64bit  <%dp>,  <.message.disk.resize>
-    call        <%cb>,  <_puts>
-    call <%cb>, <_print_num>
-    mov .64bit  <%dp>,  <.message.disk.resize.tail>
-    call        <%cb>,  <_puts>
+    mov .64bit          <%dp>,                      <.message.disk.resize>
+    call                <%cb>,                      <_puts>
+    call                <%cb>,                      <_print_num>
+    mov .64bit          <%dp>,                      <.message.disk.resize.tail>
+    call                <%cb>,                      <_puts>
 
     .skip.trunc:
-    mov .64bit  <%dp>,  <.message.disk.size>
-    xor .64bit  <%db>,  <%db>
-    call        <%cb>,  <_puts>
+    mov .64bit          <%dp>,                      <.message.disk.size>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
 
-    mov .64bit <%fer0>, <%fer3>
-    call <%cb>, <_print_num>
-    mov .64bit  <%dp>,  <.message.sector>
-    xor .64bit  <%db>,  <%db>
-    call        <%cb>,  <_puts>
+    mov .64bit          <%fer0>,                    <%fer3>
+    call                <%cb>,                      <_print_num>
+    mov .64bit          <%dp>,                      <.message.sector>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
 
-    mov .64bit  <%dp>,  <.message.writing>
-    xor .64bit  <%db>,  <%db>
-    call        <%cb>,  <_puts>
+    mov .64bit          <%dp>,                      <.message.writing>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
 
-    pop .64bit <%fer0>
-    push .64bit <%fer0>
-    div .64bit <$(512)>
+    pop .64bit          <%fer0>
+    push .64bit         <%fer0>
+    div .64bit          <$(512)>
 
-    out .64bit FDA_START_SEC, <$(0)>
-    out .64bit FDA_OPS_SEC_CNT, <%fer0>
-    pop .64bit <%fer3>
-    xor .64bit <%dp>, <%dp>
-    xor .64bit <%db>, <%db>
-    outs .64bit FDA_OUTPUT
+    out .64bit          FDA_START_SEC,              <$(0)>
+    out .64bit          FDA_OPS_SEC_CNT,            <%fer0>
+    pop .64bit          <%fer3>
+    xor .64bit          <%dp>,                      <%dp>
+    xor .64bit          <%db>,                      <%db>
+    outs .64bit         FDA_OUTPUT
 
     popall
     ret
@@ -335,25 +355,25 @@ _writes:
     .8bit_data < 0 >
 
 _int_0x02_io_error:
-    cmp .16bit <%exr0>, <$(0xF0)>
-    je <%cb>, <.io_error>
+    cmp .16bit          <%exr0>,                    <$(0xF0)>
+    je                  <%cb>,                      <.io_error>
 
     ; no such device
-    mov .64bit  <%dp>,  <.message.no.such.dev>
-    xor .64bit  <%db>,  <%db>
-    call        <%cb>,  <_puts>
+    mov .64bit          <%dp>,                      <.message.no.such.dev>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
     KBFLUSH
     INTGETC
-    mov .64bit <%fer0>, <$(6)>
-    jmp <%cb>, <.error.type.end>
+    mov .64bit          <%fer0>,                    <$(6)>
+    jmp                 <%cb>,                      <.error.type.end>
 
     .io_error:
-    mov .64bit  <%dp>,  <.message.io.error>
-    xor .64bit  <%db>,  <%db>
-    call        <%cb>,  <_puts>
+    mov .64bit          <%dp>,                      <.message.io.error>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
     KBFLUSH
     INTGETC
-    mov .64bit <%fer0>, <$(5)>
+    mov .64bit          <%fer0>,                    <$(5)>
 
     .error.type.end:
     hlt
@@ -367,44 +387,44 @@ _int_0x02_io_error:
     .8bit_data < 0 >
 
 _start:
-    mov .64bit  <%sb>,  <_stack_frame>
-    mov .64bit  <%sp>,  <$(0xFFF)>
+    mov .64bit          <%sb>,                      <_stack_frame>
+    mov .64bit          <%sp>,                      <$(0xFFF)>
 
     ; install error handler
-    mov .64bit <*1&64($(0xA0000), $(0x02 * 16), $(8))>, <_int_0x02_io_error>
+    mov .64bit          <*1&64($(0xA0000), $(0x02 * 16), $(8))>, <_int_0x02_io_error>
 
     ; show welcome message
-    mov .64bit  <%dp>,  <.welcome>
-    xor .64bit  <%db>,  <%db>
-    call        <%cb>,  <_puts>
+    mov .64bit          <%dp>,                      <.welcome>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
 
     KBFLUSH
     INTGETC
 
     ; read from disk
-    mov .64bit  <%dp>,  <.reading_from_disk>
-    call        <%cb>,  <_puts>
-    call        <%cb>,  <_reads>
-    push .64bit <%fer0>
+    mov .64bit          <%dp>,                      <.reading_from_disk>
+    call                <%cb>,                      <_puts>
+    call                <%cb>,                      <_reads>
+    push .64bit         <%fer0>
 
-    mov .64bit  <%dp>,  <.press_to_write_to_floppy>
-    call        <%cb>,  <_puts>
-
-    KBFLUSH
-    INTGETC
-
-    mov .64bit  <%dp>,  <.writint_to_floppy>
-    call        <%cb>,  <_puts>
-    pop .64bit <%fer0>
-    call        <%cb>,  <_writes>
-
-    mov .64bit  <%dp>,  <.exit.message>
-    xor .64bit  <%db>,  <%db>
-    call        <%cb>,  <_puts>
+    mov .64bit          <%dp>,                      <.press_to_write_to_floppy>
+    call                <%cb>,                      <_puts>
 
     KBFLUSH
     INTGETC
-    xor .64bit <%fer0>, <%fer0>
+
+    mov .64bit          <%dp>,                      <.writint_to_floppy>
+    call                <%cb>,                      <_puts>
+    pop .64bit          <%fer0>
+    call                <%cb>,                      <_writes>
+
+    mov .64bit          <%dp>,                      <.exit.message>
+    xor .64bit          <%db>,                      <%db>
+    call                <%cb>,                      <_puts>
+
+    KBFLUSH
+    INTGETC
+    xor .64bit          <%fer0>,                    <%fer0>
     hlt
 
 .welcome:

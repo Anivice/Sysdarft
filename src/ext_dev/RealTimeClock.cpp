@@ -134,7 +134,10 @@ void SysdarftRealTimeClock::update_time(std::atomic<bool> & running)
         }
     }
 
-    log("RTC updated time ", timestamp, " times in ",
-        std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::system_clock::now() - m_machineTime).count(), " nanoseconds, scale=", scale, "\n");
+    const auto running_seconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::system_clock::now() - m_machineTime).count();
+
+    log("RTC updated time ", timestamp, " times in ", running_seconds,
+        " nanoseconds, scale=", scale, ", "
+        "average triggering interval ", running_seconds / timestamp, " per second.\n");
 }
