@@ -361,7 +361,7 @@ function(add_unit_test TARGET_NAME)
 endfunction()
 
 # Unit Tests:
-add_unit_test(preprocessors tests/disk_io.asm)
+add_unit_test(disk_io tests/disk_io.asm)
 add_unit_test(rtc tests/rtc.asm)
 
 add_custom_target(
