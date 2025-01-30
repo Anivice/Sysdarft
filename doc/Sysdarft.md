@@ -1,6 +1,50 @@
 # ![](sysdarft.png)
 
+Permission is granted to copy,
+distribute and/or modify this document under the terms of the GNU Free Documentation License,
+Version 1.3 or any later version published by the Free Software Foundation;
+with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+A copy of the license is included in the section entitled "GNU Free Documentation License."
+in *Appendix C*.
+
+
 # **Content**
+
+- Notation Conventions
+- CPU Registers
+  - General-Purpose Registers
+  - Special-Purpose Registers
+    - Flag Register
+    - Current Procedure Stack Preservation Space, `CPS`
+
+- Assembler Syntax
+  - Preprocessor directives
+    - Declarative PreProcessor Directives
+    - Content Directives
+    - Assembling Control Flow and Conditional Compilation Directives
+    - Assembler Instruction Statements
+- Memory Layout
+- Interruption
+- External Devices
+  - Block Devices
+  - Real Time Clock (RTC)
+- Appendix A: Instructions Set
+  - Width Encoding
+  - Operand Encoding
+  - Instruction Encoding
+  - Instruction Set
+    - Miscellaneous
+    - Arithmetic
+    - Logic and Bitwise
+    - Data Transfer
+    - Control Flow
+    - Input/Output
+- Appendix B: Examples
+  - Example A, Disk I/O
+  - Example B, Real Time Clock
+- Appendix C: GNU Free Documentation License
+
+- References
 
 # **Notation Conventions**
 
@@ -301,6 +345,8 @@ This design simplifies stack allocation:
 by setting the pointer to a specific size, the stack is automatically sized accordingly.
 
 ![Stack](stack.png)
+
+$\pagebreak[4]$
 
 The following is a demonstration illustrating how a stack is managed
 (Push and Pop Data onto the Stack):
@@ -3289,5 +3335,1883 @@ SYMBOL TABLE - SIZE 47:
 ![Console Output](ExampleADiskIO.png)
 
 ![Floppy Drive A Stops at `0x00059800` Due to 512-byte (sector) Atomic I/O Operation](ExampleADiskContentDump.png)
+
+# **Example B, Real Time Clock**
+
+## Source Code
+
+#### File `interrupt.asm`
+
+*(Same as shown in Example A)*
+
+#### File `rtc.asm`
+
+```
+; rtc.asm
+;
+; Copyright 2025 Anivice Ives
+;
+; This program is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+;
+; SPDX-License-Identifier: GPL-3.0-or-later
+;
+
+
+.equ 'RTC_TIME',    '0x70'
+.equ 'RTC_INT',     '0x71'
+
+%define SECONDS_IN_MINUTE   < $(60) >
+%define SECONDS_IN_HOUR     < $(3600) >
+%define SECONDS_IN_DAY      < $(86400) >
+
+.org 0xC1800
+
+%include "./interrupt.asm"
+
+jmp                     <%cb>,                                      <_start>
+
+; _putc(%EXR0, linear position, %EXR1, ASCII Code)
+_putc:
+    pushall
+    mov     .64bit      <%db>,                                      <$(0xB8000)>
+    push    .16bit      <%exr1>
+    xor     .16bit      <%exr1>,                                    <%exr1>
+    xor     .32bit      <%her1>,                                    <%her1>
+    mov     .64bit      <%dp>,                                      <%fer0>
+
+    pop     .16bit      <%exr0>
+    mov     .8bit       <*1&8(%db, %dp, $(0))>,                     <%r0>
+
+    REFRESH
+
+    popall
+    ret
+
+; _newline(%EXR0, linear address)
+_newline:
+    pushall
+    int                 <$(0x15)>
+    div     .16bit      <$(80)>
+    ; EXR0 quotient(row), EXR1 reminder(col)
+    cmp     .16bit      <%exr0>,                                    <$(24)>
+    jbe                 <%cb>,                                      <.scroll>
+
+    xor     .16bit      <%exr1>,                                    <%exr1>
+    inc     .16bit      <%exr0>
+    mul     .16bit      <$(80)>
+    SETCUSP
+    REFRESH
+    jmp                 <%cb>,                                      < .exit>
+
+    .scroll:
+        ; move content (scroll up)
+        mov .64bit      <%db>,                                      <$(0xB8000)>
+        xor .64bit      <%dp>,                                      <%dp>
+        mov .64bit      <%eb>,                                      <$(0xB8000 + 80)>
+        xor .64bit      <%ep>,                                      <%ep>
+        mov .64bit      <%fer3>,                                    <$(2000 - 80)>
+        movs
+
+        ; clear last line
+        mov .64bit      <%fer3>,                                    <$(80)>
+        mov .64bit      <%eb>,                                      <$(0xB8000)>
+        mov .64bit      <%ep>,                                      <$(2000 - 80)>
+        xor .64bit      <%dp>,                                      <%dp>
+        .scroll.loop:
+            mov .8bit   <*1&8(%eb, %ep, %dp)>,                      <$(' ')>
+            inc .64bit  <%dp>
+            loop        <%cb>,                                      <.scroll.loop>
+
+        mov .16bit      <%exr0>,                                    <$(2000 - 80)>
+        SETCUSP
+        REFRESH
+    .exit:
+
+    popall
+    int                 <$(0x15)>
+    ret
+
+; _puts(%DB:%DP), null terminated string
+_puts:
+    pushall
+    .loop:
+        mov .8bit       <%r2>,                                      <*1&8(%db, %dp, $(0))>
+
+        cmp .8bit       <%r2>,                                      <$(0)>
+        je              <%cb>,                                      <.exit>
+
+        cmp .8bit       <%r2>,                                      <$(0x0A)>
+        jne             <%cb>,                                      <.skip_newline>
+
+        .newline:
+        call            <%cb>,                                      <_newline>
+        mov .64bit      <%fer3>,                                    <.last_offset>
+        mov .16bit      <*1&16($(0), %fer3, $(0))>,                 <%exr0>
+        jmp             <%cb>,      <.end>
+
+        .skip_newline:
+        xor .8bit       <%r3>,                                      <%r3>
+        mov .64bit      <%fer3>,                                    <.last_offset>
+        mov .16bit      <%exr0>,                                    <*1&16($(0), %fer3, $(0))>
+        call            <%cb>,                                      <_putc>
+
+        inc .16bit      <%exr0>
+        cmp .16bit      <%exr7>,                                    <$(2000)>
+        je              <%cb>,                                      <.newline>
+
+        mov .16bit      <*1&16($(0), %fer3, $(0))>,                 <%exr0>
+        SETCUSP
+
+        .end:
+        inc .64bit      <%dp>
+        jmp             <%cb>,                                      <.loop>
+
+    .exit:
+    popall
+    ret
+
+.last_offset:
+    .16bit_data < 0 >
+
+; _print_num(%fer0)
+_print_num:
+    pushall
+
+    xor .64bit          <%fer2>,                                    <%fer2>       ; record occurrences of digits
+    .loop:
+        div .64bit      <$(10)>
+        ; %fer0 ==> ori
+        ; %fer1 ==> reminder
+        mov  .64bit     <%fer3>,                                    <%fer1>
+        add  .64bit     <%fer3>,                                    <$('0')>
+        push .64bit     <%fer3>
+
+        inc .64bit      <%fer2>
+
+        cmp .64bit      <%fer0>,                                    <$(0x00)>
+        jne             <%cb>,                                      <.loop>
+
+    xor .64bit          <%db>,                                      <%db>
+    mov .64bit          <%dp>,                                      <.cache>
+
+    mov .64bit          <%fer3>,                                    <%fer2>
+    .loop_pop:
+        pop .64bit      <%fer0>
+        mov .8bit       <*1&8(%db, %dp, $(0))>,                     <%r0>
+        inc .64bit      <%dp>
+        loop            <%cb>,                                      <.loop_pop>
+
+    mov .8bit           <*1&8(%db, %dp, $(0))>,                     <$(0)>
+    mov .64bit          <%dp>,                                      <.cache>
+    call                <%cb>,                                      <_puts>
+
+    popall
+    ret
+
+    .cache:
+        .resvb < 16 >
+
+_start:
+    mov .64bit          <%sp>,                                      <$(0xFFF)>      ; setup stack frame size
+    mov .64bit          <%sb>,                                      <_stack_frame>  ; setup stack frame location
+    mov .64bit          <*1&64($(0xA0000), $(16 * 128),  $(8))>,    <_int_rtc>      ; set 128 as RTC interrupt
+    mov .64bit          <*1&64($(0xA0000), $(16 * 5), $(8))>,       <_int_kb_abort>
+
+    out .64bit          <$(RTC_INT)>,                               <$(0x4E2080)>   ; 1s, 0x80
+
+    .inf_loop:
+        int             <$(0x14)>
+        cmp .8bit       <%r0>,                                      <$('q')>
+        jne             <%cb>,                                      <.inf_loop>
+
+    xor .64bit          <%fer0>,                                    <%fer0>
+    hlt
+
+_int_kb_abort:
+    int                 <$(0x17)>
+    xor .64bit          <%db>,                                      <%db>
+    mov .64bit          <%dp>,                                      <.message>
+    call                <%cb>,                                      <_puts>
+    mov .64bit          <%fer3>,                                    <$(0x1FFFFF)>
+    .wait:
+    loop                <%cb>,                                      <.wait>
+    xor .64bit          <%fer0>,                                    <%fer0>
+    hlt
+    .message:
+    .string < "\nSystem shutdown!\n" >
+    .8bit_data < 0 >
+
+; check if a year is a leap year
+; is_leap_year(year ==> %fer0)->bool
+is_leap_year:
+    push .64bit         <%fer1>
+    push .64bit         <%fer2>
+
+    mov .64bit          <%fer2>,                                    <%fer0>
+
+    ; %fer0 % 400 == 0 ==> 1
+    div .64bit          <$(400)>
+    cmp .64bit          <%fer1>,                                    <$(0)>
+    je                  <%cb>,                                      <.return1>
+
+    ; %fer0 % 100 == 0 ==> 0
+    mov .64bit          <%fer0>,                                    <%fer2>
+    div .64bit          <$(100)>
+    cmp .64bit          <%fer1>,                                    <$(0)>
+    je                  <%cb>,                                      <.return0>
+
+    ; %fer0 % 4 == 0 ==> 1
+    mov .64bit          <%fer0>,                                    <%fer2>
+    div .64bit          <$(4)>
+    cmp .64bit          <%fer1>,                                    <$(0)>
+    je                  <%cb>,                                      <.return1>
+
+    jmp                 <%cb>,                                      <.return0>
+
+    .return1:
+    mov .64bit          <%fer0>,                                    <$(1)>
+    jmp                 <%cb>,                                      <.return>
+
+    .return0:
+    mov .64bit          <%fer0>,                                    <$(0)>
+
+    .return:
+    pop .64bit          <%fer2>
+    pop .64bit          <%fer1>
+    ret
+
+; Function to get the number of days in a month for a given year
+; get_days_in_month(month ==> %fer0, year ==> %fer1)-> days ==> %fer0
+get_days_in_month:
+    cmp .64bit          <%fer0>,                                    <$(1)>
+    je                  <%cb>,                                      <.month1>
+    cmp .64bit          <%fer0>,                                    <$(2)>
+    je                  <%cb>,                                      <.month2>
+    cmp .64bit          <%fer0>,                                    <$(3)>
+    je                  <%cb>,                                      <.month3>
+    cmp .64bit          <%fer0>,                                    <$(4)>
+    je                  <%cb>,                                      <.month4>
+    cmp .64bit          <%fer0>,                                    <$(5)>
+    je                  <%cb>,                                      <.month5>
+    cmp .64bit          <%fer0>,                                    <$(6)>
+    je                  <%cb>,                                      <.month6>
+    cmp .64bit          <%fer0>,                                    <$(7)>
+    je                  <%cb>,                                      <.month7>
+    cmp .64bit          <%fer0>,                                    <$(8)>
+    je                  <%cb>,                                      <.month8>
+    cmp .64bit          <%fer0>,                                    <$(9)>
+    je                  <%cb>,                                      <.month9>
+    cmp .64bit          <%fer0>,                                    <$(10)>
+    je                  <%cb>,                                      <.month10>
+    cmp .64bit          <%fer0>,                                    <$(11)>
+    je                  <%cb>,                                      <.month11>
+    cmp .64bit          <%fer0>,                                    <$(12)>
+    je                  <%cb>,                                      <.month12>
+
+    .month1:
+    mov .64bit          <%fer0>,                                    <$(31)>
+    jmp                 <%cb>,                                      <.end>
+
+    .month2:
+    mov .64bit          <%fer0>,                                    <%fer1>
+    call                <%cb>,                                      <is_leap_year>
+    cmp .64bit          <%fer0>,                                    <$(1)>
+    je                  <%cb>,                                      <.leap>
+
+    .not_leap:
+        mov .64bit      <%fer0>,                                    <$(28)>
+        jmp             <%cb>,                                      <.end>
+
+    .leap:
+        mov .64bit      <%fer0>,                                    <$(29)>
+        jmp             <%cb>,                                      <.end>
+
+    .month3:
+    mov .64bit          <%fer0>,                                    <$(31)>
+    jmp                 <%cb>,                                      <.end>
+
+    .month4:
+    mov .64bit          <%fer0>,                                    <$(30)>
+    jmp                 <%cb>,                                      <.end>
+
+    .month5:
+    mov .64bit          <%fer0>,                                    <$(31)>
+    jmp                 <%cb>,                                      <.end>
+
+    .month6:
+    mov .64bit          <%fer0>,                                    <$(30)>
+    jmp                 <%cb>,                                      <.end>
+
+    .month7:
+    mov .64bit          <%fer0>,                                    <$(31)>
+    jmp                 <%cb>,                                      <.end>
+
+    .month8:
+    mov .64bit          <%fer0>,                                    <$(31)>
+    jmp                 <%cb>,                                      <.end>
+
+    .month9:
+    mov .64bit          <%fer0>,                                    <$(30)>
+    jmp                 <%cb>,                                      <.end>
+
+    .month10:
+    mov .64bit          <%fer0>,                                    <$(31)>
+    jmp                 <%cb>,                                      <.end>
+
+    .month11:
+    mov .64bit          <%fer0>,                                    <$(30)>
+    jmp                 <%cb>,                                      <.end>
+
+    .month12:
+    mov .64bit          <%fer0>,                                    <$(31)>
+
+    .end:
+    ret
+
+; determine_the_year(total_days => %fer0)->(%fer0 => year, %fer1 => total_days)
+determine_the_year:
+    push .64bit         <%fer2>
+    push .64bit         <%fer3>
+
+    mov .64bit          <%fer1>,                                    <%fer0>
+    mov .64bit          <%fer2>,                                    <$(1970)>
+
+    ; %fer1 => total_days, %fer2 => year
+
+    .loop:
+        mov .64bit      <%fer0>,                                    <%fer2>
+        call            <%cb>,                                      <is_leap_year>
+        cmp .64bit      <%fer0>,                                    <$(1)>
+        je              <%cb>,                                      <.is_leap>
+
+        .is_not_leap:
+        mov .64bit      <%fer3>,                                    <$(365)>
+        jmp             <%cb>,                                      <.end_is_leap_cmp>
+
+        .is_leap:
+        mov .64bit      <%fer3>,                                    <$(366)>
+
+        .end_is_leap_cmp:
+        cmp .64bit      <%fer1>,                                    <%fer3>
+        jl              <%cb>,                                      <.break>
+
+        sub .64bit      <%fer1>,                                    <%fer3>
+        inc .64bit      <%fer2>
+        jmp             <%cb>,                                      <.loop>
+    .break:
+
+    mov .64bit          <%fer0>,                                    <%fer2>
+
+    pop .64bit          <%fer3>
+    pop .64bit          <%fer2>
+    ret
+
+; determine_the_month(total_days => %fer0, year => %fer1)->(%fer0 => month, %fer1 => total_days)
+determine_the_month:
+    push .64bit         <%fer2>
+    push .64bit         <%fer3>
+
+    ; %fer2 => month counter
+    mov .64bit          <%fer2>,                                    <$(1)>
+    ; total_days => %fer3
+    mov .64bit          <%fer3>,                                    <%fer0>
+
+    .loop:
+        mov .64bit      <%fer0>,                                    <%fer2>
+        call            <%cb>,                                      <get_days_in_month> ; => %fer0
+        cmp .64bit      <%fer3>,                                    <%fer0>
+        jl              <%cb>,                                      <.break>
+
+        sub .64bit      <%fer3>,                                    <%fer0>
+        inc .64bit      <%fer2>
+
+        jmp             <%cb>,                                      <.loop>
+
+    .break:
+
+    mov .64bit          <%fer0>,                                    <%fer2>
+    mov .64bit          <%fer1>,                                    <%fer3>
+
+    pop .64bit          <%fer3>
+    pop .64bit          <%fer2>
+    ret
+
+
+; _print_time(%fer0)
+_print_time:
+    pushall
+
+    ; Calculate total days and remaining seconds
+    div .64bit          SECONDS_IN_DAY
+    ; total_days => %fer15, remaining_seconds => %fer0
+    mov .64bit          <%fer15>,                                   <%fer0>
+    mov .64bit          <%fer0>,                                    <%fer1>
+
+    ; Calculate current time
+    div .64bit          SECONDS_IN_HOUR
+    ; hour => %fer14, remaining_seconds => %fer1
+    mov .64bit          <%fer14>,                                   <%fer0>
+    mov .64bit          <%fer0>,                                    <%fer1>
+    div .64bit          SECONDS_IN_MINUTE
+    ; minute => %fer13, second => %fer12
+    mov .64bit          <%fer13>,                                   <%fer0>
+    mov .64bit          <%fer12>,                                   <%fer1>
+
+    ; total_days => %fer15
+    ; hour => %fer14
+    ; minute => %fer13
+    ; second => %fer12
+
+    ; determine_the_year(total_days => %fer0)->(%fer0 => year, %fer1 => total_days)
+    ; determine_the_month(total_days => %fer0, year => %fer1)->(%fer0 => month, %fer1 => total_days)
+
+    mov .64bit          <%fer0>,                                    <%fer15>
+    call                <%cb>,                                      <determine_the_year>
+    mov .64bit          <%fer11>,                                   <%fer0> ; year
+
+    mov .64bit          <%fer0>,                                    <%fer1>
+    mov .64bit          <%fer1>,                                    <%fer11>
+    call                <%cb>,                                      <determine_the_month>
+    mov .64bit          <%fer10>,                                   <%fer0> ; month
+    mov .64bit          <%fer9>,                                    <%fer1> ; days
+
+
+    mov .64bit          <%fer0>,                                    <%fer11>
+    call                <%cb>,                                      <_print_num>
+    xor .64bit          <%db>,                                      <%db>
+    mov .64bit          <%dp>,                                      <.dash>
+    call                <%cb>,                                      <_puts>
+
+    mov .64bit          <%fer0>,                                    <%fer10>
+    call                <%cb>,                                      <_print_num>
+    xor .64bit          <%db>,                                      <%db>
+    mov .64bit          <%dp>,                                      <.dash>
+    call                <%cb>,                                      <_puts>
+
+    mov .64bit          <%fer0>,                                    <%fer9>
+    call                <%cb>,                                      <_print_num>
+    xor .64bit          <%db>,                                      <%db>
+    mov .64bit          <%dp>,                                      <.dash>
+    call                <%cb>,                                      <_puts>
+
+    mov .64bit          <%fer0>,                                    <%fer14>
+    call                <%cb>,                                      <_print_num>
+    xor .64bit          <%db>,                                      <%db>
+    mov .64bit          <%dp>,                                      <.dash>
+    call                <%cb>,                                      <_puts>
+
+    mov .64bit          <%fer0>,                                    <%fer13>
+    call                <%cb>,                                      <_print_num>
+    xor .64bit          <%db>,                                      <%db>
+    mov .64bit          <%dp>,                                      <.dash>
+    call                <%cb>,                                      <_puts>
+
+    mov .64bit          <%fer0>,                                    <%fer12>
+    call                <%cb>,                                      <_print_num>
+
+    popall
+    ret
+
+    .dash:
+    .string < "-" >
+    .8bit_data < 0 >
+
+_int_rtc:
+    xor .64bit          <%db>,                                      <%db>
+    mov .64bit          <%dp>,                                      <.message>
+    call                <%cb>,                                      <_puts>
+    in .64bit           <$(RTC_TIME)>,                              <%fer0>
+
+    ; output current time
+    call                <%cb>,                                      <_print_time>
+
+    mov .64bit          <%dp>,                                      <.message.tail>
+    call                <%cb>,                                      <_puts>
+    iret
+    .message:
+    .string < "Current time: " >
+    .8bit_data < 0 >
+    .message.tail:
+    .string < "\n" >
+    .8bit_data < 0 >
+
+_stack_frame:
+.resvb < 16 - ( (@ - @@) % 16 ) >
+```
+
+### Disassembled Symbol File
+
+```
+
+rtc.sys        FORMAT    SYS
+
+SYMBOL TABLE - SIZE 54:
+00000000000C180E                             _putc
+00000000000C1865                             _newline
+00000000000C18D7                             _newline_scroll
+00000000000C194A                             _newline_scroll_loop
+00000000000C199A                             _newline_exit
+00000000000C19A7                             _puts
+00000000000C19A8                             _puts_loop
+00000000000C19FA                             _puts_newline
+00000000000C1A44                             _puts_skip_newline
+00000000000C1AD4                             _puts_end
+00000000000C1AE7                             _puts_exit
+00000000000C1AE9                             _puts_last_offset
+00000000000C1AEB                             _print_num
+00000000000C1AF4                             _print_num_loop
+00000000000C1B5D                             _print_num_loop_pop
+00000000000C1BCB                             _print_num_cache
+00000000000C1BDB                             _start
+00000000000C1C69                             _start_inf_loop
+00000000000C1C9A                             _int_kb_abort
+00000000000C1CD9                             _int_kb_abort_wait
+00000000000C1CF0                             _int_kb_abort_message
+00000000000C1D03                             is_leap_year
+00000000000C1DAE                             is_leap_year_return1
+00000000000C1DCB                             is_leap_year_return0
+00000000000C1DDA                             is_leap_year_return
+00000000000C1DE5                             get_days_in_month
+00000000000C1F41                             get_days_in_month_month1
+00000000000C1F5E                             get_days_in_month_month2
+00000000000C1FAE                             get_days_in_month_leap
+00000000000C1FCB                             get_days_in_month_month3
+00000000000C1FE8                             get_days_in_month_month4
+00000000000C2005                             get_days_in_month_month5
+00000000000C2022                             get_days_in_month_month6
+00000000000C203F                             get_days_in_month_month7
+00000000000C205C                             get_days_in_month_month8
+00000000000C2079                             get_days_in_month_month9
+00000000000C2096                             get_days_in_month_month10
+00000000000C20B3                             get_days_in_month_month11
+00000000000C20D0                             get_days_in_month_month12
+00000000000C20DF                             get_days_in_month_end
+00000000000C20E0                             determine_the_year
+00000000000C2101                             determine_the_year_loop
+00000000000C2151                             determine_the_year_is_leap
+00000000000C2160                             determine_the_year_end_is_leap_cmp
+00000000000C2191                             determine_the_year_break
+00000000000C21A4                             determine_the_month
+00000000000C21C5                             determine_the_month_loop
+00000000000C220C                             determine_the_month_break
+00000000000C2227                             _print_time
+00000000000C2407                             _print_time_dash
+00000000000C2409                             _int_rtc
+00000000000C2469                             _int_rtc_message
+00000000000C2478                             _int_rtc_message_tail
+00000000000C247A                             _stack_frame
+
+
+00000000000C1800: 30 01 64 A2 02 64 DB 1B     JMP <%CB>, <$(0xC1BDB /* _start */)>
+                  0C 00 00 00 00 00 
+
+
+<_putc> :
+00000000000C180E: 24                          PUSHALL
+00000000000C180F: 20 64 01 64 A3 02 64 00     MOV .64bit <%DB>, <$(0xB8000)>
+                  80 0B 00 00 00 00 00 
+00000000000C181E: 22 16 01 16 01              PUSH .16bit <%EXR1>
+00000000000C1823: 12 16 01 16 01 01 16 01     XOR .16bit <%EXR1>, <%EXR1>
+00000000000C182B: 12 32 01 32 01 01 32 01     XOR .32bit <%HER1>, <%HER1>
+00000000000C1833: 20 64 01 64 A4 01 64 00     MOV .64bit <%DP>, <%FER0>
+00000000000C183B: 23 16 01 16 00              POP .16bit <%EXR0>
+00000000000C1840: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $(0x0))>, <%R0>
+                  64 A4 02 64 00 00 00 00 
+                  00 00 00 00 01 01 08 00 
+00000000000C1858: 39 02 64 18 00 00 00 00     INT <$(0x18)>
+                  00 00 00 
+00000000000C1863: 25                          POPALL
+00000000000C1864: 32                          RET
+
+
+<_newline> :
+00000000000C1865: 24                          PUSHALL
+00000000000C1866: 39 02 64 15 00 00 00 00     INT <$(0x15)>
+                  00 00 00 
+00000000000C1871: 08 16 02 64 50 00 00 00     DIV .16bit <$(0x50)>
+                  00 00 00 00 
+00000000000C187D: 0A 16 01 16 00 02 64 18     CMP .16bit <%EXR0>, <$(0x18)>
+                  00 00 00 00 00 00 00 
+00000000000C188C: 37 01 64 A2 02 64 D7 18     JBE <%CB>, <$(0xC18D7 /* _newline_scroll */)>
+                  0C 00 00 00 00 00 
+00000000000C189A: 12 16 01 16 01 01 16 01     XOR .16bit <%EXR1>, <%EXR1>
+00000000000C18A2: 0B 16 01 16 00              INC .16bit <%EXR0>
+00000000000C18A7: 06 16 02 64 50 00 00 00     MUL .16bit <$(0x50)>
+                  00 00 00 00 
+00000000000C18B3: 39 02 64 11 00 00 00 00     INT <$(0x11)>
+                  00 00 00 
+00000000000C18BE: 39 02 64 18 00 00 00 00     INT <$(0x18)>
+                  00 00 00 
+00000000000C18C9: 30 01 64 A2 02 64 9A 19     JMP <%CB>, <$(0xC199A /* _newline_exit */)>
+                  0C 00 00 00 00 00 
+
+
+<_newline_scroll> :
+00000000000C18D7: 20 64 01 64 A3 02 64 00     MOV .64bit <%DB>, <$(0xB8000)>
+                  80 0B 00 00 00 00 00 
+00000000000C18E6: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
+00000000000C18EE: 20 64 01 64 A5 02 64 50     MOV .64bit <%EB>, <$(0xB8050)>
+                  80 0B 00 00 00 00 00 
+00000000000C18FD: 12 64 01 64 A6 01 64 A6     XOR .64bit <%EP>, <%EP>
+00000000000C1905: 20 64 01 64 03 02 64 80     MOV .64bit <%FER3>, <$(0x780)>
+                  07 00 00 00 00 00 00 
+00000000000C1914: 28                          MOVS
+00000000000C1915: 20 64 01 64 03 02 64 50     MOV .64bit <%FER3>, <$(0x50)>
+                  00 00 00 00 00 00 00 
+00000000000C1924: 20 64 01 64 A5 02 64 00     MOV .64bit <%EB>, <$(0xB8000)>
+                  80 0B 00 00 00 00 00 
+00000000000C1933: 20 64 01 64 A6 02 64 80     MOV .64bit <%EP>, <$(0x780)>
+                  07 00 00 00 00 00 00 
+00000000000C1942: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
+
+
+<_newline_scroll_loop> :
+00000000000C194A: 20 08 03 08 01 64 A5 01     MOV .8bit  <*1&8(%EB, %EP, %DP)>, <$(0x20)>
+                  64 A6 01 64 A4 01 02 64 
+                  20 00 00 00 00 00 00 00 
+00000000000C1962: 0B 64 01 64 A4              INC .64bit <%DP>
+00000000000C1967: 60 01 64 A2 02 64 4A 19     LOOP <%CB>, <$(0xC194A /* _newline_scroll_loop */)>
+                  0C 00 00 00 00 00 
+00000000000C1975: 20 16 01 16 00 02 64 80     MOV .16bit <%EXR0>, <$(0x780)>
+                  07 00 00 00 00 00 00 
+00000000000C1984: 39 02 64 11 00 00 00 00     INT <$(0x11)>
+                  00 00 00 
+00000000000C198F: 39 02 64 18 00 00 00 00     INT <$(0x18)>
+                  00 00 00 
+
+
+<_newline_exit> :
+00000000000C199A: 25                          POPALL
+00000000000C199B: 39 02 64 15 00 00 00 00     INT <$(0x15)>
+                  00 00 00 
+00000000000C19A6: 32                          RET
+
+
+<_puts> :
+00000000000C19A7: 24                          PUSHALL
+
+
+<_puts_loop> :
+00000000000C19A8: 20 08 01 08 02 03 08 01     MOV .8bit  <%R2>, <*1&8(%DB, %DP, $(0x0))>
+                  64 A3 01 64 A4 02 64 00 
+                  00 00 00 00 00 00 00 01 
+00000000000C19C0: 0A 08 01 08 02 02 64 00     CMP .8bit  <%R2>, <$(0x0)>
+                  00 00 00 00 00 00 00 
+00000000000C19CF: 33 01 64 A2 02 64 E7 1A     JE <%CB>, <$(0xC1AE7 /* _puts_exit */)>
+                  0C 00 00 00 00 00 
+00000000000C19DD: 0A 08 01 08 02 02 64 0A     CMP .8bit  <%R2>, <$(0xA)>
+                  00 00 00 00 00 00 00 
+00000000000C19EC: 34 01 64 A2 02 64 44 1A     JNE <%CB>, <$(0xC1A44 /* _puts_skip_newline */)>
+                  0C 00 00 00 00 00 
+
+
+<_puts_newline> :
+00000000000C19FA: 31 01 64 A2 02 64 65 18     CALL <%CB>, <$(0xC1865 /* _newline */)>
+                  0C 00 00 00 00 00 
+00000000000C1A08: 20 64 01 64 03 02 64 E9     MOV .64bit <%FER3>, <$(0xC1AE9 /* _puts_last_offset */)>
+                  1A 0C 00 00 00 00 00 
+00000000000C1A17: 20 16 03 16 02 64 00 00     MOV .16bit <*1&16($(0x0), %FER3, $(0x0))>, <%EXR0>
+                  00 00 00 00 00 00 01 64 
+                  03 02 64 00 00 00 00 00 
+                  00 00 00 01 01 16 00 
+00000000000C1A36: 30 01 64 A2 02 64 D4 1A     JMP <%CB>, <$(0xC1AD4 /* _puts_end */)>
+                  0C 00 00 00 00 00 
+
+
+<_puts_skip_newline> :
+00000000000C1A44: 12 08 01 08 03 01 08 03     XOR .8bit  <%R3>, <%R3>
+00000000000C1A4C: 20 64 01 64 03 02 64 E9     MOV .64bit <%FER3>, <$(0xC1AE9 /* _puts_last_offset */)>
+                  1A 0C 00 00 00 00 00 
+00000000000C1A5B: 20 16 01 16 00 03 16 02     MOV .16bit <%EXR0>, <*1&16($(0x0), %FER3, $(0x0))>
+                  64 00 00 00 00 00 00 00 
+                  00 01 64 03 02 64 00 00 
+                  00 00 00 00 00 00 01 
+00000000000C1A7A: 31 01 64 A2 02 64 0E 18     CALL <%CB>, <$(0xC180E /* _putc */)>
+                  0C 00 00 00 00 00 
+00000000000C1A88: 0B 16 01 16 00              INC .16bit <%EXR0>
+00000000000C1A8D: 0A 16 01 16 07 02 64 D0     CMP .16bit <%EXR7>, <$(0x7D0)>
+                  07 00 00 00 00 00 00 
+00000000000C1A9C: 33 01 64 A2 02 64 FA 19     JE <%CB>, <$(0xC19FA /* _puts_newline */)>
+                  0C 00 00 00 00 00 
+00000000000C1AAA: 20 16 03 16 02 64 00 00     MOV .16bit <*1&16($(0x0), %FER3, $(0x0))>, <%EXR0>
+                  00 00 00 00 00 00 01 64 
+                  03 02 64 00 00 00 00 00 
+                  00 00 00 01 01 16 00 
+00000000000C1AC9: 39 02 64 11 00 00 00 00     INT <$(0x11)>
+                  00 00 00 
+
+
+<_puts_end> :
+00000000000C1AD4: 0B 64 01 64 A4              INC .64bit <%DP>
+00000000000C1AD9: 30 01 64 A2 02 64 A8 19     JMP <%CB>, <$(0xC19A8 /* _puts_loop */)>
+                  0C 00 00 00 00 00 
+
+
+<_puts_exit> :
+00000000000C1AE7: 25                          POPALL
+00000000000C1AE8: 32                          RET
+
+
+<_puts_last_offset> :
+00000000000C1AE9: 00                          NOP
+00000000000C1AEA: 00                          NOP
+
+
+<_print_num> :
+00000000000C1AEB: 24                          PUSHALL
+00000000000C1AEC: 12 64 01 64 02 01 64 02     XOR .64bit <%FER2>, <%FER2>
+
+
+<_print_num_loop> :
+00000000000C1AF4: 08 64 02 64 0A 00 00 00     DIV .64bit <$(0xA)>
+                  00 00 00 00 
+00000000000C1B00: 20 64 01 64 03 01 64 01     MOV .64bit <%FER3>, <%FER1>
+00000000000C1B08: 01 64 01 64 03 02 64 30     ADD .64bit <%FER3>, <$(0x30)>
+                  00 00 00 00 00 00 00 
+00000000000C1B17: 22 64 01 64 03              PUSH .64bit <%FER3>
+00000000000C1B1C: 0B 64 01 64 02              INC .64bit <%FER2>
+00000000000C1B21: 0A 64 01 64 00 02 64 00     CMP .64bit <%FER0>, <$(0x0)>
+                  00 00 00 00 00 00 00 
+00000000000C1B30: 34 01 64 A2 02 64 F4 1A     JNE <%CB>, <$(0xC1AF4 /* _print_num_loop */)>
+                  0C 00 00 00 00 00 
+00000000000C1B3E: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1B46: 20 64 01 64 A4 02 64 CB     MOV .64bit <%DP>, <$(0xC1BCB /* _print_num_cache */)>
+                  1B 0C 00 00 00 00 00 
+00000000000C1B55: 20 64 01 64 03 01 64 02     MOV .64bit <%FER3>, <%FER2>
+
+
+<_print_num_loop_pop> :
+00000000000C1B5D: 23 64 01 64 00              POP .64bit <%FER0>
+00000000000C1B62: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $(0x0))>, <%R0>
+                  64 A4 02 64 00 00 00 00 
+                  00 00 00 00 01 01 08 00 
+00000000000C1B7A: 0B 64 01 64 A4              INC .64bit <%DP>
+00000000000C1B7F: 60 01 64 A2 02 64 5D 1B     LOOP <%CB>, <$(0xC1B5D /* _print_num_loop_pop */)>
+                  0C 00 00 00 00 00 
+00000000000C1B8D: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $(0x0))>, <$(0x0)>
+                  64 A4 02 64 00 00 00 00 
+                  00 00 00 00 01 02 64 00 
+                  00 00 00 00 00 00 00 
+00000000000C1BAC: 20 64 01 64 A4 02 64 CB     MOV .64bit <%DP>, <$(0xC1BCB /* _print_num_cache */)>
+                  1B 0C 00 00 00 00 00 
+00000000000C1BBB: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7 /* _puts */)>
+                  0C 00 00 00 00 00 
+00000000000C1BC9: 25                          POPALL
+00000000000C1BCA: 32                          RET
+
+
+<_print_num_cache> :
+00000000000C1BCB: 00                          NOP
+00000000000C1BCC: 00                          NOP
+00000000000C1BCD: 00                          NOP
+
+ ... PADDLING 0x00 APPEARED 16 TIMES SINCE 00000000000C1BCB...
+
+
+
+<_start> :
+00000000000C1BDB: 20 64 01 64 A1 02 64 FF     MOV .64bit <%SP>, <$(0xFFF)>
+                  0F 00 00 00 00 00 00 
+00000000000C1BEA: 20 64 01 64 A0 02 64 7A     MOV .64bit <%SB>, <$(0xC247A /* _stack_frame */)>
+                  24 0C 00 00 00 00 00 
+00000000000C1BF9: 20 64 03 64 02 64 00 00     MOV .64bit <*1&64($(0xA0000), $(0x800), $(0x8))>,
+                  0A 00 00 00 00 00 02 64                <$(0xC2409 /* _int_rtc */)>
+                  00 08 00 00 00 00 00 00 
+                  02 64 08 00 00 00 00 00 
+                  00 00 01 02 64 09 24 0C 
+                  00 00 00 00 00 
+00000000000C1C26: 20 64 03 64 02 64 00 00     MOV .64bit <*1&64($(0xA0000), $(0x50), $(0x8))>,
+                  0A 00 00 00 00 00 02 64                <$(0xC1C9A /* _int_kb_abort */)>
+                  50 00 00 00 00 00 00 00 
+                  02 64 08 00 00 00 00 00 
+                  00 00 01 02 64 9A 1C 0C 
+                  00 00 00 00 00 
+00000000000C1C53: 51 64 02 64 71 00 00 00     OUT .64bit <$(0x71)>, <$(0x4E2080)>
+                  00 00 00 00 02 64 80 20 
+                  4E 00 00 00 00 00 
+
+
+<_start_inf_loop> :
+00000000000C1C69: 39 02 64 14 00 00 00 00     INT <$(0x14)>
+                  00 00 00 
+00000000000C1C74: 0A 08 01 08 00 02 64 71     CMP .8bit  <%R0>, <$(0x71)>
+                  00 00 00 00 00 00 00 
+00000000000C1C83: 34 01 64 A2 02 64 69 1C     JNE <%CB>, <$(0xC1C69 /* _start_inf_loop */)>
+                  0C 00 00 00 00 00 
+00000000000C1C91: 12 64 01 64 00 01 64 00     XOR .64bit <%FER0>, <%FER0>
+00000000000C1C99: 40                          HLT
+
+
+<_int_kb_abort> :
+00000000000C1C9A: 39 02 64 17 00 00 00 00     INT <$(0x17)>
+                  00 00 00 
+00000000000C1CA5: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1CAD: 20 64 01 64 A4 02 64 F0     MOV .64bit <%DP>, <$(0xC1CF0 /* _int_kb_abort_message */)>
+                  1C 0C 00 00 00 00 00 
+00000000000C1CBC: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7 /* _puts */)>
+                  0C 00 00 00 00 00 
+00000000000C1CCA: 20 64 01 64 03 02 64 FF     MOV .64bit <%FER3>, <$(0x1FFFFF)>
+                  FF 1F 00 00 00 00 00 
+
+
+<_int_kb_abort_wait> :
+00000000000C1CD9: 60 01 64 A2 02 64 D9 1C     LOOP <%CB>, <$(0xC1CD9 /* _int_kb_abort_wait */)>
+                  0C 00 00 00 00 00 
+00000000000C1CE7: 12 64 01 64 00 01 64 00     XOR .64bit <%FER0>, <%FER0>
+00000000000C1CEF: 40                          HLT
+
+
+<_int_kb_abort_message> :
+00000000000C1CF0: 0A53 7973 7465 6D20 7368 7574 646F 776E    .System shutdown
+00000000000C1D00: 210A                                       !.
+
+00000000000C1D02: 00                          NOP
+
+
+<is_leap_year> :
+00000000000C1D03: 22 64 01 64 01              PUSH .64bit <%FER1>
+00000000000C1D08: 22 64 01 64 02              PUSH .64bit <%FER2>
+00000000000C1D0D: 20 64 01 64 02 01 64 00     MOV .64bit <%FER2>, <%FER0>
+00000000000C1D15: 08 64 02 64 90 01 00 00     DIV .64bit <$(0x190)>
+                  00 00 00 00 
+00000000000C1D21: 0A 64 01 64 01 02 64 00     CMP .64bit <%FER1>, <$(0x0)>
+                  00 00 00 00 00 00 00 
+00000000000C1D30: 33 01 64 A2 02 64 AE 1D     JE <%CB>, <$(0xC1DAE /* is_leap_year_return1 */)>
+                  0C 00 00 00 00 00 
+00000000000C1D3E: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
+00000000000C1D46: 08 64 02 64 64 00 00 00     DIV .64bit <$(0x64)>
+                  00 00 00 00 
+00000000000C1D52: 0A 64 01 64 01 02 64 00     CMP .64bit <%FER1>, <$(0x0)>
+                  00 00 00 00 00 00 00 
+00000000000C1D61: 33 01 64 A2 02 64 CB 1D     JE <%CB>, <$(0xC1DCB /* is_leap_year_return0 */)>
+                  0C 00 00 00 00 00 
+00000000000C1D6F: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
+00000000000C1D77: 08 64 02 64 04 00 00 00     DIV .64bit <$(0x4)>
+                  00 00 00 00 
+00000000000C1D83: 0A 64 01 64 01 02 64 00     CMP .64bit <%FER1>, <$(0x0)>
+                  00 00 00 00 00 00 00 
+00000000000C1D92: 33 01 64 A2 02 64 AE 1D     JE <%CB>, <$(0xC1DAE /* is_leap_year_return1 */)>
+                  0C 00 00 00 00 00 
+00000000000C1DA0: 30 01 64 A2 02 64 CB 1D     JMP <%CB>, <$(0xC1DCB /* is_leap_year_return0 */)>
+                  0C 00 00 00 00 00 
+
+
+<is_leap_year_return1> :
+00000000000C1DAE: 20 64 01 64 00 02 64 01     MOV .64bit <%FER0>, <$(0x1)>
+                  00 00 00 00 00 00 00 
+00000000000C1DBD: 30 01 64 A2 02 64 DA 1D     JMP <%CB>, <$(0xC1DDA /* is_leap_year_return */)>
+                  0C 00 00 00 00 00 
+
+
+<is_leap_year_return0> :
+00000000000C1DCB: 20 64 01 64 00 02 64 00     MOV .64bit <%FER0>, <$(0x0)>
+                  00 00 00 00 00 00 00 
+
+
+<is_leap_year_return> :
+00000000000C1DDA: 23 64 01 64 02              POP .64bit <%FER2>
+00000000000C1DDF: 23 64 01 64 01              POP .64bit <%FER1>
+00000000000C1DE4: 32                          RET
+
+
+<get_days_in_month> :
+00000000000C1DE5: 0A 64 01 64 00 02 64 01     CMP .64bit <%FER0>, <$(0x1)>
+                  00 00 00 00 00 00 00 
+00000000000C1DF4: 33 01 64 A2 02 64 41 1F     JE <%CB>, <$(0xC1F41 /* get_days_in_month_month1 */)>
+                  0C 00 00 00 00 00 
+00000000000C1E02: 0A 64 01 64 00 02 64 02     CMP .64bit <%FER0>, <$(0x2)>
+                  00 00 00 00 00 00 00 
+00000000000C1E11: 33 01 64 A2 02 64 5E 1F     JE <%CB>, <$(0xC1F5E /* get_days_in_month_month2 */)>
+                  0C 00 00 00 00 00 
+00000000000C1E1F: 0A 64 01 64 00 02 64 03     CMP .64bit <%FER0>, <$(0x3)>
+                  00 00 00 00 00 00 00 
+00000000000C1E2E: 33 01 64 A2 02 64 CB 1F     JE <%CB>, <$(0xC1FCB /* get_days_in_month_month3 */)>
+                  0C 00 00 00 00 00 
+00000000000C1E3C: 0A 64 01 64 00 02 64 04     CMP .64bit <%FER0>, <$(0x4)>
+                  00 00 00 00 00 00 00 
+00000000000C1E4B: 33 01 64 A2 02 64 E8 1F     JE <%CB>, <$(0xC1FE8 /* get_days_in_month_month4 */)>
+                  0C 00 00 00 00 00 
+00000000000C1E59: 0A 64 01 64 00 02 64 05     CMP .64bit <%FER0>, <$(0x5)>
+                  00 00 00 00 00 00 00 
+00000000000C1E68: 33 01 64 A2 02 64 05 20     JE <%CB>, <$(0xC2005 /* get_days_in_month_month5 */)>
+                  0C 00 00 00 00 00 
+00000000000C1E76: 0A 64 01 64 00 02 64 06     CMP .64bit <%FER0>, <$(0x6)>
+                  00 00 00 00 00 00 00 
+00000000000C1E85: 33 01 64 A2 02 64 22 20     JE <%CB>, <$(0xC2022 /* get_days_in_month_month6 */)>
+                  0C 00 00 00 00 00 
+00000000000C1E93: 0A 64 01 64 00 02 64 07     CMP .64bit <%FER0>, <$(0x7)>
+                  00 00 00 00 00 00 00 
+00000000000C1EA2: 33 01 64 A2 02 64 3F 20     JE <%CB>, <$(0xC203F /* get_days_in_month_month7 */)>
+                  0C 00 00 00 00 00 
+00000000000C1EB0: 0A 64 01 64 00 02 64 08     CMP .64bit <%FER0>, <$(0x8)>
+                  00 00 00 00 00 00 00 
+00000000000C1EBF: 33 01 64 A2 02 64 5C 20     JE <%CB>, <$(0xC205C /* get_days_in_month_month8 */)>
+                  0C 00 00 00 00 00 
+00000000000C1ECD: 0A 64 01 64 00 02 64 09     CMP .64bit <%FER0>, <$(0x9)>
+                  00 00 00 00 00 00 00 
+00000000000C1EDC: 33 01 64 A2 02 64 79 20     JE <%CB>, <$(0xC2079 /* get_days_in_month_month9 */)>
+                  0C 00 00 00 00 00 
+00000000000C1EEA: 0A 64 01 64 00 02 64 0A     CMP .64bit <%FER0>, <$(0xA)>
+                  00 00 00 00 00 00 00 
+00000000000C1EF9: 33 01 64 A2 02 64 96 20     JE <%CB>, <$(0xC2096 /* get_days_in_month_month10 */)>
+                  0C 00 00 00 00 00 
+00000000000C1F07: 0A 64 01 64 00 02 64 0B     CMP .64bit <%FER0>, <$(0xB)>
+                  00 00 00 00 00 00 00 
+00000000000C1F16: 33 01 64 A2 02 64 B3 20     JE <%CB>, <$(0xC20B3 /* get_days_in_month_month11 */)>
+                  0C 00 00 00 00 00 
+00000000000C1F24: 0A 64 01 64 00 02 64 0C     CMP .64bit <%FER0>, <$(0xC)>
+                  00 00 00 00 00 00 00 
+00000000000C1F33: 33 01 64 A2 02 64 D0 20     JE <%CB>, <$(0xC20D0 /* get_days_in_month_month12 */)>
+                  0C 00 00 00 00 00 
+
+
+<get_days_in_month_month1> :
+00000000000C1F41: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$(0x1F)>
+                  00 00 00 00 00 00 00 
+00000000000C1F50: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF /* get_days_in_month_end */)>
+                  0C 00 00 00 00 00 
+
+
+<get_days_in_month_month2> :
+00000000000C1F5E: 20 64 01 64 00 01 64 01     MOV .64bit <%FER0>, <%FER1>
+00000000000C1F66: 31 01 64 A2 02 64 03 1D     CALL <%CB>, <$(0xC1D03 /* is_leap_year */)>
+                  0C 00 00 00 00 00 
+00000000000C1F74: 0A 64 01 64 00 02 64 01     CMP .64bit <%FER0>, <$(0x1)>
+                  00 00 00 00 00 00 00 
+00000000000C1F83: 33 01 64 A2 02 64 AE 1F     JE <%CB>, <$(0xC1FAE /* get_days_in_month_leap */)>
+                  0C 00 00 00 00 00 
+00000000000C1F91: 20 64 01 64 00 02 64 1C     MOV .64bit <%FER0>, <$(0x1C)>
+                  00 00 00 00 00 00 00 
+00000000000C1FA0: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF /* get_days_in_month_end */)>
+                  0C 00 00 00 00 00 
+
+
+<get_days_in_month_leap> :
+00000000000C1FAE: 20 64 01 64 00 02 64 1D     MOV .64bit <%FER0>, <$(0x1D)>
+                  00 00 00 00 00 00 00 
+00000000000C1FBD: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF /* get_days_in_month_end */)>
+                  0C 00 00 00 00 00 
+
+
+<get_days_in_month_month3> :
+00000000000C1FCB: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$(0x1F)>
+                  00 00 00 00 00 00 00 
+00000000000C1FDA: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF /* get_days_in_month_end */)>
+                  0C 00 00 00 00 00 
+
+
+<get_days_in_month_month4> :
+00000000000C1FE8: 20 64 01 64 00 02 64 1E     MOV .64bit <%FER0>, <$(0x1E)>
+                  00 00 00 00 00 00 00 
+00000000000C1FF7: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF /* get_days_in_month_end */)>
+                  0C 00 00 00 00 00 
+
+
+<get_days_in_month_month5> :
+00000000000C2005: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$(0x1F)>
+                  00 00 00 00 00 00 00 
+00000000000C2014: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF /* get_days_in_month_end */)>
+                  0C 00 00 00 00 00 
+
+
+<get_days_in_month_month6> :
+00000000000C2022: 20 64 01 64 00 02 64 1E     MOV .64bit <%FER0>, <$(0x1E)>
+                  00 00 00 00 00 00 00 
+00000000000C2031: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF /* get_days_in_month_end */)>
+                  0C 00 00 00 00 00 
+
+
+<get_days_in_month_month7> :
+00000000000C203F: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$(0x1F)>
+                  00 00 00 00 00 00 00 
+00000000000C204E: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF /* get_days_in_month_end */)>
+                  0C 00 00 00 00 00 
+
+
+<get_days_in_month_month8> :
+00000000000C205C: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$(0x1F)>
+                  00 00 00 00 00 00 00 
+00000000000C206B: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF /* get_days_in_month_end */)>
+                  0C 00 00 00 00 00 
+
+
+<get_days_in_month_month9> :
+00000000000C2079: 20 64 01 64 00 02 64 1E     MOV .64bit <%FER0>, <$(0x1E)>
+                  00 00 00 00 00 00 00 
+00000000000C2088: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF /* get_days_in_month_end */)>
+                  0C 00 00 00 00 00 
+
+
+<get_days_in_month_month10> :
+00000000000C2096: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$(0x1F)>
+                  00 00 00 00 00 00 00 
+00000000000C20A5: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF /* get_days_in_month_end */)>
+                  0C 00 00 00 00 00 
+
+
+<get_days_in_month_month11> :
+00000000000C20B3: 20 64 01 64 00 02 64 1E     MOV .64bit <%FER0>, <$(0x1E)>
+                  00 00 00 00 00 00 00 
+00000000000C20C2: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF /* get_days_in_month_end */)>
+                  0C 00 00 00 00 00 
+
+
+<get_days_in_month_month12> :
+00000000000C20D0: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$(0x1F)>
+                  00 00 00 00 00 00 00 
+
+
+<get_days_in_month_end> :
+00000000000C20DF: 32                          RET
+
+
+<determine_the_year> :
+00000000000C20E0: 22 64 01 64 02              PUSH .64bit <%FER2>
+00000000000C20E5: 22 64 01 64 03              PUSH .64bit <%FER3>
+00000000000C20EA: 20 64 01 64 01 01 64 00     MOV .64bit <%FER1>, <%FER0>
+00000000000C20F2: 20 64 01 64 02 02 64 B2     MOV .64bit <%FER2>, <$(0x7B2)>
+                  07 00 00 00 00 00 00 
+
+
+<determine_the_year_loop> :
+00000000000C2101: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
+00000000000C2109: 31 01 64 A2 02 64 03 1D     CALL <%CB>, <$(0xC1D03 /* is_leap_year */)>
+                  0C 00 00 00 00 00 
+00000000000C2117: 0A 64 01 64 00 02 64 01     CMP .64bit <%FER0>, <$(0x1)>
+                  00 00 00 00 00 00 00 
+00000000000C2126: 33 01 64 A2 02 64 51 21     JE <%CB>, <$(0xC2151 /* determine_the_year_is_leap */)>
+                  0C 00 00 00 00 00 
+00000000000C2134: 20 64 01 64 03 02 64 6D     MOV .64bit <%FER3>, <$(0x16D)>
+                  01 00 00 00 00 00 00 
+00000000000C2143: 30 01 64 A2 02 64 60 21     JMP <%CB>, <$(0xC2160 /* determine_the_year_end_is_leap_cmp */)>
+                  0C 00 00 00 00 00 
+
+
+<determine_the_year_is_leap> :
+00000000000C2151: 20 64 01 64 03 02 64 6E     MOV .64bit <%FER3>, <$(0x16E)>
+                  01 00 00 00 00 00 00 
+
+
+<determine_the_year_end_is_leap_cmp> :
+00000000000C2160: 0A 64 01 64 01 01 64 03     CMP .64bit <%FER1>, <%FER3>
+00000000000C2168: 36 01 64 A2 02 64 91 21     JL <%CB>, <$(0xC2191 /* determine_the_year_break */)>
+                  0C 00 00 00 00 00 
+00000000000C2176: 03 64 01 64 01 01 64 03     SUB .64bit <%FER1>, <%FER3>
+00000000000C217E: 0B 64 01 64 02              INC .64bit <%FER2>
+00000000000C2183: 30 01 64 A2 02 64 01 21     JMP <%CB>, <$(0xC2101 /* determine_the_year_loop */)>
+                  0C 00 00 00 00 00 
+
+
+<determine_the_year_break> :
+00000000000C2191: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
+00000000000C2199: 23 64 01 64 03              POP .64bit <%FER3>
+00000000000C219E: 23 64 01 64 02              POP .64bit <%FER2>
+00000000000C21A3: 32                          RET
+
+
+<determine_the_month> :
+00000000000C21A4: 22 64 01 64 02              PUSH .64bit <%FER2>
+00000000000C21A9: 22 64 01 64 03              PUSH .64bit <%FER3>
+00000000000C21AE: 20 64 01 64 02 02 64 01     MOV .64bit <%FER2>, <$(0x1)>
+                  00 00 00 00 00 00 00 
+00000000000C21BD: 20 64 01 64 03 01 64 00     MOV .64bit <%FER3>, <%FER0>
+
+
+<determine_the_month_loop> :
+00000000000C21C5: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
+00000000000C21CD: 31 01 64 A2 02 64 E5 1D     CALL <%CB>, <$(0xC1DE5 /* get_days_in_month */)>
+                  0C 00 00 00 00 00 
+00000000000C21DB: 0A 64 01 64 03 01 64 00     CMP .64bit <%FER3>, <%FER0>
+00000000000C21E3: 36 01 64 A2 02 64 0C 22     JL <%CB>, <$(0xC220C /* determine_the_month_break */)>
+                  0C 00 00 00 00 00 
+00000000000C21F1: 03 64 01 64 03 01 64 00     SUB .64bit <%FER3>, <%FER0>
+00000000000C21F9: 0B 64 01 64 02              INC .64bit <%FER2>
+00000000000C21FE: 30 01 64 A2 02 64 C5 21     JMP <%CB>, <$(0xC21C5 /* determine_the_month_loop */)>
+                  0C 00 00 00 00 00 
+
+
+<determine_the_month_break> :
+00000000000C220C: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
+00000000000C2214: 20 64 01 64 01 01 64 03     MOV .64bit <%FER1>, <%FER3>
+00000000000C221C: 23 64 01 64 03              POP .64bit <%FER3>
+00000000000C2221: 23 64 01 64 02              POP .64bit <%FER2>
+00000000000C2226: 32                          RET
+
+
+<_print_time> :
+00000000000C2227: 24                          PUSHALL
+00000000000C2228: 08 64 02 64 80 51 01 00     DIV .64bit <$(0x15180)>
+                  00 00 00 00 
+00000000000C2234: 20 64 01 64 0F 01 64 00     MOV .64bit <%FER15>, <%FER0>
+00000000000C223C: 20 64 01 64 00 01 64 01     MOV .64bit <%FER0>, <%FER1>
+00000000000C2244: 08 64 02 64 10 0E 00 00     DIV .64bit <$(0xE10)>
+                  00 00 00 00 
+00000000000C2250: 20 64 01 64 0E 01 64 00     MOV .64bit <%FER14>, <%FER0>
+00000000000C2258: 20 64 01 64 00 01 64 01     MOV .64bit <%FER0>, <%FER1>
+00000000000C2260: 08 64 02 64 3C 00 00 00     DIV .64bit <$(0x3C)>
+                  00 00 00 00 
+00000000000C226C: 20 64 01 64 0D 01 64 00     MOV .64bit <%FER13>, <%FER0>
+00000000000C2274: 20 64 01 64 0C 01 64 01     MOV .64bit <%FER12>, <%FER1>
+00000000000C227C: 20 64 01 64 00 01 64 0F     MOV .64bit <%FER0>, <%FER15>
+00000000000C2284: 31 01 64 A2 02 64 E0 20     CALL <%CB>, <$(0xC20E0 /* determine_the_year */)>
+                  0C 00 00 00 00 00 
+00000000000C2292: 20 64 01 64 0B 01 64 00     MOV .64bit <%FER11>, <%FER0>
+00000000000C229A: 20 64 01 64 00 01 64 01     MOV .64bit <%FER0>, <%FER1>
+00000000000C22A2: 20 64 01 64 01 01 64 0B     MOV .64bit <%FER1>, <%FER11>
+00000000000C22AA: 31 01 64 A2 02 64 A4 21     CALL <%CB>, <$(0xC21A4 /* determine_the_month */)>
+                  0C 00 00 00 00 00 
+00000000000C22B8: 20 64 01 64 0A 01 64 00     MOV .64bit <%FER10>, <%FER0>
+00000000000C22C0: 20 64 01 64 09 01 64 01     MOV .64bit <%FER9>, <%FER1>
+00000000000C22C8: 20 64 01 64 00 01 64 0B     MOV .64bit <%FER0>, <%FER11>
+00000000000C22D0: 31 01 64 A2 02 64 EB 1A     CALL <%CB>, <$(0xC1AEB /* _print_num */)>
+                  0C 00 00 00 00 00 
+00000000000C22DE: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C22E6: 20 64 01 64 A4 02 64 07     MOV .64bit <%DP>, <$(0xC2407 /* _print_time_dash */)>
+                  24 0C 00 00 00 00 00 
+00000000000C22F5: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7 /* _puts */)>
+                  0C 00 00 00 00 00 
+00000000000C2303: 20 64 01 64 00 01 64 0A     MOV .64bit <%FER0>, <%FER10>
+00000000000C230B: 31 01 64 A2 02 64 EB 1A     CALL <%CB>, <$(0xC1AEB /* _print_num */)>
+                  0C 00 00 00 00 00 
+00000000000C2319: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C2321: 20 64 01 64 A4 02 64 07     MOV .64bit <%DP>, <$(0xC2407 /* _print_time_dash */)>
+                  24 0C 00 00 00 00 00 
+00000000000C2330: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7 /* _puts */)>
+                  0C 00 00 00 00 00 
+00000000000C233E: 20 64 01 64 00 01 64 09     MOV .64bit <%FER0>, <%FER9>
+00000000000C2346: 31 01 64 A2 02 64 EB 1A     CALL <%CB>, <$(0xC1AEB /* _print_num */)>
+                  0C 00 00 00 00 00 
+00000000000C2354: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C235C: 20 64 01 64 A4 02 64 07     MOV .64bit <%DP>, <$(0xC2407 /* _print_time_dash */)>
+                  24 0C 00 00 00 00 00 
+00000000000C236B: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7 /* _puts */)>
+                  0C 00 00 00 00 00 
+00000000000C2379: 20 64 01 64 00 01 64 0E     MOV .64bit <%FER0>, <%FER14>
+00000000000C2381: 31 01 64 A2 02 64 EB 1A     CALL <%CB>, <$(0xC1AEB /* _print_num */)>
+                  0C 00 00 00 00 00 
+00000000000C238F: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C2397: 20 64 01 64 A4 02 64 07     MOV .64bit <%DP>, <$(0xC2407 /* _print_time_dash */)>
+                  24 0C 00 00 00 00 00 
+00000000000C23A6: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7 /* _puts */)>
+                  0C 00 00 00 00 00 
+00000000000C23B4: 20 64 01 64 00 01 64 0D     MOV .64bit <%FER0>, <%FER13>
+00000000000C23BC: 31 01 64 A2 02 64 EB 1A     CALL <%CB>, <$(0xC1AEB /* _print_num */)>
+                  0C 00 00 00 00 00 
+00000000000C23CA: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C23D2: 20 64 01 64 A4 02 64 07     MOV .64bit <%DP>, <$(0xC2407 /* _print_time_dash */)>
+                  24 0C 00 00 00 00 00 
+00000000000C23E1: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7 /* _puts */)>
+                  0C 00 00 00 00 00 
+00000000000C23EF: 20 64 01 64 00 01 64 0C     MOV .64bit <%FER0>, <%FER12>
+00000000000C23F7: 31 01 64 A2 02 64 EB 1A     CALL <%CB>, <$(0xC1AEB /* _print_num */)>
+                  0C 00 00 00 00 00 
+00000000000C2405: 25                          POPALL
+00000000000C2406: 32                          RET
+
+
+<_print_time_dash> :
+00000000000C2407: 2D                                         -
+
+00000000000C2408: 00                          NOP
+
+
+<_int_rtc> :
+00000000000C2409: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C2411: 20 64 01 64 A4 02 64 69     MOV .64bit <%DP>, <$(0xC2469 /* _int_rtc_message */)>
+                  24 0C 00 00 00 00 00 
+00000000000C2420: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7 /* _puts */)>
+                  0C 00 00 00 00 00 
+00000000000C242E: 50 64 02 64 70 00 00 00     IN .64bit <$(0x70)>, <%FER0>
+                  00 00 00 00 01 64 00 
+00000000000C243D: 31 01 64 A2 02 64 27 22     CALL <%CB>, <$(0xC2227 /* _print_time */)>
+                  0C 00 00 00 00 00 
+00000000000C244B: 20 64 01 64 A4 02 64 78     MOV .64bit <%DP>, <$(0xC2478 /* _int_rtc_message_tail */)>
+                  24 0C 00 00 00 00 00 
+00000000000C245A: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7 /* _puts */)>
+                  0C 00 00 00 00 00 
+00000000000C2468: 3B                          IRET
+
+
+<_int_rtc_message> :
+00000000000C2469: 4375 7272 656E 7420 7469 6D65              Current time
+
+00000000000C2475: 3A                          INT3
+00000000000C2476: 2000 0A00                                   ...
+
+
+
+<_stack_frame> :
+00000000000C247A: 00                          NOP
+00000000000C247B: 00                          NOP
+00000000000C247C: 00                          NOP
+
+ ... PADDLING 0x00 APPEARED 6 TIMES SINCE 00000000000C247A...
+```
+
+### Raw Binary Data
+
+```
+00000000: 3001 64a2 0264 db1b 0c00 0000 0000 2420  0.d..d........$ 
+00000010: 6401 64a3 0264 0080 0b00 0000 0000 2216  d.d..d........".
+00000020: 0116 0112 1601 1601 0116 0112 3201 3201  ............2.2.
+00000030: 0132 0120 6401 64a4 0164 0023 1601 1600  .2. d.d..d.#....
+00000040: 2008 0308 0164 a301 64a4 0264 0000 0000   ....d..d..d....
+00000050: 0000 0000 0101 0800 3902 6418 0000 0000  ........9.d.....
+00000060: 0000 0025 3224 3902 6415 0000 0000 0000  ...%2$9.d.......
+00000070: 0008 1602 6450 0000 0000 0000 000a 1601  ....dP..........
+00000080: 1600 0264 1800 0000 0000 0000 3701 64a2  ...d........7.d.
+00000090: 0264 d718 0c00 0000 0000 1216 0116 0101  .d..............
+000000a0: 1601 0b16 0116 0006 1602 6450 0000 0000  ..........dP....
+000000b0: 0000 0039 0264 1100 0000 0000 0000 3902  ...9.d........9.
+000000c0: 6418 0000 0000 0000 0030 0164 a202 649a  d........0.d..d.
+000000d0: 190c 0000 0000 0020 6401 64a3 0264 0080  ....... d.d..d..
+000000e0: 0b00 0000 0000 1264 0164 a401 64a4 2064  .......d.d..d. d
+000000f0: 0164 a502 6450 800b 0000 0000 0012 6401  .d..dP........d.
+00000100: 64a6 0164 a620 6401 6403 0264 8007 0000  d..d. d.d..d....
+00000110: 0000 0000 2820 6401 6403 0264 5000 0000  ....( d.d..dP...
+00000120: 0000 0000 2064 0164 a502 6400 800b 0000  .... d.d..d.....
+00000130: 0000 0020 6401 64a6 0264 8007 0000 0000  ... d.d..d......
+00000140: 0000 1264 0164 a401 64a4 2008 0308 0164  ...d.d..d. ....d
+00000150: a501 64a6 0164 a401 0264 2000 0000 0000  ..d..d...d .....
+00000160: 0000 0b64 0164 a460 0164 a202 644a 190c  ...d.d.`.d..dJ..
+00000170: 0000 0000 0020 1601 1600 0264 8007 0000  ..... .....d....
+00000180: 0000 0000 3902 6411 0000 0000 0000 0039  ....9.d........9
+00000190: 0264 1800 0000 0000 0000 2539 0264 1500  .d........%9.d..
+000001a0: 0000 0000 0000 3224 2008 0108 0203 0801  ......2$ .......
+000001b0: 64a3 0164 a402 6400 0000 0000 0000 0001  d..d..d.........
+000001c0: 0a08 0108 0202 6400 0000 0000 0000 0033  ......d........3
+000001d0: 0164 a202 64e7 1a0c 0000 0000 000a 0801  .d..d...........
+000001e0: 0802 0264 0a00 0000 0000 0000 3401 64a2  ...d........4.d.
+000001f0: 0264 441a 0c00 0000 0000 3101 64a2 0264  .dD.......1.d..d
+00000200: 6518 0c00 0000 0000 2064 0164 0302 64e9  e....... d.d..d.
+00000210: 1a0c 0000 0000 0020 1603 1602 6400 0000  ....... ....d...
+00000220: 0000 0000 0001 6403 0264 0000 0000 0000  ......d..d......
+00000230: 0000 0101 1600 3001 64a2 0264 d41a 0c00  ......0.d..d....
+00000240: 0000 0000 1208 0108 0301 0803 2064 0164  ............ d.d
+00000250: 0302 64e9 1a0c 0000 0000 0020 1601 1600  ..d........ ....
+00000260: 0316 0264 0000 0000 0000 0000 0164 0302  ...d.........d..
+00000270: 6400 0000 0000 0000 0001 3101 64a2 0264  d.........1.d..d
+00000280: 0e18 0c00 0000 0000 0b16 0116 000a 1601  ................
+00000290: 1607 0264 d007 0000 0000 0000 3301 64a2  ...d........3.d.
+000002a0: 0264 fa19 0c00 0000 0000 2016 0316 0264  .d........ ....d
+000002b0: 0000 0000 0000 0000 0164 0302 6400 0000  .........d..d...
+000002c0: 0000 0000 0001 0116 0039 0264 1100 0000  .........9.d....
+000002d0: 0000 0000 0b64 0164 a430 0164 a202 64a8  .....d.d.0.d..d.
+000002e0: 190c 0000 0000 0025 3200 0024 1264 0164  .......%2..$.d.d
+000002f0: 0201 6402 0864 0264 0a00 0000 0000 0000  ..d..d.d........
+00000300: 2064 0164 0301 6401 0164 0164 0302 6430   d.d..d..d.d..d0
+00000310: 0000 0000 0000 0022 6401 6403 0b64 0164  ......."d.d..d.d
+00000320: 020a 6401 6400 0264 0000 0000 0000 0000  ..d.d..d........
+00000330: 3401 64a2 0264 f41a 0c00 0000 0000 1264  4.d..d.........d
+00000340: 0164 a301 64a3 2064 0164 a402 64cb 1b0c  .d..d. d.d..d...
+00000350: 0000 0000 0020 6401 6403 0164 0223 6401  ..... d.d..d.#d.
+00000360: 6400 2008 0308 0164 a301 64a4 0264 0000  d. ....d..d..d..
+00000370: 0000 0000 0000 0101 0800 0b64 0164 a460  ...........d.d.`
+00000380: 0164 a202 645d 1b0c 0000 0000 0020 0803  .d..d]....... ..
+00000390: 0801 64a3 0164 a402 6400 0000 0000 0000  ..d..d..d.......
+000003a0: 0001 0264 0000 0000 0000 0000 2064 0164  ...d........ d.d
+000003b0: a402 64cb 1b0c 0000 0000 0031 0164 a202  ..d........1.d..
+000003c0: 64a7 190c 0000 0000 0025 3200 0000 0000  d........%2.....
+000003d0: 0000 0000 0000 0000 0000 0020 6401 64a1  ........... d.d.
+000003e0: 0264 ff0f 0000 0000 0000 2064 0164 a002  .d........ d.d..
+000003f0: 647a 240c 0000 0000 0020 6403 6402 6400  dz$...... d.d.d.
+00000400: 000a 0000 0000 0002 6400 0800 0000 0000  ........d.......
+00000410: 0002 6408 0000 0000 0000 0001 0264 0924  ..d..........d.$
+00000420: 0c00 0000 0000 2064 0364 0264 0000 0a00  ...... d.d.d....
+00000430: 0000 0000 0264 5000 0000 0000 0000 0264  .....dP........d
+00000440: 0800 0000 0000 0000 0102 649a 1c0c 0000  ..........d.....
+00000450: 0000 0051 6402 6471 0000 0000 0000 0002  ...Qd.dq........
+00000460: 6480 204e 0000 0000 0039 0264 1400 0000  d. N.....9.d....
+00000470: 0000 0000 0a08 0108 0002 6471 0000 0000  ..........dq....
+00000480: 0000 0034 0164 a202 6469 1c0c 0000 0000  ...4.d..di......
+00000490: 0012 6401 6400 0164 0040 3902 6417 0000  ..d.d..d.@9.d...
+000004a0: 0000 0000 0012 6401 64a3 0164 a320 6401  ......d.d..d. d.
+000004b0: 64a4 0264 f01c 0c00 0000 0000 3101 64a2  d..d........1.d.
+000004c0: 0264 a719 0c00 0000 0000 2064 0164 0302  .d........ d.d..
+000004d0: 64ff ff1f 0000 0000 0060 0164 a202 64d9  d........`.d..d.
+000004e0: 1c0c 0000 0000 0012 6401 6400 0164 0040  ........d.d..d.@
+000004f0: 0a53 7973 7465 6d20 7368 7574 646f 776e  .System shutdown
+00000500: 210a 0022 6401 6401 2264 0164 0220 6401  !.."d.d."d.d. d.
+00000510: 6402 0164 0008 6402 6490 0100 0000 0000  d..d..d.d.......
+00000520: 000a 6401 6401 0264 0000 0000 0000 0000  ..d.d..d........
+00000530: 3301 64a2 0264 ae1d 0c00 0000 0000 2064  3.d..d........ d
+00000540: 0164 0001 6402 0864 0264 6400 0000 0000  .d..d..d.dd.....
+00000550: 0000 0a64 0164 0102 6400 0000 0000 0000  ...d.d..d.......
+00000560: 0033 0164 a202 64cb 1d0c 0000 0000 0020  .3.d..d........ 
+00000570: 6401 6400 0164 0208 6402 6404 0000 0000  d.d..d..d.d.....
+00000580: 0000 000a 6401 6401 0264 0000 0000 0000  ....d.d..d......
+00000590: 0000 3301 64a2 0264 ae1d 0c00 0000 0000  ..3.d..d........
+000005a0: 3001 64a2 0264 cb1d 0c00 0000 0000 2064  0.d..d........ d
+000005b0: 0164 0002 6401 0000 0000 0000 0030 0164  .d..d........0.d
+000005c0: a202 64da 1d0c 0000 0000 0020 6401 6400  ..d........ d.d.
+000005d0: 0264 0000 0000 0000 0000 2364 0164 0223  .d........#d.d.#
+000005e0: 6401 6401 320a 6401 6400 0264 0100 0000  d.d.2.d.d..d....
+000005f0: 0000 0000 3301 64a2 0264 411f 0c00 0000  ....3.d..dA.....
+00000600: 0000 0a64 0164 0002 6402 0000 0000 0000  ...d.d..d.......
+00000610: 0033 0164 a202 645e 1f0c 0000 0000 000a  .3.d..d^........
+00000620: 6401 6400 0264 0300 0000 0000 0000 3301  d.d..d........3.
+00000630: 64a2 0264 cb1f 0c00 0000 0000 0a64 0164  d..d.........d.d
+00000640: 0002 6404 0000 0000 0000 0033 0164 a202  ..d........3.d..
+00000650: 64e8 1f0c 0000 0000 000a 6401 6400 0264  d.........d.d..d
+00000660: 0500 0000 0000 0000 3301 64a2 0264 0520  ........3.d..d. 
+00000670: 0c00 0000 0000 0a64 0164 0002 6406 0000  .......d.d..d...
+00000680: 0000 0000 0033 0164 a202 6422 200c 0000  .....3.d..d" ...
+00000690: 0000 000a 6401 6400 0264 0700 0000 0000  ....d.d..d......
+000006a0: 0000 3301 64a2 0264 3f20 0c00 0000 0000  ..3.d..d? ......
+000006b0: 0a64 0164 0002 6408 0000 0000 0000 0033  .d.d..d........3
+000006c0: 0164 a202 645c 200c 0000 0000 000a 6401  .d..d\ .......d.
+000006d0: 6400 0264 0900 0000 0000 0000 3301 64a2  d..d........3.d.
+000006e0: 0264 7920 0c00 0000 0000 0a64 0164 0002  .dy .......d.d..
+000006f0: 640a 0000 0000 0000 0033 0164 a202 6496  d........3.d..d.
+00000700: 200c 0000 0000 000a 6401 6400 0264 0b00   .......d.d..d..
+00000710: 0000 0000 0000 3301 64a2 0264 b320 0c00  ......3.d..d. ..
+00000720: 0000 0000 0a64 0164 0002 640c 0000 0000  .....d.d..d.....
+00000730: 0000 0033 0164 a202 64d0 200c 0000 0000  ...3.d..d. .....
+00000740: 0020 6401 6400 0264 1f00 0000 0000 0000  . d.d..d........
+00000750: 3001 64a2 0264 df20 0c00 0000 0000 2064  0.d..d. ...... d
+00000760: 0164 0001 6401 3101 64a2 0264 031d 0c00  .d..d.1.d..d....
+00000770: 0000 0000 0a64 0164 0002 6401 0000 0000  .....d.d..d.....
+00000780: 0000 0033 0164 a202 64ae 1f0c 0000 0000  ...3.d..d.......
+00000790: 0020 6401 6400 0264 1c00 0000 0000 0000  . d.d..d........
+000007a0: 3001 64a2 0264 df20 0c00 0000 0000 2064  0.d..d. ...... d
+000007b0: 0164 0002 641d 0000 0000 0000 0030 0164  .d..d........0.d
+000007c0: a202 64df 200c 0000 0000 0020 6401 6400  ..d. ...... d.d.
+000007d0: 0264 1f00 0000 0000 0000 3001 64a2 0264  .d........0.d..d
+000007e0: df20 0c00 0000 0000 2064 0164 0002 641e  . ...... d.d..d.
+000007f0: 0000 0000 0000 0030 0164 a202 64df 200c  .......0.d..d. .
+00000800: 0000 0000 0020 6401 6400 0264 1f00 0000  ..... d.d..d....
+00000810: 0000 0000 3001 64a2 0264 df20 0c00 0000  ....0.d..d. ....
+00000820: 0000 2064 0164 0002 641e 0000 0000 0000  .. d.d..d.......
+00000830: 0030 0164 a202 64df 200c 0000 0000 0020  .0.d..d. ...... 
+00000840: 6401 6400 0264 1f00 0000 0000 0000 3001  d.d..d........0.
+00000850: 64a2 0264 df20 0c00 0000 0000 2064 0164  d..d. ...... d.d
+00000860: 0002 641f 0000 0000 0000 0030 0164 a202  ..d........0.d..
+00000870: 64df 200c 0000 0000 0020 6401 6400 0264  d. ...... d.d..d
+00000880: 1e00 0000 0000 0000 3001 64a2 0264 df20  ........0.d..d. 
+00000890: 0c00 0000 0000 2064 0164 0002 641f 0000  ...... d.d..d...
+000008a0: 0000 0000 0030 0164 a202 64df 200c 0000  .....0.d..d. ...
+000008b0: 0000 0020 6401 6400 0264 1e00 0000 0000  ... d.d..d......
+000008c0: 0000 3001 64a2 0264 df20 0c00 0000 0000  ..0.d..d. ......
+000008d0: 2064 0164 0002 641f 0000 0000 0000 0032   d.d..d........2
+000008e0: 2264 0164 0222 6401 6403 2064 0164 0101  "d.d."d.d. d.d..
+000008f0: 6400 2064 0164 0202 64b2 0700 0000 0000  d. d.d..d.......
+00000900: 0020 6401 6400 0164 0231 0164 a202 6403  . d.d..d.1.d..d.
+00000910: 1d0c 0000 0000 000a 6401 6400 0264 0100  ........d.d..d..
+00000920: 0000 0000 0000 3301 64a2 0264 5121 0c00  ......3.d..dQ!..
+00000930: 0000 0000 2064 0164 0302 646d 0100 0000  .... d.d..dm....
+00000940: 0000 0030 0164 a202 6460 210c 0000 0000  ...0.d..d`!.....
+00000950: 0020 6401 6403 0264 6e01 0000 0000 0000  . d.d..dn.......
+00000960: 0a64 0164 0101 6403 3601 64a2 0264 9121  .d.d..d.6.d..d.!
+00000970: 0c00 0000 0000 0364 0164 0101 6403 0b64  .......d.d..d..d
+00000980: 0164 0230 0164 a202 6401 210c 0000 0000  .d.0.d..d.!.....
+00000990: 0020 6401 6400 0164 0223 6401 6403 2364  . d.d..d.#d.d.#d
+000009a0: 0164 0232 2264 0164 0222 6401 6403 2064  .d.2"d.d."d.d. d
+000009b0: 0164 0202 6401 0000 0000 0000 0020 6401  .d..d........ d.
+000009c0: 6403 0164 0020 6401 6400 0164 0231 0164  d..d. d.d..d.1.d
+000009d0: a202 64e5 1d0c 0000 0000 000a 6401 6403  ..d.........d.d.
+000009e0: 0164 0036 0164 a202 640c 220c 0000 0000  .d.6.d..d.".....
+000009f0: 0003 6401 6403 0164 000b 6401 6402 3001  ..d.d..d..d.d.0.
+00000a00: 64a2 0264 c521 0c00 0000 0000 2064 0164  d..d.!...... d.d
+00000a10: 0001 6402 2064 0164 0101 6403 2364 0164  ..d. d.d..d.#d.d
+00000a20: 0323 6401 6402 3224 0864 0264 8051 0100  .#d.d.2$.d.d.Q..
+00000a30: 0000 0000 2064 0164 0f01 6400 2064 0164  .... d.d..d. d.d
+00000a40: 0001 6401 0864 0264 100e 0000 0000 0000  ..d..d.d........
+00000a50: 2064 0164 0e01 6400 2064 0164 0001 6401   d.d..d. d.d..d.
+00000a60: 0864 0264 3c00 0000 0000 0000 2064 0164  .d.d<....... d.d
+00000a70: 0d01 6400 2064 0164 0c01 6401 2064 0164  ..d. d.d..d. d.d
+00000a80: 0001 640f 3101 64a2 0264 e020 0c00 0000  ..d.1.d..d. ....
+00000a90: 0000 2064 0164 0b01 6400 2064 0164 0001  .. d.d..d. d.d..
+00000aa0: 6401 2064 0164 0101 640b 3101 64a2 0264  d. d.d..d.1.d..d
+00000ab0: a421 0c00 0000 0000 2064 0164 0a01 6400  .!...... d.d..d.
+00000ac0: 2064 0164 0901 6401 2064 0164 0001 640b   d.d..d. d.d..d.
+00000ad0: 3101 64a2 0264 eb1a 0c00 0000 0000 1264  1.d..d.........d
+00000ae0: 0164 a301 64a3 2064 0164 a402 6407 240c  .d..d. d.d..d.$.
+00000af0: 0000 0000 0031 0164 a202 64a7 190c 0000  .....1.d..d.....
+00000b00: 0000 0020 6401 6400 0164 0a31 0164 a202  ... d.d..d.1.d..
+00000b10: 64eb 1a0c 0000 0000 0012 6401 64a3 0164  d.........d.d..d
+00000b20: a320 6401 64a4 0264 0724 0c00 0000 0000  . d.d..d.$......
+00000b30: 3101 64a2 0264 a719 0c00 0000 0000 2064  1.d..d........ d
+00000b40: 0164 0001 6409 3101 64a2 0264 eb1a 0c00  .d..d.1.d..d....
+00000b50: 0000 0000 1264 0164 a301 64a3 2064 0164  .....d.d..d. d.d
+00000b60: a402 6407 240c 0000 0000 0031 0164 a202  ..d.$......1.d..
+00000b70: 64a7 190c 0000 0000 0020 6401 6400 0164  d........ d.d..d
+00000b80: 0e31 0164 a202 64eb 1a0c 0000 0000 0012  .1.d..d.........
+00000b90: 6401 64a3 0164 a320 6401 64a4 0264 0724  d.d..d. d.d..d.$
+00000ba0: 0c00 0000 0000 3101 64a2 0264 a719 0c00  ......1.d..d....
+00000bb0: 0000 0000 2064 0164 0001 640d 3101 64a2  .... d.d..d.1.d.
+00000bc0: 0264 eb1a 0c00 0000 0000 1264 0164 a301  .d.........d.d..
+00000bd0: 64a3 2064 0164 a402 6407 240c 0000 0000  d. d.d..d.$.....
+00000be0: 0031 0164 a202 64a7 190c 0000 0000 0020  .1.d..d........ 
+00000bf0: 6401 6400 0164 0c31 0164 a202 64eb 1a0c  d.d..d.1.d..d...
+00000c00: 0000 0000 0025 322d 0012 6401 64a3 0164  .....%2-..d.d..d
+00000c10: a320 6401 64a4 0264 6924 0c00 0000 0000  . d.d..di$......
+00000c20: 3101 64a2 0264 a719 0c00 0000 0000 5064  1.d..d........Pd
+00000c30: 0264 7000 0000 0000 0000 0164 0031 0164  .dp........d.1.d
+00000c40: a202 6427 220c 0000 0000 0020 6401 64a4  ..d'"...... d.d.
+00000c50: 0264 7824 0c00 0000 0000 3101 64a2 0264  .dx$......1.d..d
+00000c60: a719 0c00 0000 0000 3b43 7572 7265 6e74  ........;Current
+00000c70: 2074 696d 653a 2000 0a00 0000 0000 0000   time: .........
+```
+
+# Result of Example B
+
+![Console Output](ExampleB.png)
+
+# **Appendix C: GNU Free Documentation License**
+
+Version 1.3, 3 November 2008
+
+Copyright (C) 2000, 2001, 2002, 2007, 2008 Free Software Foundation,
+Inc. <https://fsf.org/>
+
+Everyone is permitted to copy and distribute verbatim copies of this
+license document, but changing it is not allowed.
+
+## 0. PREAMBLE
+
+The purpose of this License is to make a manual, textbook, or other
+functional and useful document "free" in the sense of freedom: to
+assure everyone the effective freedom to copy and redistribute it,
+with or without modifying it, either commercially or noncommercially.
+Secondarily, this License preserves for the author and publisher a way
+to get credit for their work, while not being considered responsible
+for modifications made by others.
+
+This License is a kind of "copyleft", which means that derivative
+works of the document must themselves be free in the same sense. It
+complements the GNU General Public License, which is a copyleft
+license designed for free software.
+
+We have designed this License in order to use it for manuals for free
+software, because free software needs free documentation: a free
+program should come with manuals providing the same freedoms that the
+software does. But this License is not limited to software manuals; it
+can be used for any textual work, regardless of subject matter or
+whether it is published as a printed book. We recommend this License
+principally for works whose purpose is instruction or reference.
+
+## 1. APPLICABILITY AND DEFINITIONS
+
+This License applies to any manual or other work, in any medium, that
+contains a notice placed by the copyright holder saying it can be
+distributed under the terms of this License. Such a notice grants a
+world-wide, royalty-free license, unlimited in duration, to use that
+work under the conditions stated herein. The "Document", below, refers
+to any such manual or work. Any member of the public is a licensee,
+and is addressed as "you". You accept the license if you copy, modify
+or distribute the work in a way requiring permission under copyright
+law.
+
+A "Modified Version" of the Document means any work containing the
+Document or a portion of it, either copied verbatim, or with
+modifications and/or translated into another language.
+
+A "Secondary Section" is a named appendix or a front-matter section of
+the Document that deals exclusively with the relationship of the
+publishers or authors of the Document to the Document's overall
+subject (or to related matters) and contains nothing that could fall
+directly within that overall subject. (Thus, if the Document is in
+part a textbook of mathematics, a Secondary Section may not explain
+any mathematics.) The relationship could be a matter of historical
+connection with the subject or with related matters, or of legal,
+commercial, philosophical, ethical or political position regarding
+them.
+
+The "Invariant Sections" are certain Secondary Sections whose titles
+are designated, as being those of Invariant Sections, in the notice
+that says that the Document is released under this License. If a
+section does not fit the above definition of Secondary then it is not
+allowed to be designated as Invariant. The Document may contain zero
+Invariant Sections. If the Document does not identify any Invariant
+Sections then there are none.
+
+The "Cover Texts" are certain short passages of text that are listed,
+as Front-Cover Texts or Back-Cover Texts, in the notice that says that
+the Document is released under this License. A Front-Cover Text may be
+at most 5 words, and a Back-Cover Text may be at most 25 words.
+
+A "Transparent" copy of the Document means a machine-readable copy,
+represented in a format whose specification is available to the
+general public, that is suitable for revising the document
+straightforwardly with generic text editors or (for images composed of
+pixels) generic paint programs or (for drawings) some widely available
+drawing editor, and that is suitable for input to text formatters or
+for automatic translation to a variety of formats suitable for input
+to text formatters. A copy made in an otherwise Transparent file
+format whose markup, or absence of markup, has been arranged to thwart
+or discourage subsequent modification by readers is not Transparent.
+An image format is not Transparent if used for any substantial amount
+of text. A copy that is not "Transparent" is called "Opaque".
+
+Examples of suitable formats for Transparent copies include plain
+ASCII without markup, Texinfo input format, LaTeX input format, SGML
+or XML using a publicly available DTD, and standard-conforming simple
+HTML, PostScript or PDF designed for human modification. Examples of
+transparent image formats include PNG, XCF and JPG. Opaque formats
+include proprietary formats that can be read and edited only by
+proprietary word processors, SGML or XML for which the DTD and/or
+processing tools are not generally available, and the
+machine-generated HTML, PostScript or PDF produced by some word
+processors for output purposes only.
+
+The "Title Page" means, for a printed book, the title page itself,
+plus such following pages as are needed to hold, legibly, the material
+this License requires to appear in the title page. For works in
+formats which do not have any title page as such, "Title Page" means
+the text near the most prominent appearance of the work's title,
+preceding the beginning of the body of the text.
+
+The "publisher" means any person or entity that distributes copies of
+the Document to the public.
+
+A section "Entitled XYZ" means a named subunit of the Document whose
+title either is precisely XYZ or contains XYZ in parentheses following
+text that translates XYZ in another language. (Here XYZ stands for a
+specific section name mentioned below, such as "Acknowledgements",
+"Dedications", "Endorsements", or "History".) To "Preserve the Title"
+of such a section when you modify the Document means that it remains a
+section "Entitled XYZ" according to this definition.
+
+The Document may include Warranty Disclaimers next to the notice which
+states that this License applies to the Document. These Warranty
+Disclaimers are considered to be included by reference in this
+License, but only as regards disclaiming warranties: any other
+implication that these Warranty Disclaimers may have is void and has
+no effect on the meaning of this License.
+
+## 2. VERBATIM COPYING
+
+You may copy and distribute the Document in any medium, either
+commercially or noncommercially, provided that this License, the
+copyright notices, and the license notice saying this License applies
+to the Document are reproduced in all copies, and that you add no
+other conditions whatsoever to those of this License. You may not use
+technical measures to obstruct or control the reading or further
+copying of the copies you make or distribute. However, you may accept
+compensation in exchange for copies. If you distribute a large enough
+number of copies you must also follow the conditions in section 3.
+
+You may also lend copies, under the same conditions stated above, and
+you may publicly display copies.
+
+## 3. COPYING IN QUANTITY
+
+If you publish printed copies (or copies in media that commonly have
+printed covers) of the Document, numbering more than 100, and the
+Document's license notice requires Cover Texts, you must enclose the
+copies in covers that carry, clearly and legibly, all these Cover
+Texts: Front-Cover Texts on the front cover, and Back-Cover Texts on
+the back cover. Both covers must also clearly and legibly identify you
+as the publisher of these copies. The front cover must present the
+full title with all words of the title equally prominent and visible.
+You may add other material on the covers in addition. Copying with
+changes limited to the covers, as long as they preserve the title of
+the Document and satisfy these conditions, can be treated as verbatim
+copying in other respects.
+
+If the required texts for either cover are too voluminous to fit
+legibly, you should put the first ones listed (as many as fit
+reasonably) on the actual cover, and continue the rest onto adjacent
+pages.
+
+If you publish or distribute Opaque copies of the Document numbering
+more than 100, you must either include a machine-readable Transparent
+copy along with each Opaque copy, or state in or with each Opaque copy
+a computer-network location from which the general network-using
+public has access to download using public-standard network protocols
+a complete Transparent copy of the Document, free of added material.
+If you use the latter option, you must take reasonably prudent steps,
+when you begin distribution of Opaque copies in quantity, to ensure
+that this Transparent copy will remain thus accessible at the stated
+location until at least one year after the last time you distribute an
+Opaque copy (directly or through your agents or retailers) of that
+edition to the public.
+
+It is requested, but not required, that you contact the authors of the
+Document well before redistributing any large number of copies, to
+give them a chance to provide you with an updated version of the
+Document.
+
+## 4. MODIFICATIONS
+
+You may copy and distribute a Modified Version of the Document under
+the conditions of sections 2 and 3 above, provided that you release
+the Modified Version under precisely this License, with the Modified
+Version filling the role of the Document, thus licensing distribution
+and modification of the Modified Version to whoever possesses a copy
+of it. In addition, you must do these things in the Modified Version:
+
+-   A. Use in the Title Page (and on the covers, if any) a title
+    distinct from that of the Document, and from those of previous
+    versions (which should, if there were any, be listed in the
+    History section of the Document). You may use the same title as a
+    previous version if the original publisher of that version
+    gives permission.
+-   B. List on the Title Page, as authors, one or more persons or
+    entities responsible for authorship of the modifications in the
+    Modified Version, together with at least five of the principal
+    authors of the Document (all of its principal authors, if it has
+    fewer than five), unless they release you from this requirement.
+-   C. State on the Title page the name of the publisher of the
+    Modified Version, as the publisher.
+-   D. Preserve all the copyright notices of the Document.
+-   E. Add an appropriate copyright notice for your modifications
+    adjacent to the other copyright notices.
+-   F. Include, immediately after the copyright notices, a license
+    notice giving the public permission to use the Modified Version
+    under the terms of this License, in the form shown in the
+    Addendum below.
+-   G. Preserve in that license notice the full lists of Invariant
+    Sections and required Cover Texts given in the Document's
+    license notice.
+-   H. Include an unaltered copy of this License.
+-   I. Preserve the section Entitled "History", Preserve its Title,
+    and add to it an item stating at least the title, year, new
+    authors, and publisher of the Modified Version as given on the
+    Title Page. If there is no section Entitled "History" in the
+    Document, create one stating the title, year, authors, and
+    publisher of the Document as given on its Title Page, then add an
+    item describing the Modified Version as stated in the
+    previous sentence.
+-   J. Preserve the network location, if any, given in the Document
+    for public access to a Transparent copy of the Document, and
+    likewise the network locations given in the Document for previous
+    versions it was based on. These may be placed in the "History"
+    section. You may omit a network location for a work that was
+    published at least four years before the Document itself, or if
+    the original publisher of the version it refers to
+    gives permission.
+-   K. For any section Entitled "Acknowledgements" or "Dedications",
+    Preserve the Title of the section, and preserve in the section all
+    the substance and tone of each of the contributor acknowledgements
+    and/or dedications given therein.
+-   L. Preserve all the Invariant Sections of the Document, unaltered
+    in their text and in their titles. Section numbers or the
+    equivalent are not considered part of the section titles.
+-   M. Delete any section Entitled "Endorsements". Such a section may
+    not be included in the Modified Version.
+-   N. Do not retitle any existing section to be Entitled
+    "Endorsements" or to conflict in title with any Invariant Section.
+-   O. Preserve any Warranty Disclaimers.
+
+If the Modified Version includes new front-matter sections or
+appendices that qualify as Secondary Sections and contain no material
+copied from the Document, you may at your option designate some or all
+of these sections as invariant. To do this, add their titles to the
+list of Invariant Sections in the Modified Version's license notice.
+These titles must be distinct from any other section titles.
+
+You may add a section Entitled "Endorsements", provided it contains
+nothing but endorsements of your Modified Version by various
+partiesâ€”for example, statements of peer review or that the text has
+been approved by an organization as the authoritative definition of a
+standard.
+
+You may add a passage of up to five words as a Front-Cover Text, and a
+passage of up to 25 words as a Back-Cover Text, to the end of the list
+of Cover Texts in the Modified Version. Only one passage of
+Front-Cover Text and one of Back-Cover Text may be added by (or
+through arrangements made by) any one entity. If the Document already
+includes a cover text for the same cover, previously added by you or
+by arrangement made by the same entity you are acting on behalf of,
+you may not add another; but you may replace the old one, on explicit
+permission from the previous publisher that added the old one.
+
+The author(s) and publisher(s) of the Document do not by this License
+give permission to use their names for publicity for or to assert or
+imply endorsement of any Modified Version.
+
+## 5. COMBINING DOCUMENTS
+
+You may combine the Document with other documents released under this
+License, under the terms defined in section 4 above for modified
+versions, provided that you include in the combination all of the
+Invariant Sections of all of the original documents, unmodified, and
+list them all as Invariant Sections of your combined work in its
+license notice, and that you preserve all their Warranty Disclaimers.
+
+The combined work need only contain one copy of this License, and
+multiple identical Invariant Sections may be replaced with a single
+copy. If there are multiple Invariant Sections with the same name but
+different contents, make the title of each such section unique by
+adding at the end of it, in parentheses, the name of the original
+author or publisher of that section if known, or else a unique number.
+Make the same adjustment to the section titles in the list of
+Invariant Sections in the license notice of the combined work.
+
+In the combination, you must combine any sections Entitled "History"
+in the various original documents, forming one section Entitled
+"History"; likewise combine any sections Entitled "Acknowledgements",
+and any sections Entitled "Dedications". You must delete all sections
+Entitled "Endorsements".
+
+## 6. COLLECTIONS OF DOCUMENTS
+
+You may make a collection consisting of the Document and other
+documents released under this License, and replace the individual
+copies of this License in the various documents with a single copy
+that is included in the collection, provided that you follow the rules
+of this License for verbatim copying of each of the documents in all
+other respects.
+
+You may extract a single document from such a collection, and
+distribute it individually under this License, provided you insert a
+copy of this License into the extracted document, and follow this
+License in all other respects regarding verbatim copying of that
+document.
+
+## 7. AGGREGATION WITH INDEPENDENT WORKS
+
+A compilation of the Document or its derivatives with other separate
+and independent documents or works, in or on a volume of a storage or
+distribution medium, is called an "aggregate" if the copyright
+resulting from the compilation is not used to limit the legal rights
+of the compilation's users beyond what the individual works permit.
+When the Document is included in an aggregate, this License does not
+apply to the other works in the aggregate which are not themselves
+derivative works of the Document.
+
+If the Cover Text requirement of section 3 is applicable to these
+copies of the Document, then if the Document is less than one half of
+the entire aggregate, the Document's Cover Texts may be placed on
+covers that bracket the Document within the aggregate, or the
+electronic equivalent of covers if the Document is in electronic form.
+Otherwise they must appear on printed covers that bracket the whole
+aggregate.
+
+## 8. TRANSLATION
+
+Translation is considered a kind of modification, so you may
+distribute translations of the Document under the terms of section 4.
+Replacing Invariant Sections with translations requires special
+permission from their copyright holders, but you may include
+translations of some or all Invariant Sections in addition to the
+original versions of these Invariant Sections. You may include a
+translation of this License, and all the license notices in the
+Document, and any Warranty Disclaimers, provided that you also include
+the original English version of this License and the original versions
+of those notices and disclaimers. In case of a disagreement between
+the translation and the original version of this License or a notice
+or disclaimer, the original version will prevail.
+
+If a section in the Document is Entitled "Acknowledgements",
+"Dedications", or "History", the requirement (section 4) to Preserve
+its Title (section 1) will typically require changing the actual
+title.
+
+## 9. TERMINATION
+
+You may not copy, modify, sublicense, or distribute the Document
+except as expressly provided under this License. Any attempt otherwise
+to copy, modify, sublicense, or distribute it is void, and will
+automatically terminate your rights under this License.
+
+However, if you cease all violation of this License, then your license
+from a particular copyright holder is reinstated (a) provisionally,
+unless and until the copyright holder explicitly and finally
+terminates your license, and (b) permanently, if the copyright holder
+fails to notify you of the violation by some reasonable means prior to
+60 days after the cessation.
+
+Moreover, your license from a particular copyright holder is
+reinstated permanently if the copyright holder notifies you of the
+violation by some reasonable means, this is the first time you have
+received notice of violation of this License (for any work) from that
+copyright holder, and you cure the violation prior to 30 days after
+your receipt of the notice.
+
+Termination of your rights under this section does not terminate the
+licenses of parties who have received copies or rights from you under
+this License. If your rights have been terminated and not permanently
+reinstated, receipt of a copy of some or all of the same material does
+not give you any rights to use it.
+
+## 10. FUTURE REVISIONS OF THIS LICENSE
+
+The Free Software Foundation may publish new, revised versions of the
+GNU Free Documentation License from time to time. Such new versions
+will be similar in spirit to the present version, but may differ in
+detail to address new problems or concerns. See
+<https://www.gnu.org/licenses/>.
+
+Each version of the License is given a distinguishing version number.
+If the Document specifies that a particular numbered version of this
+License "or any later version" applies to it, you have the option of
+following the terms and conditions either of that specified version or
+of any later version that has been published (not as a draft) by the
+Free Software Foundation. If the Document does not specify a version
+number of this License, you may choose any version ever published (not
+as a draft) by the Free Software Foundation. If the Document specifies
+that a proxy can decide which future versions of this License can be
+used, that proxy's public statement of acceptance of a version
+permanently authorizes you to choose that version for the Document.
+
+## 11. RELICENSING
+
+"Massive Multiauthor Collaboration Site" (or "MMC Site") means any
+World Wide Web server that publishes copyrightable works and also
+provides prominent facilities for anybody to edit those works. A
+public wiki that anybody can edit is an example of such a server. A
+"Massive Multiauthor Collaboration" (or "MMC") contained in the site
+means any set of copyrightable works thus published on the MMC site.
+
+"CC-BY-SA" means the Creative Commons Attribution-Share Alike 3.0
+license published by Creative Commons Corporation, a not-for-profit
+corporation with a principal place of business in San Francisco,
+California, as well as future copyleft versions of that license
+published by that same organization.
+
+"Incorporate" means to publish or republish a Document, in whole or in
+part, as part of another Document.
+
+An MMC is "eligible for relicensing" if it is licensed under this
+License, and if all works that were first published under this License
+somewhere other than this MMC, and subsequently incorporated in whole
+or in part into the MMC, (1) had no cover texts or invariant sections,
+and (2) were thus incorporated prior to November 1, 2008.
+
+The operator of an MMC Site may republish an MMC contained in the site
+under CC-BY-SA on the same site at any time before August 1, 2009,
+provided the MMC is eligible for relicensing.
+
+## ADDENDUM: How to use this License for your documents
+
+To use this License in a document you have written, include a copy of
+the License in the document and put the following copyright and
+license notices just after the title page:
+
+        Copyright (C)  YEAR  YOUR NAME.
+        Permission is granted to copy, distribute and/or modify this document
+        under the terms of the GNU Free Documentation License, Version 1.3
+        or any later version published by the Free Software Foundation;
+        with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+        A copy of the license is included in the section entitled "GNU
+        Free Documentation License".
+
+If you have Invariant Sections, Front-Cover Texts and Back-Cover
+Texts, replace the "with â€¦ Texts." line with this:
+
+        with the Invariant Sections being LIST THEIR TITLES, with the
+        Front-Cover Texts being LIST, and with the Back-Cover Texts being LIST.
+
+If you have Invariant Sections without Cover Texts, or some other
+combination of the three, merge those two alternatives to suit the
+situation.
+
+If your document contains nontrivial examples of program code, we
+recommend releasing these examples in parallel under your choice of
+free software license, such as the GNU General Public License, to
+permit their use in free software.
 
 # References
