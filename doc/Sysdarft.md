@@ -2165,7 +2165,8 @@ _puts:
 _print_num:
     pushall
 
-    xor .64bit          <%fer2>,                    <%fer2>       ; record occurrences of digits
+    ; record occurrences of digits
+    xor .64bit          <%fer2>,                    <%fer2>       
     .loop:
         div .64bit      <$(10)>
         ; %fer0 ==> ori
