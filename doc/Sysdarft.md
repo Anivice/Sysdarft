@@ -83,6 +83,7 @@ in Appendix C.
 - Appendix B: Examples
   - Example A, Disk I/O
   - Example B, Real Time Clock
+  - Example C, Signal-Based Multi-Threading
 - Appendix C: GNU Free Documentation License
 
 - References
