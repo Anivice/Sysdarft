@@ -146,9 +146,8 @@ protected:
     template < typename DataType >
     DataType do_width_ambiguous_access_memory_based_on_table()
     {
-        const auto DB = Access.load<DataBaseType>();
         auto DP = OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryAddress;
-        return Access.pop_memory_from<DataType>(DB, DP);
+        return Access.pop_memory_from<DataType>(0, DP);
     }
 
     uint64_t do_access_width_specified_access_memory_based_on_table()

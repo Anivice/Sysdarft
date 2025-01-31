@@ -138,8 +138,8 @@ _puts:
 ; _print_num(%fer0)
 _print_num:
     pushall
-
-    xor .64bit          <%fer2>,                                    <%fer2>       ; record occurrences of digits
+    ; record occurrences of digits
+    xor .64bit          <%fer2>,                                    <%fer2>
     .loop:
         div .64bit      <$(10)>
         ; %fer0 ==> ori
@@ -174,11 +174,11 @@ _print_num:
         .resvb < 16 >
 
 _start:
-    mov .64bit          <%sp>,                                      <$(0xFFF)>      ; setup stack frame size
-    mov .64bit          <%sb>,                                      <_stack_frame>  ; setup stack frame location
-    mov .64bit          <*1&64($(0xA0000), $(16 * 128),  $(8))>,    <_int_rtc>      ; set 128 as RTC interrupt
+    mov .64bit          <%sp>,                                      <$(0xFFF)>
+    mov .64bit          <%sb>,                                      <_stack_frame>
+    mov .64bit          <*1&64($(0xA0000), $(16 * 128),  $(8))>,    <_int_rtc>
     mov .64bit          <*1&64($(0xA0000), $(16 * 5), $(8))>,       <_int_kb_abort>
-
+    ; out .64bit          <$(RTC_TIME)>,                              <$(1560600000)>
     out .64bit          <$(RTC_INT)>,                               <$(0x4E2080)>   ; 1s, 0x80
 
     .inf_loop:
@@ -436,36 +436,54 @@ _print_time:
     call                <%cb>,                                      <determine_the_month>
     mov .64bit          <%fer10>,                                   <%fer0> ; month
     mov .64bit          <%fer9>,                                    <%fer1> ; days
+    inc .64bit          <%fer9>     ; days++
 
+    ; year   => %fer11
+    ; month  => %fer10
+    ; day    => %fer9
+    ; hour   => %fer14
+    ; minute => %fer13
+    ; second => %fer12
 
-    mov .64bit          <%fer0>,                                    <%fer11>
-    call                <%cb>,                                      <_print_num>
     xor .64bit          <%db>,                                      <%db>
-    mov .64bit          <%dp>,                                      <.dash>
-    call                <%cb>,                                      <_puts>
 
-    mov .64bit          <%fer0>,                                    <%fer10>
-    call                <%cb>,                                      <_print_num>
-    xor .64bit          <%db>,                                      <%db>
-    mov .64bit          <%dp>,                                      <.dash>
-    call                <%cb>,                                      <_puts>
-
+    ; print day
     mov .64bit          <%fer0>,                                    <%fer9>
     call                <%cb>,                                      <_print_num>
-    xor .64bit          <%db>,                                      <%db>
-    mov .64bit          <%dp>,                                      <.dash>
+
+    mov .64bit          <%dp>,                                      <.space>
     call                <%cb>,                                      <_puts>
 
+    ; print month
+    mov .64bit          <%db>,                                      <.months>
+    mov .64bit          <%dp>,                                      <%fer10>
+    dec .64bit          <%dp>
+    lea                 <%dp>,                                      <*4&8(%dp, $(0), $(0))>
+    lea                 <%fer0>,                                    <*1&8(%db, %dp, $(0))>
+    call                <%cb>,                                      <_puts>
+
+    xor .64bit          <%db>,                                      <%db>
+    mov .64bit          <%dp>,                                      <.space>
+    call                <%cb>,                                      <_puts>
+
+    ; print year
+    mov .64bit          <%fer0>,                                    <%fer11>
+    call                <%cb>,                                      <_print_num>
+
+    mov .64bit          <%dp>,                                      <.space>
+    call                <%cb>,                                      <_puts>
+
+    ; print time
     mov .64bit          <%fer0>,                                    <%fer14>
     call                <%cb>,                                      <_print_num>
-    xor .64bit          <%db>,                                      <%db>
-    mov .64bit          <%dp>,                                      <.dash>
+
+    mov .64bit          <%dp>,                                      <.col>
     call                <%cb>,                                      <_puts>
 
     mov .64bit          <%fer0>,                                    <%fer13>
     call                <%cb>,                                      <_print_num>
-    xor .64bit          <%db>,                                      <%db>
-    mov .64bit          <%dp>,                                      <.dash>
+
+    mov .64bit          <%dp>,                                      <.col>
     call                <%cb>,                                      <_puts>
 
     mov .64bit          <%fer0>,                                    <%fer12>
@@ -474,8 +492,38 @@ _print_time:
     popall
     ret
 
-    .dash:
-    .string < "-" >
+    .col:
+    .string < ":" >
+    .8bit_data < 0 >
+
+    .space:
+    .string < " " >
+    .8bit_data < 0 >
+
+    .months:
+    .string < "Jan" >
+    .8bit_data < 0 >
+    .string < "Feb" >
+    .8bit_data < 0 >
+    .string < "Mar" >
+    .8bit_data < 0 >
+    .string < "Apr" >
+    .8bit_data < 0 >
+    .string < "May" >
+    .8bit_data < 0 >
+    .string < "Jun" >
+    .8bit_data < 0 >
+    .string < "Jul" >
+    .8bit_data < 0 >
+    .string < "Aug" >
+    .8bit_data < 0 >
+    .string < "Sep" >
+    .8bit_data < 0 >
+    .string < "Oct" >
+    .8bit_data < 0 >
+    .string < "Nov" >
+    .8bit_data < 0 >
+    .string < "Dec" >
     .8bit_data < 0 >
 
 _int_rtc:
@@ -494,7 +542,7 @@ _int_rtc:
     .string < "Current time: " >
     .8bit_data < 0 >
     .message.tail:
-    .string < "\n" >
+    .string < " UTC\n" >
     .8bit_data < 0 >
 
 _stack_frame:
