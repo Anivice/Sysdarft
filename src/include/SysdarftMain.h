@@ -96,6 +96,7 @@ const option_complicated long_options[] = {
                                                                                                 "Disconnecting debug console will cause system to immediately halt,\n"
                                                                                                 "which is equivalent to pulling the plug\n"
                                                                                                 "Debug server expects this argument: [Debug Server IP Address]:[Port]"},
+    {"no-curses", no_argument,        nullptr,       0,     "Disable Curses, and use console output (will cause format issues)"},
     {"crow-log",required_argument,  nullptr, 0,     "Specify the log file of crow service"},
     {nullptr,   0,                  nullptr, 0,     nullptr }
 };

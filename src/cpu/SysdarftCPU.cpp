@@ -60,14 +60,16 @@ SysdarftCPU::SysdarftCPU(const uint64_t memory,
     timestamp = 0;
 }
 
-uint64_t SysdarftCPU::Boot()
+uint64_t SysdarftCPU::Boot(const bool headless)
 {
     SystemHalted = false;
     do_abort_int = false;
     hd_int_flag = false;
     timestamp = 0;
 
-    SysdarftCursesUI::initialize();
+    if (!headless) {
+        SysdarftCursesUI::initialize();
+    }
 
     while (!SystemHalted)
     {

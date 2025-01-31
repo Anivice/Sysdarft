@@ -135,7 +135,8 @@ uint64_t boot_sysdarft(
     const bool debug,
     const std::string & ip,
     const uint16_t port,
-    const std::string & log_path)
+    const std::string & log_path,
+    bool headless)
 {
     std::ifstream file(bios, std::ios::in | std::ios::binary);
     std::vector<uint8_t> bios_code;
@@ -169,7 +170,7 @@ uint64_t boot_sysdarft(
             debug_server = std::make_unique<RemoteDebugServer>(ip, port, CPUInstance, log_path);
         }
 
-        ret = CPUInstance.Boot();
+        ret = CPUInstance.Boot(headless);
     } catch (...) {
         g_cpu_instance = nullptr;
         throw;
@@ -370,6 +371,8 @@ int main(int argc, char** argv)
                 fdb = parsed_options["fdb"].at(0);
             }
 
+            bool headless = parsed_options.contains("no-curses");
+
             bool debug = false;
             std::string ip{};
             uint64_t port = 0;
@@ -397,7 +400,7 @@ int main(int argc, char** argv)
             }
 
             // boot system
-            return static_cast<int>(boot_sysdarft(memory_size, bios_path, hdd, fda, fdb, debug, ip, port, log_file));
+            return static_cast<int>(boot_sysdarft(memory_size, bios_path, hdd, fda, fdb, debug, ip, port, log_file, headless));
         }
 
         std::cout   << "If you see this message, that means you have provided one or more arguments,\n"
