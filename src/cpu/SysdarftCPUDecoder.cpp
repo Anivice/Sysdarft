@@ -101,6 +101,7 @@ void OperandType::do_decode_register_without_prefix()
     OperandReferenceTable.OperandInfo.RegisterValue.RegisterWidthBCD = width;
     OperandReferenceTable.OperandInfo.RegisterValue.RegisterIndex = register_index;
 
+#ifdef __DEBUG__
     if (width == _64bit_prefix && register_index > 15)
     {
         switch (register_index) {
@@ -124,6 +125,7 @@ void OperandType::do_decode_register_without_prefix()
         default: throw IllegalInstruction("Unknown register type");
         }
     }
+#endif // __DEBUG__
 }
 
 void OperandType::do_decode_constant_without_prefix()
@@ -135,8 +137,10 @@ void OperandType::do_decode_constant_without_prefix()
         const auto num = Access.pop_code64();
         OperandReferenceTable.OperandType = ConstantOperand;
         OperandReferenceTable.OperandInfo.ConstantValue = num;
+#ifdef __DEBUG__
         ss << "0x" << std::uppercase << std::hex << num;
         OperandReferenceTable.literal = "$(" + ss.str() + ")";
+#endif // __DEBUG__
     } else {
         throw IllegalInstruction("Unknown constant width");
     }
@@ -169,12 +173,24 @@ void OperandType::do_decode_memory_without_prefix()
     decode_each_parameter(literal1, base);
     decode_each_parameter(literal2, off1);
     decode_each_parameter(literal3, off2);
-    const uint8_t ratio = Access.pop_code8();
+    const uint8_t ratio_bcd = Access.pop_code8();
+    uint8_t ratio = 0;
+
+    switch (ratio_bcd) {
+    case 0x01: ratio = 1; break;
+    case 0x02: ratio = 2; break;
+    case 0x04: ratio = 4; break;
+    case 0x08: ratio = 8; break;
+    case 0x16: ratio = 16; break;
+    default: throw IllegalInstruction("Unknown ratio");
+    }
 
     const uint64_t calculated_address = (base + off1 + off2) * ratio;
     OperandReferenceTable.OperandType = MemoryOperand;
     OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryAddress = calculated_address;
-    OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.RegisterWidthBCD = WidthBCD;
+    OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryWidthBCD = WidthBCD;
+
+#ifdef __DEBUG__
     OperandReferenceTable.literal = "*" + std::to_string(ratio) + "&";
 
     switch (WidthBCD) {
@@ -186,6 +202,15 @@ void OperandType::do_decode_memory_without_prefix()
     }
 
     OperandReferenceTable.literal += "(" + literal1 + ", " + literal2 + ", " + literal3 + ")";
+#else
+    if (WidthBCD != _8bit_prefix
+        && WidthBCD != _16bit_prefix
+        && WidthBCD != _32bit_prefix
+        && WidthBCD != _64bit_prefix)
+    {
+        throw IllegalInstruction("Unknown width");
+    }
+#endif // __DEBUG__
 }
 
 void OperandType::do_decode_operand()
@@ -198,6 +223,7 @@ void OperandType::do_decode_operand()
         default: throw IllegalInstruction("Unknown operand type");
     }
 
+#ifdef __DEBUG__
     OperandReferenceTable.literal = "<" + OperandReferenceTable.literal + ">";
     if (OperandReferenceTable.OperandType == MemoryOperand) {
         std::stringstream ss;
@@ -205,6 +231,7 @@ void OperandType::do_decode_operand()
            << OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryAddress;
         OperandReferenceTable.literal += " /* = " + ss.str() + " */";
     }
+#endif // __DEBUG__
 }
 
 uint64_t OperandType::do_access_operand_based_on_table()
@@ -303,7 +330,7 @@ void OperandType::store_value_to_register_based_on_table(const uint64_t value)
 void OperandType::store_value_to_memory_based_on_table(const uint64_t value)
 {
     int width = 0;
-    switch (OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.RegisterWidthBCD) {
+    switch (OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryWidthBCD) {
     case _8bit_prefix: width = 1; break;
     case _16bit_prefix: width = 2; break;
     case _32bit_prefix: width = 4; break;;
@@ -342,10 +369,26 @@ SysdarftCPUInstructionDecoder::pop_instruction_from_ip_and_increase_ip()
 
                 switch (width)
                 {
-                case _8bit_prefix: buffer << " .8bit "; break;
-                case _16bit_prefix: buffer << " .16bit";  break;
-                case _32bit_prefix: buffer << " .32bit";  break;
-                case _64bit_prefix: buffer << " .64bit";  break;
+                case _8bit_prefix:
+#ifdef __DEBUG__
+                    buffer << " .8bit ";
+#endif
+                    break;
+                case _16bit_prefix:
+#ifdef __DEBUG__
+                    buffer << " .16bit";
+#endif
+                    break;
+                case _32bit_prefix:
+#ifdef __DEBUG__
+                    buffer << " .32bit";
+#endif
+                    break;
+                case _64bit_prefix:
+#ifdef __DEBUG__
+                    buffer << " .64bit";
+#endif
+                    break;
                 default: throw IllegalInstruction("Unknown width specification");
                 }
             }
@@ -354,10 +397,14 @@ SysdarftCPUInstructionDecoder::pop_instruction_from_ip_and_increase_ip()
             for (uint64_t i = 0 ; i < arg_count; i++)
             {
                 ret.operands.emplace_back(*this);
+#ifdef __DEBUG__
                 buffer << " " << ret.operands.back().get_literal() << (i == 0 && arg_count > 1 ? "," : "");
+#endif
             }
 
+#ifdef __DEBUG__
             ret.literal = buffer.str();
+#endif
             return ret;
         }
     }

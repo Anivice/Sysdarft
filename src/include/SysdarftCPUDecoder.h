@@ -132,7 +132,7 @@ protected:
 
             struct {
                 uint64_t MemoryAddress;
-                uint8_t RegisterWidthBCD;
+                uint8_t MemoryWidthBCD;
             } CalculatedMemoryAddress;
         } OperandInfo { };
 
@@ -152,7 +152,7 @@ protected:
 
     uint64_t do_access_width_specified_access_memory_based_on_table()
     {
-        switch (OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.RegisterWidthBCD) {
+        switch (OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryWidthBCD) {
         case _8bit_prefix: return do_width_ambiguous_access_memory_based_on_table<uint8_t>();
         case _16bit_prefix: return do_width_ambiguous_access_memory_based_on_table<uint16_t>();
         case _32bit_prefix: return do_width_ambiguous_access_memory_based_on_table<uint32_t>();
