@@ -55,9 +55,6 @@ in Appendix C.
 - CPU Registers
   - General-Purpose Registers
   - Special-Purpose Registers
-    - Flag Register
-    - Current Procedure Stack Preservation Space, `CPS`
-
 - Assembler Syntax
   - Preprocessor directives
     - Declarative PreProcessor Directives
