@@ -73,22 +73,32 @@ uint64_t SysdarftCPU::Boot(const bool headless)
 
     while (!SystemHalted)
     {
-        // capture and control area
-        if (do_abort_int)
-        {
-            // the reason why 0x05 is raised using flags is that
-            // we don't want the program to be halting inside a
-            // signal capturing state where thread safety is harder to regulate.
-            // also, if we interrupt whist protector is locked, it will cause a deadlock
-            do_abort_int = false;
-            do_abort_0x05();
-        }
+        try {
+            // capture and control area
+            if (do_abort_int)
+            {
+                // the reason why 0x05 is raised using flags is that
+                // we don't want the program to be halting inside a
+                // signal capturing state where thread safety is harder to regulate.
+                // also, if we interrupt whist protector is locked, it will cause a deadlock
+                do_abort_int = false;
+                do_abort_0x05();
+            }
 
-        SysdarftCPUInterruption::protector.lock();
+            SysdarftCPUInterruption::protector.lock();
 
-        for (const auto & i : interruption_requests) {
-            do_interruption(i);
-            external_device_requested = false;
+            for (const auto & i : interruption_requests) {
+                do_interruption(i);
+                external_device_requested = false;
+            }
+        } catch (SysdarftCPUSubroutineRequestToAbortTheCurrentInstructionExecutionProcedureDueToError&) {
+            try {
+                do_stackoverflow_0x07();
+            } catch (...) {
+                std::cerr << "Critical error detected in Sysdarft!" << std::endl;
+                show_context();
+                return EXIT_FAILURE;
+            }
         }
 
         interruption_requests.clear();

@@ -416,8 +416,11 @@ int main(int argc, char** argv)
     } catch (const std::exception& e) {
         std::cerr << "Unexpected error: " << e.what() << std::endl;
         return EXIT_FAILURE;
-    } catch (...) {
+    }
+#ifndef __DEBUG__
+    catch (...) {
         std::cerr << "Unknown error occurred." << std::endl;
         return EXIT_FAILURE;
     }
+#endif //!__DEBUG__
 }

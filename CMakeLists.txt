@@ -363,6 +363,7 @@ endfunction()
 # Unit Tests:
 add_unit_test(disk_io tests/disk_io.asm)
 add_unit_test(rtc tests/rtc.asm)
+add_unit_test(thread tests/thread.asm)
 
 add_custom_target(
         COPY_SRC_FILE ALL

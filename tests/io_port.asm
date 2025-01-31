@@ -39,4 +39,7 @@
 %define FDB_INPUT           0x129
 %define FDB_OUTPUT          0x12A
 
+.equ 'RTC_TIME',    '0x70'
+.equ 'RTC_INT',     '0x71'
+
 %endif ; _IO_PORT_ASM_

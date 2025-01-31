@@ -118,7 +118,7 @@ _puts:
         call            <%cb>,                                      <_putc>
 
         inc .16bit      <%exr0>
-        cmp .16bit      <%exr7>,                                    <$(2000)>
+        cmp .16bit      <%exr0>,                                    <$(2000)>
         je              <%cb>,                                      <.newline>
 
         mov .16bit      <*1&16($(0), %fer3, $(0))>,                 <%exr0>
