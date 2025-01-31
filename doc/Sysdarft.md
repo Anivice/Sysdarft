@@ -37,14 +37,14 @@ VERSION 0.0.1-Alpha
 \thispagestyle{empty}
 
 \vspace*{\fill}
-\begin{center}
+Copyright (C) 2025 Anivice Ives
+
 Permission is granted to copy,
 distribute and/or modify this document under the terms of the GNU Free Documentation License,
 Version 1.3 or any later version published by the Free Software Foundation;
 with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
 A copy of the license is included in the section entitled "GNU Free Documentation License."
 in Appendix C.
-\end{center}
 \vspace{\fill}
 
 \newpage
@@ -478,9 +478,9 @@ And if `%SP` decreases below zero, the register overflows and wrap-around.
 
 Similar wrap-around happens to `%SP` when `%SP` is set to `-1`, but $64\text{-bit}$ in width.
 `%SP` performs a wrap-around to represent `-1`, which is `0xFFFFFFFFFFFFFFFF`,
-or `1111111111111111111111111111111111111111111111111111111111111111`,
+or $1111111111111111111111111111111111111111111111111111111111111111_2$,
 where every bit in the stack pointer is set to `1` which, when assumed as unsigned,
-is the maximum value a $64\text{-bit}$ register can represent ($18446744073709551615_10$).
+is the maximum value a $64\text{-bit}$ register can represent ($18446744073709551615_{10}$).
 
 ---
 
