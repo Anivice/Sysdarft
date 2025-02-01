@@ -32,7 +32,7 @@ SysdarftCursesUI::SysdarftCursesUI(const uint64_t memory)
     :   SysdarftCPUMemoryAccess(memory),
         cursor_x(0), cursor_y(0),
         offset_x(0), offset_y(0),
-        vsb(1)
+        vsb(1), ConsoleInputThread(this, &SysdarftCursesUI::monitor_console_input)
 {
     video_memory = (char*)SysdarftCPUMemoryAccess::Memory[184].data();
     // Initialize video memory with spaces
@@ -55,10 +55,13 @@ SysdarftCursesUI::SysdarftCursesUI(const uint64_t memory)
     free(data);
 
     log("Sound file decompressed!\n");
+
+    ConsoleInputThread.start();
 }
 
 SysdarftCursesUI::~SysdarftCursesUI()
 {
+    log("Cleaning up UI instances...\n");
     running = false;
     for (auto & thread : sound_thread_pool)
     {
@@ -66,6 +69,14 @@ SysdarftCursesUI::~SysdarftCursesUI()
             thread.join();
         }
     }
+
+    log("Shutdown Input Monitor...");
+    ConsoleInputThread.stop();
+    log("done\n");
+
+    log("Shutdown GUI...");
+    GUIDisplay.cleanup();
+    log("done\n");
 }
 
 void SysdarftCursesUI::initialize()
@@ -244,6 +255,32 @@ void SysdarftCursesUI::render_screen()
     set_cursor_visibility(vsb);
 }
 
+void SysdarftCursesUI::monitor_console_input(std::atomic < bool > & running)
+{
+    debug::set_thread_name("CIN");
+    while (running)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        if (const auto key = read_keyControl(); key != NO_KEY)
+        {
+            switch (key) {
+            case 3: /* Ctrl+C */
+                KeyboardIntAbort = true;
+            break;
+            case 26: /* Ctrl+Z */
+                SystemHalted = true;
+            break;
+            default:
+                {
+                    std::lock_guard lock(input_mutex);
+                    captured_input.emplace_back(key);
+                }
+            }
+        }
+    }
+}
+
+
 void SysdarftCursesUI::play_bell_sound(const std::atomic < bool > & running_flag)
 {
     sf::SoundBuffer buffer;
@@ -265,4 +302,57 @@ void SysdarftCursesUI::play_bell_sound(const std::atomic < bool > & running_flag
     while (running_flag && sound.getStatus() == sf::Sound::Playing) {
         sf::sleep(sf::milliseconds(50));
     }
+}
+
+void SysdarftCursesUI::gui_input_handler(const int keyCode)
+{
+    if (keyCode == -1) {
+        return;
+    }
+
+    switch (keyCode) {
+    case 3: /* Ctrl+C */
+        KeyboardIntAbort = true;
+        break;
+    case 26: /* Ctrl+Z */
+        SystemHalted = true;
+        break;
+    default:
+        {
+            std::lock_guard lock(input_mutex);
+            captured_input.emplace_back(keyCode);
+        }
+    }
+}
+
+std::array<char, V_HEIGHT * V_WIDTH> SysdarftCursesUI::video_memory_puller()
+{
+    std::array<char, V_HEIGHT * V_WIDTH> ret{};
+    SysdarftCPUMemoryAccess::read_memory(VIDEO_MEMORY_START, ret.data(), VIDEO_MEMORY_SIZE);
+    return ret;
+}
+
+void SysdarftCursesUI::launch_gui()
+{
+    GUIDisplay.register_input_handler(this, &SysdarftCursesUI::gui_input_handler);
+    GUIDisplay.register_linear_buffer_reader(this, &SysdarftCursesUI::video_memory_puller);
+    GUIDisplay.init();
+}
+
+void SysdarftCursesUI::flush_input_buffer()
+{
+    std::lock_guard<std::mutex> lock(input_mutex);
+    captured_input.clear();
+}
+
+int SysdarftCursesUI::get_input()
+{
+    std::lock_guard<std::mutex> lock(input_mutex);
+    if (captured_input.empty()) {
+        return -1;
+    }
+
+    const auto ret = captured_input.front();
+    captured_input.erase(captured_input.begin());
+    return ret;
 }

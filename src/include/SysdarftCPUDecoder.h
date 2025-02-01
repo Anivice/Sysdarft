@@ -183,11 +183,8 @@ public:
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPUInterruption : public DecoderDataAccess
 {
 protected:
-    // External halt is handled at upper level
-    std::atomic<bool> SystemHalted = false;
-    std::atomic < bool > do_abort_int = false;
     std::atomic < bool > debugger_pause_blocked_int_0x14 = false;
-    std::mutex protector;
+    std::mutex External_Int_Req_Vec_Protector;
     std::vector < uint64_t > interruption_requests;
     std::atomic < bool > external_device_requested = false;
     std::atomic < uint64_t > current_routine_pop_len = 0;
@@ -251,14 +248,14 @@ protected:
     void do_interruption_set_cur_pos_0x11();
     void do_interruption_set_cur_visib_0x12();
     void do_interruption_newline_0x13();
-    void do_interruption_getinput_0x14();
+    void do_interruption_getInput_0x14();
     void do_interruption_cur_pos_0x15();
     void do_get_system_hardware_info_0x16();
     void do_ring_bell_0x17();
     void do_refresh_screen_0x18();
     void do_clear_user_input_stream_0x19();
 
-    std::atomic<bool> hd_int_flag = false;
+    std::atomic<bool> Int3DebugInterrupt = false;
 
     void do_interruption(uint64_t code);
     void do_iret();

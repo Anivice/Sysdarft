@@ -42,6 +42,8 @@
 // This contains all functions for debug purposes
 namespace debug
 {
+    std::string demangle(const char *mangled_name);
+
     // contains command status, including stdout, stderr and exit code
     struct cmd_status
     {

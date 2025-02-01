@@ -103,29 +103,6 @@ void complicated_to_gnu(option * dest, const option_complicated * src)
     dest[offset] = {nullptr, 0, nullptr, 0 };
 }
 
-volatile std::atomic < SysdarftCPU * > g_cpu_instance = nullptr;
-// Signal handler for window resize
-void resize_handler(int)
-{
-    if (g_cpu_instance) {
-        g_cpu_instance.load()->handle_resize();
-    }
-}
-
-void int_handler(int)
-{
-    if (g_cpu_instance) {
-        g_cpu_instance.load()->set_abort_next();
-    }
-}
-
-void stop_handler(int)
-{
-    if (g_cpu_instance) {
-        g_cpu_instance.load()->system_hlt();
-    }
-}
-
 uint64_t boot_sysdarft(
     const uint64_t memory_size,
     const std::string & bios,
@@ -136,7 +113,8 @@ uint64_t boot_sysdarft(
     const std::string & ip,
     const uint16_t port,
     const std::string & log_path,
-    bool headless)
+    const bool headless,
+    const bool gui)
 {
     std::ifstream file(bios, std::ios::in | std::ios::binary);
     std::vector<uint8_t> bios_code;
@@ -157,11 +135,6 @@ uint64_t boot_sysdarft(
     file.close();
 
     SysdarftCPU CPUInstance(memory_size, bios_code, hdd, fda, fdb);
-    g_cpu_instance = &CPUInstance;
-
-    std::signal(SIGINT, int_handler);
-    std::signal(SIGWINCH, resize_handler);
-    std::signal(SIGTSTP, stop_handler);
 
     std::unique_ptr < RemoteDebugServer > debug_server;
 
@@ -170,13 +143,11 @@ uint64_t boot_sysdarft(
             debug_server = std::make_unique<RemoteDebugServer>(ip, port, CPUInstance, log_path);
         }
 
-        ret = CPUInstance.Boot(headless);
+        ret = CPUInstance.Boot(headless, gui);
     } catch (...) {
-        g_cpu_instance = nullptr;
         throw;
     }
 
-    g_cpu_instance = nullptr;
     return ret;
 }
 
@@ -371,7 +342,8 @@ int main(int argc, char** argv)
                 fdb = parsed_options["fdb"].at(0);
             }
 
-            bool headless = parsed_options.contains("no-curses");
+            const bool headless = parsed_options.contains("no-curses");
+            const bool gui = parsed_options.contains("with-gui");
 
             bool debug = false;
             std::string ip{};
@@ -400,7 +372,7 @@ int main(int argc, char** argv)
             }
 
             // boot system
-            return static_cast<int>(boot_sysdarft(memory_size, bios_path, hdd, fda, fdb, debug, ip, port, log_file, headless));
+            return static_cast<int>(boot_sysdarft(memory_size, bios_path, hdd, fda, fdb, debug, ip, port, log_file, headless, gui));
         }
 
         std::cout   << "If you see this message, that means you have provided one or more arguments,\n"

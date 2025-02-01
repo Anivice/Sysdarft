@@ -178,6 +178,7 @@ add_library(SysdarftDebug OBJECT
         src/include/SysdarftDebug.h
         src/include/SysdarftDebug.inl
         src/PreProcessingFlagChecker.cpp
+        src/demangle.cpp
 )
 target_include_directories(SysdarftDebug PUBLIC src/include)
 
@@ -219,9 +220,18 @@ find_package(Curses REQUIRED)
 find_package(SFML COMPONENTS audio system REQUIRED)
 add_library(SysdarftCursesUI OBJECT
         src/SysdarftCursesUI.cpp
+        src/gui/TerminalDisplay.cpp
+        src/include/TerminalDisplay.hpp
+        src/KeyControl.c
+        src/include/ASCIIKeymap.h
         ${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c)
 target_include_directories(SysdarftCursesUI PUBLIC src/include)
-target_link_libraries(SysdarftCursesUI PUBLIC ${CURSES_LIBRARIES} sfml-audio sfml-system ZLIB::ZLIB)
+target_link_libraries(SysdarftCursesUI PUBLIC ${CURSES_LIBRARIES}
+        sfml-audio
+        sfml-system
+        ZLIB::ZLIB
+        sfml-graphics
+        sfml-window)
 
 # CPU
 add_library(SysdarftCPU OBJECT
@@ -329,7 +339,6 @@ add_executable(sysdarft-system
         src/SysdarftConsole/Watcher.cpp
         src/SysdarftConsole/logo.c
         src/SysdarftConsole/DisassembleAnArea.cpp
-        src/SysdarftConsole/CrowSendAbort.cpp
         src/SysdarftConsole/PullData.cpp
 )
 target_include_directories(sysdarft-system PUBLIC ${ASIO_INCLUDE_DIR} src/include src/include/crow)
@@ -394,3 +403,5 @@ function(add_pdf_target TARGET FILE)
 endfunction()
 
 add_pdf_target(Sysdarft.pdf doc/Sysdarft.md)
+
+add_executable(keyEcho utils/keyEcho.c src/KeyControl.c)

@@ -96,7 +96,8 @@ const option_complicated long_options[] = {
                                                                                                 "Disconnecting debug console will cause system to immediately halt,\n"
                                                                                                 "which is equivalent to pulling the plug\n"
                                                                                                 "Debug server expects this argument: [Debug Server IP Address]:[Port]"},
-    {"no-curses", no_argument,        nullptr,       0,     "Disable Curses, and use console output (will cause format issues)"},
+    {"no-curses", no_argument,      nullptr, 0,     "Disable Curses, and use console output (will cause format issues)"},
+    {"with-gui",  no_argument,        nullptr, 'W',     "Launch GUI display"},
     {"crow-log",required_argument,  nullptr, 0,     "Specify the log file of crow service"},
     {nullptr,   0,                  nullptr, 0,     nullptr }
 };
@@ -204,7 +205,6 @@ private:
     void crow_setup_stepi();
     void crow_setup_watcher();
     void crow_setup_disassemble_an_area();
-    void crow_setup_kbint();
     void crow_setup_pull_data();
 
 public:

@@ -47,9 +47,7 @@ public:
         const std::string & fdb);
     ~SysdarftCPU() override { SysdarftCursesUI::cleanup(); }
 
-    void set_abort_next() { do_abort_int = true; }
-    void system_hlt() { SystemHalted = true; }
-    [[nodiscard]] uint64_t Boot(bool headless = false);
+    [[nodiscard]] uint64_t Boot(bool headless = false, bool with_gui = false);
 
     SysdarftCPU & operator = (const SysdarftCPU &) = delete;
     [[nodiscard]] uint64_t SystemTotalMemory() const { return TotalMemory; }

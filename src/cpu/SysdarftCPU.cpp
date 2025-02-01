@@ -60,32 +60,36 @@ SysdarftCPU::SysdarftCPU(const uint64_t memory,
     timestamp = 0;
 }
 
-uint64_t SysdarftCPU::Boot(const bool headless)
+uint64_t SysdarftCPU::Boot(const bool headless, const bool with_gui)
 {
     SystemHalted = false;
-    do_abort_int = false;
-    hd_int_flag = false;
+    KeyboardIntAbort = false;
+    Int3DebugInterrupt = false;
     timestamp = 0;
 
     if (!headless) {
         SysdarftCursesUI::initialize();
     }
 
+    if (with_gui) {
+        SysdarftCursesUI::launch_gui();
+    }
+
     while (!SystemHalted)
     {
         try {
             // capture and control area
-            if (do_abort_int)
+            if (KeyboardIntAbort)
             {
                 // the reason why 0x05 is raised using flags is that
                 // we don't want the program to be halting inside a
                 // signal capturing state where thread safety is harder to regulate.
                 // also, if we interrupt whist protector is locked, it will cause a deadlock
-                do_abort_int = false;
+                KeyboardIntAbort = false;
                 do_abort_0x05();
             }
 
-            SysdarftCPUInterruption::protector.lock();
+            SysdarftCPUInterruption::External_Int_Req_Vec_Protector.lock();
 
             for (const auto & i : interruption_requests) {
                 do_interruption(i);
@@ -102,7 +106,7 @@ uint64_t SysdarftCPU::Boot(const bool headless)
         }
 
         interruption_requests.clear();
-        SysdarftCPUInstructionExecutor::protector.unlock();
+        SysdarftCPUInstructionExecutor::External_Int_Req_Vec_Protector.unlock();
 
         try {
             SysdarftCPUInstructionExecutor::execute(timestamp++);

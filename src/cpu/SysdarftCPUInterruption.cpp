@@ -29,12 +29,16 @@
 #include <SysdarftCursesUI.h>
 #include <SysdarftInstructionExec.h>
 
+#ifdef __DEBUG__
+
 void flush_stdin()
 {
     if (tcflush(STDIN_FILENO, TCIFLUSH) != 0) {
         log("Error flushing stdin: ", strerror(errno), "\n");
     }
 }
+
+#endif
 
 SysdarftCPUInterruption::SysdarftCPUInterruption(const uint64_t memory) :
     DecoderDataAccess(memory)
@@ -150,7 +154,7 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
         case 0x11: do_interruption_set_cur_pos_0x11();      return;
         case 0x12: do_interruption_set_cur_visib_0x12();    return;
         case 0x13: do_interruption_newline_0x13();          return;
-        case 0x14: do_interruption_getinput_0x14();         return;
+        case 0x14: do_interruption_getInput_0x14();         return;
         case 0x15: do_interruption_cur_pos_0x15();          return;
         case 0x16: do_get_system_hardware_info_0x16();      return;
         case 0x17: do_ring_bell_0x17();                     return;
@@ -172,7 +176,7 @@ void SysdarftCPUInterruption::do_ext_dev_interruption(const uint64_t code)
 {
     if (code > 0x1F && code < MAX_INTERRUPTION_ENTRY)
     {
-        if (!protector.try_lock()) {
+        if (!External_Int_Req_Vec_Protector.try_lock()) {
             log("External device interruption ignored, number ", code, "\n");
             return; // ignore this interruption, the system is currently masked
             // (the system processing other hardware interruptions, bus not free)
@@ -180,7 +184,7 @@ void SysdarftCPUInterruption::do_ext_dev_interruption(const uint64_t code)
 
         interruption_requests.emplace_back(code);
         external_device_requested = true;
-        protector.unlock();
+        External_Int_Req_Vec_Protector.unlock();
     } else {
         throw SysdarftInterruptionOutOfRange("External hardware has invoked a invalid interruption code");
     }
@@ -242,7 +246,7 @@ void SysdarftCPUInterruption::do_interruption_fatal_0x00()
 
 void SysdarftCPUInterruption::do_interruption_debug_0x03()
 {
-    hd_int_flag = true;
+    Int3DebugInterrupt = true;
     // software interruptions
     const auto location = do_interruption_lookup(0x03);
     do_preserve_cpu_state();
@@ -294,13 +298,12 @@ void SysdarftCPUInterruption::do_interruption_newline_0x13()
     SysdarftCursesUI::newline();
 }
 
-void SysdarftCPUInterruption::do_interruption_getinput_0x14()
+void SysdarftCPUInterruption::do_interruption_getInput_0x14()
 {
-    char ch = 0;
     while (!SystemHalted)
         // abort if external halt or device interruption triggered
     {
-        if (do_abort_int || debugger_pause_blocked_int_0x14)
+        if (KeyboardIntAbort || debugger_pause_blocked_int_0x14)
         {
             debugger_pause_blocked_int_0x14 = false;
             // revert ip to int <$(0x14)>
@@ -314,12 +317,10 @@ void SysdarftCPUInterruption::do_interruption_getinput_0x14()
             return;
         }
 
-        if (const ssize_t n = read(STDIN_FILENO, &ch, 1); n > 0)
+        if (const auto Key = SysdarftCursesUI::get_input(); Key != -1)
         {
-            SysdarftRegister::store<ExtendedRegisterType, 0>(ch);
+            SysdarftRegister::store<ExtendedRegisterType, 0>(Key);
             return;
-        } else if (n == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
-            throw SysdarftCPUFatal();
         }
 
         if (external_device_requested)
@@ -363,5 +364,5 @@ void SysdarftCPUInterruption::do_refresh_screen_0x18()
 
 void SysdarftCPUInterruption::do_clear_user_input_stream_0x19()
 {
-    flush_stdin();
+    SysdarftCursesUI::flush_input_buffer();
 }

@@ -61,7 +61,7 @@ public:
         };
 
 #ifdef __DEBUG__
-        workerThreadName = std::string(typeid(InstanceType).name()) + "::" + typeid(method).name();
+        workerThreadName = debug::demangle(typeid(InstanceType).name()) + "::" + debug::demangle(typeid(method).name());
 #endif
     }
 

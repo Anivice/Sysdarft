@@ -66,7 +66,6 @@ RemoteDebugServer::RemoteDebugServer(
     crow_setup_stepi();
     crow_setup_watcher();
     crow_setup_disassemble_an_area();
-    crow_setup_kbint();
     crow_setup_pull_data();
 
     server_thread = std::thread ([this](

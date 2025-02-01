@@ -114,9 +114,9 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
             }
 #endif
 
-            if (hd_int_flag || breakpoint_reached)
+            if (Int3DebugInterrupt || breakpoint_reached)
             {
-                hd_int_flag = false;
+                Int3DebugInterrupt = false;
                 breakpoint_handler(timestamp, ip_before_pop, opcode, Arg);
             }
 

@@ -21,16 +21,21 @@
 #ifndef UI_CURSES_H
 #define UI_CURSES_H
 
-#include <string>
-#include <thread>
+#include <ASCIIKeymap.h>
 #include <SysdarftDebug.h>
 #include <SysdarftMemory.h>
+#include <TerminalDisplay.hpp>
+#include <WorkerThread.h>
+#include <string>
+#include <thread>
 
 extern unsigned char bell_sound[];
 extern unsigned int bell_sound_len;
 extern unsigned long long int bell_sound_original_len;
 extern std::vector < unsigned char > bell_sound_data_uncompressed;
 extern std::mutex bell_memory_access_mutex;
+
+extern "C" enum KeyCode read_keyControl();
 
 // -----------------------------------------------------
 // Virtual screen dimensions
@@ -54,11 +59,20 @@ public:
     void ringbell();
 
 protected:
+    // External halt is handled at upper level
+    std::atomic<bool> SystemHalted = false; // TODO: Shutdown should be an interruption
+    std::atomic < bool > KeyboardIntAbort = false;
+
     int cursor_x;
     int cursor_y;
 
     void recalc_offsets();
     void render_screen();
+    void launch_gui();
+    TerminalDisplay GUIDisplay;
+
+    void flush_input_buffer();
+    int get_input();
 
 private:
     int offset_x;
@@ -68,12 +82,21 @@ private:
     int vsb;
     std::atomic < bool > running;
     std::vector<std::thread> sound_thread_pool;
+    std::vector < int > captured_input;
+    std::mutex input_mutex;
+
+    void monitor_console_input(std::atomic < bool > & running);
+
+    WorkerThread ConsoleInputThread;
 
     char& video_at(const int x, const int y) {
+        std::lock_guard<std::mutex> lock(SysdarftCPUMemoryAccess::MemoryAccessMutex);
         return video_memory[y * V_WIDTH + x];
     }
 
     static void play_bell_sound(const std::atomic < bool > & running_flag);
+    void gui_input_handler(int);
+    std::array<char, V_HEIGHT * V_WIDTH> video_memory_puller();
 };
 
 #endif // UI_CURSES_H
