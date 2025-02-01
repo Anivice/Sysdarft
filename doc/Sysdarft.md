@@ -995,6 +995,14 @@ The following is a table describing each non-maskable interruption:
 | `0x18`            | Refresh the Screen with the Video Memory. Useful when modifying the video memory directly without using teletype                                                                                                                                                                                                                                                                                                            |
 | `0x19`            | Clear Keyboard Input. All previously unhandled user input will be flushed and ignored                                                                                                                                                                                                                                                                                                                                       |
 
+> **NOTE**: `Ctrl+^]`, i.e., ASCII code `29`, is the Escape Code[^EscapeCode] for Sysdarft.
+> Using this combination will cause the system to immediately abort and shutdown without triggering anything,
+> equivalent to pulling the plug.
+
+[^EscapeCode]:
+Usually, an escape code is a text command that tells a device to perform an action instead of displaying text.
+It is usually triggered by a keyboard combination[@VT100ProgrammersReferenceManual].
+
 #### Maskable Interruptions
 
 Interrupts with identifiers exceeding `0x1F` and up to `0xFF` are typically employed by users
