@@ -132,7 +132,8 @@ _start:
     mov .64bit          <%sb>,                                      <_stack_frame>
     mov .64bit          <%sp>,                                      <$(0xFFF)>
 
-    mov .64bit          <*1&64($(0xA0000), $(16 * 5), $(8))>,       <_int_kb_abort>
+    mov .64bit          <*1&64($(0xA0000), $(16 * 0x05), $(8))>,    <_int_kb_abort>
+    mov .64bit          <*1&64($(0xA0000), $(16 * 0x09), $(8))>,    <_int_kb_abort>
 
     mov .64bit          <%dp>,                                      <.cache>
     xor .64bit          <%db>,                                      <%db>
@@ -150,7 +151,7 @@ _int_kb_abort:
     xor .64bit          <%db>,                                      <%db>
     mov .64bit          <%dp>,                                      <.message>
     call                <%cb>,                                      <_puts>
-    mov .64bit          <%fer3>,                                    <$(0x1FFFFF)>
+    mov .64bit          <%fer3>,                                    <$(0xFFFF)>
     .wait:
     loop                <%cb>,                                      <.wait>
     xor .64bit          <%fer0>,                                    <%fer0>

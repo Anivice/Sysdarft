@@ -95,7 +95,7 @@ void SysdarftCursesUI::initialize()
     clear();
     curs_set(1);
     render_screen();      // Render initial screen
-    vsb = 1;
+    set_cursor_visibility(true);
 }
 
 void SysdarftCursesUI::start_again()
@@ -135,6 +135,9 @@ void SysdarftCursesUI::set_cursor(const int x, const int y)
     cursor_x = std::clamp(x, 0, V_WIDTH  - 1);
     cursor_y = std::clamp(y, 0, V_HEIGHT - 1);
 
+    GUIDisplay.cursor_x = x;
+    GUIDisplay.cursor_y = y;
+
     // if curses mode is disabled, skip
     if (!is_inited) {
         return;
@@ -146,6 +149,7 @@ void SysdarftCursesUI::set_cursor(const int x, const int y)
 
 void SysdarftCursesUI::set_cursor_visibility(const bool visible)
 {
+    GUIDisplay.cursor_visible = visible;
     vsb = visible;
 }
 
@@ -229,7 +233,7 @@ void SysdarftCursesUI::render_screen()
         return;
     }
 
-    set_cursor_visibility(false);
+    curs_set(false);
 
     clear();
     // Render video_memory to the screen using current offsets
@@ -242,7 +246,7 @@ void SysdarftCursesUI::render_screen()
     move(offset_y + cursor_y, offset_x + cursor_x);
     refresh();
 
-    set_cursor_visibility(vsb);
+    curs_set(vsb);
 }
 
 void SysdarftCursesUI::monitor_console_input(std::atomic < bool > & running)

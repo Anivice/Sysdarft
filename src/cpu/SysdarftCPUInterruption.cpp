@@ -322,7 +322,7 @@ void SysdarftCPUInterruption::do_interruption_getInput_0x14()
     while (!SystemHalted)
         // abort if external halt or device interruption triggered
     {
-        if (KeyboardIntAbort || debugger_pause_blocked_int_0x14)
+        if (KeyboardIntAbort || debugger_pause_blocked_int_0x14 || CtrlZShutdownRequested)
         {
             debugger_pause_blocked_int_0x14 = false;
             // revert ip to int <$(0x14)>

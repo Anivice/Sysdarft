@@ -1,7 +1,8 @@
 // TerminalDisplay.cpp
-#include <TerminalDisplay.hpp>
-#include <SFML/Window/Keyboard.hpp>
 #include <ASCIIKeymap.h>
+#include <SFML/Window/Keyboard.hpp>
+#include <SysdarftCursesUI.h>
+#include <TerminalDisplay.hpp>
 
 TerminalDisplay::TerminalDisplay() : mainLoopWorker(this, &TerminalDisplay::mainLoop)
 {
@@ -50,7 +51,8 @@ void TerminalDisplay::cleanup()
  * @param control True if the Control key is held.
  * @return The corresponding KeyCode from the keymap, or NO_KEY if no mapping exists.
  */
-KeyCode convert_sfml_key(sf::Keyboard::Key key, bool shift, bool control) {
+KeyCode convert_sfml_key(sf::Keyboard::Key key, bool shift, bool control)
+{
     // If Control is pressed and key is a letter, map to ASCII 1-26.
     if (control) { // 26
         if (key >= sf::Keyboard::A && key <= sf::Keyboard::Z) {
@@ -154,37 +156,6 @@ KeyCode convert_sfml_key(sf::Keyboard::Key key, bool shift, bool control) {
     }
 }
 
-// Define a debounce interval (e.g., 50 milliseconds).
-constexpr auto debounceInterval = std::chrono::milliseconds(10);
-
-// Global (or static) map to store the last event time for each key.
-static std::unordered_map<sf::Keyboard::Key, std::chrono::steady_clock::time_point> lastKeyTime;
-
-KeyCode processKeyEvent(const sf::Event::KeyEvent& keyEvent)
-{
-    // Get current time.
-    const auto now = std::chrono::steady_clock::now();
-
-    // Check if we've seen this key recently.
-    auto it = lastKeyTime.find(keyEvent.code);
-    if (it != lastKeyTime.end())
-    {
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second);
-        if (elapsed < debounceInterval) {
-            // Ignore the event as it came too soon after the last one.
-            return NO_KEY;
-        }
-    }
-    // Record the time for this key.
-    lastKeyTime[keyEvent.code] = now;
-
-    // Now convert the SFML key event into our KeyCode.
-    // Assume you have a function convert_sfml_key(...) defined as before:
-    const bool shift = keyEvent.shift;
-    const bool control = keyEvent.control;
-    return convert_sfml_key(keyEvent.code, shift, control);
-}
-
 void TerminalDisplay::mainLoop(std::atomic<bool> & running_)
 {
     // Virtual resolution for the 80x25 grid.
@@ -196,6 +167,10 @@ void TerminalDisplay::mainLoop(std::atomic<bool> & running_)
     constexpr float cellHeight = 20.f;
     const sf::Vector2u virtualSize { static_cast<unsigned int>(columns * cellWidth),
                                        static_cast<unsigned int>(rows * cellHeight) };
+    constexpr uint64_t cursor_update_count = 500 / 16;
+    constexpr char cursor_char = '_';
+    uint64_t loop_counter = 0;
+    bool if_cursor_hidden = true;
 
     // Create an SFML window.
     sf::RenderWindow window(sf::VideoMode(virtualSize.x, virtualSize.y),
@@ -241,12 +216,15 @@ void TerminalDisplay::mainLoop(std::atomic<bool> & running_)
             break;
         }
 
+        loop_counter++;
+
         sf::Event event{};
         while (window.pollEvent(event))
         {
             // Handle window close event.
             if (event.type == sf::Event::Closed) {
                 window.close();
+                break;
             }
             // Handle window resize event: maintain aspect ratio.
             else if (event.type == sf::Event::Resized)
@@ -276,7 +254,9 @@ void TerminalDisplay::mainLoop(std::atomic<bool> & running_)
             // Handle key pressed events.
             else if (event.type == sf::Event::KeyPressed)
             {
-                const int kc = processKeyEvent(event.key);
+                const bool shift = event.key.shift;
+                const bool control = event.key.control;
+                const int kc = convert_sfml_key(event.key.code, shift, control);
                 if (kc != -1)
                 {
                     if (input_handler_) {
@@ -304,6 +284,27 @@ void TerminalDisplay::mainLoop(std::atomic<bool> & running_)
         if (buffer_reader_)
         {
             std::array<char, totalChars> buffer = buffer_reader_();
+
+            if (loop_counter == cursor_update_count)
+            {
+                loop_counter = 0;
+                if (cursor_visible)
+                {
+                    if (if_cursor_hidden) {
+                        if_cursor_hidden = false;
+                    } else {
+                        if_cursor_hidden = true;
+                    }
+                } else {
+                    if_cursor_hidden = true;
+                }
+            }
+
+            const uint64_t linear = cursor_x + cursor_y * V_WIDTH;
+            if (!if_cursor_hidden) {
+                buffer[linear] = cursor_char;
+            }
+
             for (int i = 0; i < totalChars; ++i) {
                 // Convert char to a string for sf::Text.
                 char c = buffer[i];

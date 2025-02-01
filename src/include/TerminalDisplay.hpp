@@ -55,6 +55,10 @@ public:
         };
     }
 
+    std::atomic < int > cursor_x = 0;
+    std::atomic < int > cursor_y = 0;
+    std::atomic < bool > cursor_visible = true;
+
 private:
     WorkerThread mainLoopWorker;
     std::atomic<bool> is_inited { false };
