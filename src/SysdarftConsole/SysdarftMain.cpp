@@ -103,6 +103,15 @@ void complicated_to_gnu(option * dest, const option_complicated * src)
     dest[offset] = {nullptr, 0, nullptr, 0 };
 }
 
+volatile std::atomic < SysdarftCPU * > g_cpu_instance = nullptr;
+// Signal handler for window resize
+void resize_handler(int)
+{
+    if (g_cpu_instance) {
+        g_cpu_instance.load()->handle_resize();
+    }
+}
+
 uint64_t boot_sysdarft(
     const uint64_t memory_size,
     const std::string & bios,
@@ -136,6 +145,9 @@ uint64_t boot_sysdarft(
 
     SysdarftCPU CPUInstance(memory_size, bios_code, hdd, fda, fdb);
 
+    g_cpu_instance = &CPUInstance;
+    std::signal(SIGWINCH, resize_handler);
+
     std::unique_ptr < RemoteDebugServer > debug_server;
 
     try {
@@ -145,9 +157,11 @@ uint64_t boot_sysdarft(
 
         ret = CPUInstance.Boot(headless, gui);
     } catch (...) {
+        g_cpu_instance = nullptr;
         throw;
     }
 
+    g_cpu_instance = nullptr;
     return ret;
 }
 

@@ -151,11 +151,6 @@ void SysdarftCursesUI::set_cursor_visibility(const bool visible)
 
 void SysdarftCursesUI::teletype(const char text)
 {
-    if (!is_inited) {
-        std::cout << text;
-        return;
-    }
-
     int current_x = cursor_x;
     int current_y = cursor_y;
 
@@ -175,11 +170,6 @@ void SysdarftCursesUI::teletype(const char text)
 
 void SysdarftCursesUI::newline()
 {
-    if (!is_inited) {
-        std::cout << std::endl;
-        return;
-    }
-
     if (cursor_y == V_HEIGHT - 1)
     {
         for (uint64_t i = 0; i < V_HEIGHT - 1; i++) {

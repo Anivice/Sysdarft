@@ -225,7 +225,18 @@ _rtc:
 _shutdown:
     xor .64bit          <%db>,                                      <%db>
     mov .64bit          <%dp>,                                      <.message>
-    int                 <$(0x80)>
+    int                 <$(0x13)>
+    int                 <$(0x13)>
+    .loop:
+        xor .16bit      <%exr0>,                                    <%exr0>
+        mov .8bit       <%r0>,                                      <*1&8(%db, %dp, $(0))>
+        cmp .8bit       <%r0>,                                      <$(0)>
+        je              <%cb>,                                      <.end>
+        int             <$(0x10)>
+        inc .64bit      <%dp>
+        jmp             <%cb>,                                      <.loop>
+
+    .end:
     hlt
     .message:
         .string < "System shutdown requested received!\n" >
@@ -237,7 +248,7 @@ _start:
 
     mov .64bit          <*1&64($(0xA0000), $(16 * 0x80), $(8))>,    <int_puts>
     mov .64bit          <*1&64($(0xA0000), $(16 * 0x81), $(8))>,    <_rtc>
-    mov .64bit          <*1&64($(0xA0000), $(16 * 0x20), $(8))>,    <_shutdown>
+    mov .64bit          <*1&64($(0xA0000), $(16 * 0x09), $(8))>,    <_shutdown>
 
     mov .64bit          <%dp>,                                      <_reg_threada>
     mov .64bit          <*1&64(%dp, $(160), $(0))>,                 <threadA>           ; IP
