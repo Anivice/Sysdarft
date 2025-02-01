@@ -150,6 +150,8 @@ KeyCode convert_sfml_key(sf::Keyboard::Key key, bool shift, bool control)
             return shift ? ASCII_RIGHT_BRACE : ASCII_RIGHT_BRACKET; // '}' if shifted, ']' otherwise
         case sf::Keyboard::Delete:
             return ASCII_DEL;
+        case sf::Keyboard::Enter:
+            return ASCII_LF;
         // For keys that we do not handle explicitly, return NO_KEY.
         default:
             return NO_KEY;
