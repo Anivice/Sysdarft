@@ -62,6 +62,7 @@ protected:
     // External halt is handled at upper level
     std::atomic<bool> SystemHalted = false; // TODO: Shutdown should be an interruption
     std::atomic < bool > KeyboardIntAbort = false;
+    std::atomic < bool > CtrlZShutdownRequested = false;
 
     int cursor_x;
     int cursor_y;

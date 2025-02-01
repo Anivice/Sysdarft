@@ -27,15 +27,16 @@
 #include <SysdarftMemory.h>
 #include <SysdarftRegister.h>
 
-#define INT_FATAL       (0x00)
-#define INT_DIV_0       (0x01)
-#define INT_IO_ERROR    (0x02)
-#define INT_DEBUG       (0x03)
-#define INT_BAD_INTR    (0x04)
-#define INT_ABORT       (0x05)
-#define INT_ILLEGAL_INSTRUCTION (0x06)
-#define INT_STACKOVERFLOW (0x07)
-#define INT_ILLEGAL_MEMORY_ACCESS (0x08)
+#define INT_FATAL                   (0x00)
+#define INT_DIV_0                   (0x01)
+#define INT_IO_ERROR                (0x02)
+#define INT_DEBUG                   (0x03)
+#define INT_BAD_INTR                (0x04)
+#define INT_ABORT                   (0x05)
+#define INT_ILLEGAL_INSTRUCTION     (0x06)
+#define INT_STACKOVERFLOW           (0x07)
+#define INT_ILLEGAL_MEMORY_ACCESS   (0x08)
+#define INT_SYSTEM_SHUTDOWN         (0x09)
 
 #define INT_TELETYPE    (0x10)
 #define INT_SET_CUR_POS (0x11)
@@ -209,7 +210,7 @@ protected:
      *  [0x06] ILLEGAL INSTRUCTION
      *  [0x07] STACK OVERFLOW
      *  [0x08] MEMORY ACCESS OUT OF BOUNDARY
-     *  [0x09]
+     *  [0x09] SYSTEM SHUTDOWN (Can only trigger once until IM is 0)
      *  [0x0A]
      *  [0x0B]
      *  [0x0C]

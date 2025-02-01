@@ -266,10 +266,13 @@ void SysdarftCursesUI::monitor_console_input(std::atomic < bool > & running)
             switch (key) {
             case 3: /* Ctrl+C */
                 KeyboardIntAbort = true;
-            break;
+                break;
             case 26: /* Ctrl+Z */
+                CtrlZShutdownRequested = true;
+                break;
+            case 29: /* Ctrl+^] */
                 SystemHalted = true;
-            break;
+                break;
             default:
                 {
                     std::lock_guard lock(input_mutex);
@@ -315,6 +318,9 @@ void SysdarftCursesUI::gui_input_handler(const int keyCode)
         KeyboardIntAbort = true;
         break;
     case 26: /* Ctrl+Z */
+        CtrlZShutdownRequested = true;
+        break;
+    case 29: /* Ctrl+^] */
         SystemHalted = true;
         break;
     default:

@@ -52,18 +52,26 @@ void TerminalDisplay::cleanup()
  */
 KeyCode convert_sfml_key(sf::Keyboard::Key key, bool shift, bool control) {
     // If Control is pressed and key is a letter, map to ASCII 1-26.
-    if (control) {
+    if (control) { // 26
         if (key >= sf::Keyboard::A && key <= sf::Keyboard::Z) {
             // Map A->1, B->2, ..., Z->26.
             return static_cast<KeyCode>((key - sf::Keyboard::A) + 1);
         }
-        // You can add additional control mappings here if needed.
-        return NO_KEY;
+
+        switch (key) { // 7
+            case sf::Keyboard::LBracket: return ASCII_ESC;
+            case sf::Keyboard::Backslash: return ASCII_FS;
+            case sf::Keyboard::RBracket: return ASCII_GS;
+            case sf::Keyboard::Num6: return ASCII_RS;
+            case sf::Keyboard::Slash: return ASCII_US;
+            case sf::Keyboard::Tilde: return ASCII_NUL;
+            default: return NO_KEY;
+        }
     }
 
     // Otherwise, process as normal.
     switch(key) {
-        // Letters: return uppercase if shift is pressed, lowercase otherwise.
+        // Letters: return uppercase if shift is pressed, lowercase otherwise. (26 * 2 == 52)
         case sf::Keyboard::A: return shift ? ASCII_A : ASCII_a;
         case sf::Keyboard::B: return shift ? ASCII_B : ASCII_b;
         case sf::Keyboard::C: return shift ? ASCII_C : ASCII_c;
@@ -91,7 +99,7 @@ KeyCode convert_sfml_key(sf::Keyboard::Key key, bool shift, bool control) {
         case sf::Keyboard::Y: return shift ? ASCII_Y : ASCII_y;
         case sf::Keyboard::Z: return shift ? ASCII_Z : ASCII_z;
 
-        // Digits: if shift is pressed, return the typical symbol.
+        // Digits: if shift is pressed, return the typical symbol. (10 * 2 == 20)
         case sf::Keyboard::Num0:
             return shift ? ASCII_RIGHT_PAREN : ASCII_0; // ')' when shifted
         case sf::Keyboard::Num1:
@@ -113,7 +121,7 @@ KeyCode convert_sfml_key(sf::Keyboard::Key key, bool shift, bool control) {
         case sf::Keyboard::Num9:
             return shift ? ASCII_LEFT_PAREN : ASCII_9;    // '('
 
-        // Punctuation and other common keys:
+        // Punctuation and other common keys: 23
         case sf::Keyboard::Space:
             return ASCII_SPACE;
         case sf::Keyboard::Comma:
@@ -123,7 +131,7 @@ KeyCode convert_sfml_key(sf::Keyboard::Key key, bool shift, bool control) {
         case sf::Keyboard::Slash:
             return shift ? ASCII_QUESTION : ASCII_SLASH;  // '?' if shifted, '/' otherwise
         case sf::Keyboard::BackSlash:
-            return ASCII_BACKSLASH; // Usually the same regardless of shift.
+            return shift ? ASCII_PIPE : ASCII_BACKSLASH; // '|' if shifted, '\' otherwise
         case sf::Keyboard::SemiColon:
             return shift ? ASCII_COLON : ASCII_SEMICOLON; // ':' if shifted, ';' otherwise
         case sf::Keyboard::Quote:
@@ -134,7 +142,12 @@ KeyCode convert_sfml_key(sf::Keyboard::Key key, bool shift, bool control) {
             return shift ? ASCII_PLUS : ASCII_EQUAL;  // '+' if shifted, '=' otherwise
         case sf::Keyboard::Hyphen:
             return shift ? ASCII_UNDERSCORE : ASCII_MINUS; // '_' if shifted, '-' otherwise
-
+        case sf::Keyboard::LBracket:
+            return shift ? ASCII_LEFT_BRACE : ASCII_LEFT_BRACKET; // '{' if shifted, '[' otherwise
+        case sf::Keyboard::RBracket:
+            return shift ? ASCII_RIGHT_BRACE : ASCII_RIGHT_BRACKET; // '}' if shifted, ']' otherwise
+        case sf::Keyboard::Delete:
+            return ASCII_DEL;
         // For keys that we do not handle explicitly, return NO_KEY.
         default:
             return NO_KEY;

@@ -222,12 +222,22 @@ _rtc:
     .a_started:
         .8bit_data < 0 >
 
+_shutdown:
+    xor .64bit          <%db>,                                      <%db>
+    mov .64bit          <%dp>,                                      <.message>
+    int                 <$(0x80)>
+    hlt
+    .message:
+        .string < "System shutdown requested received!\n" >
+        .8bit_data < 0 >
+
 _start:
     mov .64bit          <%sb>,                                      <_stack_frame>
     mov .64bit          <%sp>,                                      <$(0xFFF)>
 
     mov .64bit          <*1&64($(0xA0000), $(16 * 0x80), $(8))>,    <int_puts>
     mov .64bit          <*1&64($(0xA0000), $(16 * 0x81), $(8))>,    <_rtc>
+    mov .64bit          <*1&64($(0xA0000), $(16 * 0x20), $(8))>,    <_shutdown>
 
     mov .64bit          <%dp>,                                      <_reg_threada>
     mov .64bit          <*1&64(%dp, $(160), $(0))>,                 <threadA>           ; IP

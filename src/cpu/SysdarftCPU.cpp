@@ -75,6 +75,21 @@ uint64_t SysdarftCPU::Boot(const bool headless, const bool with_gui)
         SysdarftCursesUI::launch_gui();
     }
 
+    auto invoke_shutdown = [&]()
+    {
+        have_I_invoked_shutdown = true;
+        CtrlZShutdownRequested = false;
+        do_interruption(INT_SYSTEM_SHUTDOWN);
+    };
+
+    auto cleanup_invoke_shutdown = [&]()
+    {
+        have_I_invoked_shutdown = false;
+        CtrlZShutdownRequested = false;
+    };
+
+    cleanup_invoke_shutdown();
+
     while (!SystemHalted)
     {
         try {
@@ -89,6 +104,7 @@ uint64_t SysdarftCPU::Boot(const bool headless, const bool with_gui)
                 do_abort_0x05();
             }
 
+            // external device
             SysdarftCPUInterruption::External_Int_Req_Vec_Protector.lock();
 
             for (const auto & i : interruption_requests) {
@@ -107,6 +123,31 @@ uint64_t SysdarftCPU::Boot(const bool headless, const bool with_gui)
 
         interruption_requests.clear();
         SysdarftCPUInstructionExecutor::External_Int_Req_Vec_Protector.unlock();
+
+        // shutdown request
+        if (CtrlZShutdownRequested)
+        {
+            if (!have_I_invoked_shutdown) {
+                invoke_shutdown();
+            }
+
+            // else if (have_I_invoked_shutdown && SysdarftRegister::load<FlagRegisterType>().InterruptionMask) {
+            //     // ignore
+            // }
+
+            else if (have_I_invoked_shutdown // I have invoked before
+                && !SysdarftRegister::load<FlagRegisterType>().InterruptionMask // but not in the interrupt procedure,
+                // meaning: shutdown requested, handled, and refused, so we request again
+                )
+            {
+                cleanup_invoke_shutdown();
+                invoke_shutdown();
+            }
+
+            // else {
+                // logically impossible
+            // }
+        }
 
         try {
             SysdarftCPUInstructionExecutor::execute(timestamp++);

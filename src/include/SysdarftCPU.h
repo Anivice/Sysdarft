@@ -38,6 +38,7 @@ public:
 class SYSDARFT_EXPORT_SYMBOL SysdarftCPU final : public SysdarftCPUInstructionExecutor {
 private:
     __uint128_t timestamp;
+    std::atomic_bool have_I_invoked_shutdown {false};
 
 public:
     explicit SysdarftCPU(uint64_t memory,
