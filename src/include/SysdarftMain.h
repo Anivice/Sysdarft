@@ -89,7 +89,7 @@ const option_complicated long_options[] = {
     {"fda",     required_argument,  nullptr, 'A',   "Specify floppy disk A"},
     {"fdb",     required_argument,  nullptr, 'B',   "Specify floppy disk B"},
     {"memory",  required_argument,  nullptr, 'M',   "Specify memory size (in MB)\n"
-                                                                                                "Left unset and default size is 32MB"},
+                                                                                                "Left unset and the default size is 32MB"},
     {"boot",    no_argument,        nullptr, 'S',   "Boot the system"},
     {"debug",   required_argument,  nullptr, 'D',   "Boot the system with remote debug console\n"
                                                                                                 "The system will not be started unless the debug console is connected\n"

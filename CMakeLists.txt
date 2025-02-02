@@ -550,4 +550,33 @@ endfunction()
 
 add_pdf_target(Sysdarft.pdf doc/Sysdarft.md)
 
-add_executable(keyEcho utils/keyEcho.c src/KeyControl.c)
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    add_executable(keyEcho utils/keyEcho.c src/KeyControl.c)
+endif ()
+
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    message(WARNING "**DO NOT** build an AppImage and deploy it on a foreign machine in debug branch!\n"
+                    "This WILL leak your personal information on the current machine.\n"
+                    "Unless you are inside a container, DO NOT build an AppImage and deploy it.")
+endif ()
+
+if(DEFINED STATIC_BUILD AND STATIC_BUILD)
+    add_custom_target(
+            AppImage
+            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/single_executable_builder.sh
+            sysdarft-system "    "
+            "${CMAKE_BINARY_DIR}"
+            DEPENDS Sysdarft.pdf sysdarft-system
+            COMMENT "Building AppImage..."
+    )
+else ()
+    add_custom_target(
+            AppImage
+            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/single_executable_builder.sh
+            sysdarft-system
+            "libSysdarft.so libSysdarftResources.so"
+            "${CMAKE_BINARY_DIR}"
+            DEPENDS Sysdarft.pdf sysdarft-system
+            COMMENT "Building AppImage..."
+    )
+endif ()
