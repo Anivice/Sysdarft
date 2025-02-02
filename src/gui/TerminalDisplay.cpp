@@ -6,16 +6,58 @@
 #include <zlib_wrapper.h>
 #include <resources.h> // doesn't exist, generated automatically
 #include <cstring>
+#include <utility>
+#include <fstream>
 
-TerminalDisplay::TerminalDisplay() : mainLoopWorker(this, &TerminalDisplay::mainLoop)
+TerminalDisplay::TerminalDisplay(const std::string& font_name_) :
+    mainLoopWorker(this, &TerminalDisplay::mainLoop)
 {
-    log("Decompressing font file...\n");
+    const unsigned char *font = nullptr;
+    unsigned int length = 0;
+    unsigned long long int original_len = 0;
 
-    // uncompress sound
+    for (unsigned int i = 0; i < std::size(font_list_string_table); i++)
+    {
+        if ("fonts_" + font_name_ == font_list_string_table[i])
+        {
+            log("Loading font ", font_name_, "...\n");
+            font = font_list_reference_table[i];
+            length = font_list_compressed_length_table[i];
+            original_len = font_list_original_length_table[i];
+        }
+    }
+
+    if (!font)
+    {
+        if (std::ifstream font_file(font_name_);
+            font_file.is_open())
+        {
+            font_file.seekg(0, std::ios::end);
+            original_len = font_file.tellg();
+            log("Loading external font file...\n");
+            font_file.seekg(0, std::ios::beg);
+            std::lock_guard<std::mutex> lock(font_decompressed_mutex_);
+            font_decompressed.resize(original_len);
+            font_file.read((char*)font_decompressed.data(), static_cast<long>(original_len));
+            font_file.close();
+            log("Instantiating display...\n");
+            return;
+        }
+    }
+
+    if (!font) {
+        log("Failed to load font ", font_name_, ", falling back to default font.\n");
+        font = fonts_JetBrainsMono_Medium;
+        length = fonts_JetBrainsMono_Medium_len;
+        original_len = fonts_JetBrainsMono_Medium_original_len;
+    }
+
+    log("Decompressing font file...\n");
+    // uncompress font
     std::lock_guard<std::mutex> lock(font_decompressed_mutex_);
     uint64_t font_decompressed_len = 0;
-    const auto data = decompress_data(fonts_JetBrainsMono_Medium, fonts_JetBrainsMono_Medium_len, &font_decompressed_len);
-    if (font_decompressed_len != fonts_JetBrainsMono_Medium_original_len) {
+    const auto data = decompress_data(font, length, &font_decompressed_len);
+    if (font_decompressed_len != original_len) {
         throw SysdarftBaseError("Font file corrupted");
     }
 
@@ -167,9 +209,12 @@ KeyCode convert_sfml_key(sf::Keyboard::Key key, bool shift, bool control)
         case sf::Keyboard::RBracket:
             return shift ? ASCII_RIGHT_BRACE : ASCII_RIGHT_BRACKET; // '}' if shifted, ']' otherwise
         case sf::Keyboard::Delete:
+        case sf::Keyboard::BackSpace:
             return ASCII_DEL;
         case sf::Keyboard::Enter:
             return ASCII_LF;
+        case sf::Keyboard::Tab:
+            return ASCII_HT;
         // For keys that we do not handle explicitly, return NO_KEY.
         default:
             return NO_KEY;
@@ -183,7 +228,7 @@ void TerminalDisplay::mainLoop(std::atomic<bool> & running_)
     constexpr int rows = 25;
     constexpr int totalChars = columns * rows; // 2000
     // Define cell size (in pixels) for each character.
-    constexpr float cellWidth = 10.f;
+    constexpr float cellWidth = 13.f;
     constexpr float cellHeight = 20.f;
     const sf::Vector2u virtualSize { static_cast<unsigned int>(columns * cellWidth),
                                        static_cast<unsigned int>(rows * cellHeight) + 10 };
@@ -225,7 +270,8 @@ void TerminalDisplay::mainLoop(std::atomic<bool> & running_)
             sf::Text text;
             text.setFont(font);
             text.setCharacterSize(static_cast<unsigned int>(cellHeight)); // Use cellHeight as font size.
-            text.setFillColor(sf::Color::Cyan);  // Color can be adjusted for the analog horror effect.
+            const sf::Color FontColor(255, 216, 169);
+            text.setFillColor(FontColor);  // Color can be adjusted for the analog horror effect.
             text.setPosition(static_cast<float>(col) * cellWidth, static_cast<float>(row) * cellHeight);
             text.setString(" "); // Initialize with a space.
             charTexts.push_back(text);
@@ -301,7 +347,8 @@ void TerminalDisplay::mainLoop(std::atomic<bool> & running_)
         }
 
         // Clear the window.
-        window.clear(sf::Color::Black);
+        const sf::Color BackgroundColor(28, 3, 40);
+        window.clear(BackgroundColor);
 
         // If a video memory reader has been registered, update the text.
         if (buffer_reader_)

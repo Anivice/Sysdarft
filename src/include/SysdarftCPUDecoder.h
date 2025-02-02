@@ -79,7 +79,7 @@ class DecoderDataAccess
       public SysdarftCursesUI
 {
 protected:
-    explicit DecoderDataAccess(const uint64_t memory) : SysdarftCursesUI(memory) { }
+    explicit DecoderDataAccess(const uint64_t memory, const std::string & font_name) : SysdarftCursesUI(memory, font_name) { }
 
     template < typename DataType >
     DataType pop_code_and_inc_ip()
@@ -261,7 +261,7 @@ protected:
     void do_interruption(uint64_t code);
     void do_iret();
 
-    explicit SysdarftCPUInterruption(uint64_t memory);
+    explicit SysdarftCPUInterruption(uint64_t memory, const std::string & font_name);
 private:
 
     void set_mask()
@@ -292,7 +292,8 @@ protected:
 
     ActiveInstructionType pop_instruction_from_ip_and_increase_ip();
 
-    explicit SysdarftCPUInstructionDecoder(const uint64_t total_memory) : SysdarftCPUInterruption(total_memory) { }
+    explicit SysdarftCPUInstructionDecoder(const uint64_t total_memory, const std::string & font_name)
+        : SysdarftCPUInterruption(total_memory, font_name) { }
 };
 
 #endif //SYSDARFTCPUINSTRUCTIONDECODER_H

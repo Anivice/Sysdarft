@@ -21,7 +21,8 @@
 #include <SysdarftInstructionExec.h>
 #include <InstructionSet.h>
 
-SysdarftCPUInstructionExecutor::SysdarftCPUInstructionExecutor(const uint64_t memory) : SysdarftCPUInstructionDecoder(memory)
+SysdarftCPUInstructionExecutor::SysdarftCPUInstructionExecutor(const uint64_t memory, const std::string & font_name)
+    : SysdarftCPUInstructionDecoder(memory, font_name)
 {
     // Misc
     make_instruction_execution_procedure(OPCODE_NOP, &SysdarftCPUInstructionExecutor::nop);

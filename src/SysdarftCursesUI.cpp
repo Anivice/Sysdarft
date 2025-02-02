@@ -29,11 +29,12 @@
 std::mutex bell_memory_access_mutex;
 std::vector < unsigned char > bell_sound_data_uncompressed;
 
-SysdarftCursesUI::SysdarftCursesUI(const uint64_t memory)
+SysdarftCursesUI::SysdarftCursesUI(const uint64_t memory, const std::string & font_name)
     :   SysdarftCPUMemoryAccess(memory),
         cursor_x(0), cursor_y(0),
-        offset_x(0), offset_y(0),
-        vsb(1), ConsoleInputThread(this, &SysdarftCursesUI::monitor_console_input)
+        GUIDisplay(font_name), offset_x(0),
+        offset_y(0), vsb(1),
+        ConsoleInputThread(this, &SysdarftCursesUI::monitor_console_input)
 {
     video_memory = (char*)SysdarftCPUMemoryAccess::Memory[184].data();
     // Initialize video memory with spaces

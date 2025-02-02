@@ -41,7 +41,7 @@ private:
     std::atomic_bool have_I_invoked_shutdown {false};
 
 public:
-    explicit SysdarftCPU(uint64_t memory,
+    explicit SysdarftCPU(uint64_t memory, const std::string & font_name,
         const std::vector < uint8_t > & bios,
         const std::string & hdd,
         const std::string & fda,

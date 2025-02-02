@@ -40,8 +40,8 @@ void flush_stdin()
 
 #endif
 
-SysdarftCPUInterruption::SysdarftCPUInterruption(const uint64_t memory) :
-    DecoderDataAccess(memory)
+SysdarftCPUInterruption::SysdarftCPUInterruption(const uint64_t memory, const std::string & font_name) :
+    DecoderDataAccess(memory, font_name)
 {
     // Get the current flags for stdin (file descriptor 0)
     const int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
@@ -128,38 +128,53 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
 
             SysdarftCursesUI::cleanup();
             log("[CPU INTERRUPT]: \033[31;6;7;1mWarning: Hardware exception thrown with code ", code, "\033[0m\n");
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            SysdarftCursesUI::start_again();
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            SysdarftCursesUI::cleanup();
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            SysdarftCursesUI::start_again();
+            if (SysdarftCursesUI::get_is_inited())
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                SysdarftCursesUI::start_again();
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                SysdarftCursesUI::cleanup();
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                SysdarftCursesUI::start_again();
+            }
         }
         else if (code == 0x09)
         {
             SysdarftCursesUI::cleanup();
             log("[CPU INTERRUPT]: \033[32;6;7;1mSystem shutdown request received!\033[0m\n");
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            SysdarftCursesUI::start_again();
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            SysdarftCursesUI::cleanup();
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            SysdarftCursesUI::start_again();
+            if (SysdarftCursesUI::get_is_inited())
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                SysdarftCursesUI::start_again();
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                SysdarftCursesUI::cleanup();
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                SysdarftCursesUI::start_again();
+            }
         }
 #else
         if (debug::verbose)
         {
-            if (code < 0x10 && code != 0x09) {
+            if (code < 0x10 && code != 0x09)
+            {
                 SysdarftCursesUI::cleanup();
                 std::cerr << "[CPU INTERRUPT]: \033[31;6;7;1mWarning: Hardware exception thrown with code "
                           << code << "\033[0m" << std::endl;
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                SysdarftCursesUI::start_again();
-            } else if (code == 0x09) {
+                if (SysdarftCursesUI::get_is_inited())
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    SysdarftCursesUI::start_again();
+                }
+            }
+            else if (code == 0x09)
+            {
                 SysdarftCursesUI::cleanup();
                 std::cerr << "[CPU INTERRUPT]: \033[32;6;7;1mSystem shutdown request received!\033[0m" << std::endl;
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                SysdarftCursesUI::start_again();
+                if (SysdarftCursesUI::get_is_inited())
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    SysdarftCursesUI::start_again();
+                }
             }
         }
 #endif

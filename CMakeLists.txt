@@ -3,9 +3,14 @@ cmake_minimum_required(VERSION 3.29)
 project(Sysdarft C CXX)
 
 # Enable Ccache support
-find_program(CCACHE_PROGRAM ccache)
+find_program(CCACHE_PROGRAM ccache REQUIRED)
 if(NOT CCACHE_PROGRAM)
     message(FATAL_ERROR "ccache not found! Please install ccache or adjust the configuration.")
+endif()
+
+# On Linux, using GNU toolchain, force static linking for the executable.
+if(NOT (UNIX AND NOT APPLE))
+    message(FATAL_ERROR "Your Operating System does NOT provide enough functionality for Sysdarft to build and work properly!")
 endif()
 
 # Set ccache as the compiler launcher before setting the compiler
@@ -193,7 +198,7 @@ target_include_directories(SysdarftModule PUBLIC src/include)
 add_library(SysdarftGlobalEvents OBJECT src/GlobalEvents.cpp)
 target_include_directories(SysdarftGlobalEvents PUBLIC src/include)
 
-# Audio files
+# Resource files
 find_package(ZLIB REQUIRED)
 add_executable(compress utils/compress.c src/coding/zlib.c)
 target_link_libraries(compress PRIVATE ZLIB::ZLIB)
@@ -204,6 +209,9 @@ function(get_basename input_path output_var)
     # Return the result to the caller's scope
     set(${output_var} "${basename}" PARENT_SCOPE)
 endfunction()
+
+find_program(XXD_PROGRAM xxd REQUIRED)
+find_program(STAT_PROGRAM stat REQUIRED)
 
 function(add_compressed_resource_target TARGET NAME FILE)
     message(STATUS "Generating ${CMAKE_CURRENT_BINARY_DIR}/resources/${TARGET} ...")
@@ -216,10 +224,10 @@ function(add_compressed_resource_target TARGET NAME FILE)
             COMMAND ${CMAKE_CURRENT_BINARY_DIR}/compress
                         "${CMAKE_CURRENT_BINARY_DIR}/resources/${BASENAME}"
                         "${CMAKE_CURRENT_BINARY_DIR}/resources/${BASENAME}.bin"
-            COMMAND xxd -n ${NAME} -i "${CMAKE_CURRENT_BINARY_DIR}/resources/${BASENAME}.bin" > ${CMAKE_CURRENT_BINARY_DIR}/resources/${TARGET}
+            COMMAND ${XXD_PROGRAM} -n ${NAME} -i "${CMAKE_CURRENT_BINARY_DIR}/resources/${BASENAME}.bin" > ${CMAKE_CURRENT_BINARY_DIR}/resources/${TARGET}
             COMMAND echo >> "${CMAKE_CURRENT_BINARY_DIR}/resources/${TARGET}"
             COMMAND echo -n "unsigned long long int ${NAME}_original_len = " >> "${CMAKE_CURRENT_BINARY_DIR}/resources/${TARGET}"
-            COMMAND stat --format=\"%s\" "${CMAKE_CURRENT_BINARY_DIR}/resources/${BASENAME}" >> "${CMAKE_CURRENT_BINARY_DIR}/resources/${TARGET}"
+            COMMAND ${STAT_PROGRAM} --format=\"%s\" "${CMAKE_CURRENT_BINARY_DIR}/resources/${BASENAME}" >> "${CMAKE_CURRENT_BINARY_DIR}/resources/${TARGET}"
             COMMAND echo "\;" >> "${CMAKE_CURRENT_BINARY_DIR}/resources/${TARGET}"
             DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/resources/${FILE} compress
             COMMENT "Building resource ${TARGET}.."
@@ -321,11 +329,21 @@ add_custom_command(
                     "${CMAKE_CURRENT_BINARY_DIR}/resources/resources.h"
 )
 
-add_library(SysdarftResources SHARED
-        ${CMAKE_CURRENT_BINARY_DIR}/resources/resources.h
-        ${file_list}
-)
+if(DEFINED STATIC_BUILD AND STATIC_BUILD)
+    add_library(SysdarftResources OBJECT
+            ${CMAKE_CURRENT_BINARY_DIR}/resources/resources.h
+            ${file_list}
+    )
+else ()
+    add_library(SysdarftResources SHARED
+            ${CMAKE_CURRENT_BINARY_DIR}/resources/resources.h
+            ${file_list}
+    )
+endif ()
+
 set_target_properties(SysdarftResources PROPERTIES LINKER_LANGUAGE C)
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/resources)
 
 # Curses:
 find_package(Curses REQUIRED)
@@ -338,7 +356,7 @@ add_library(SysdarftCursesUI OBJECT
         src/include/ASCIIKeymap.h
         ${CMAKE_CURRENT_BINARY_DIR}/resources/resources.h
 )
-target_include_directories(SysdarftCursesUI PUBLIC src/include ${CMAKE_CURRENT_BINARY_DIR}/resources)
+target_include_directories(SysdarftCursesUI PUBLIC src/include)
 target_link_libraries(SysdarftCursesUI PUBLIC ${CURSES_LIBRARIES} SysdarftResources
         sfml-audio
         sfml-system
@@ -399,7 +417,12 @@ add_library(SysdarftICH OBJECT
 target_include_directories(SysdarftICH PUBLIC src/include)
 
 # Sysdarft Shared Library:
-add_library(Sysdarft SHARED src/include/WorkerThread.h)
+if(DEFINED STATIC_BUILD AND STATIC_BUILD)
+    add_library(Sysdarft STATIC src/include/WorkerThread.h)
+else ()
+    add_library(Sysdarft SHARED src/include/WorkerThread.h)
+endif ()
+set_target_properties(Sysdarft PROPERTIES LINKER_LANGUAGE CXX)
 target_include_directories(Sysdarft PUBLIC src/include)
 target_link_libraries(Sysdarft PRIVATE
         SysdarftDebug
@@ -455,7 +478,7 @@ add_executable(sysdarft-system
         src/SysdarftConsole/PullData.cpp
 )
 target_include_directories(sysdarft-system PUBLIC ${ASIO_INCLUDE_DIR} src/include src/include/crow)
-target_link_libraries(sysdarft-system PRIVATE Sysdarft nlohmann_json::nlohmann_json)
+target_link_libraries(sysdarft-system PRIVATE Sysdarft nlohmann_json::nlohmann_json SysdarftResources)
 
 # Enable testing
 enable_testing()
@@ -486,6 +509,7 @@ endfunction()
 add_unit_test(disk_io tests/disk_io.asm)
 add_unit_test(rtc tests/rtc.asm)
 add_unit_test(thread tests/thread.asm)
+add_unit_test(typewriter tests/typewriter.asm)
 
 add_custom_target(
         COPY_SRC_FILE ALL
@@ -495,12 +519,20 @@ add_custom_target(
 )
 
 if (NOT "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    add_custom_target(STRIP_ALL ALL
-            COMMAND strip sysdarft-system
-            COMMAND strip libSysdarft.so
-            COMMAND strip libSysdarftResources.so
-            DEPENDS sysdarft-system Sysdarft
-            COMMENT "Stripping symbols...")
+    if(DEFINED STATIC_BUILD AND STATIC_BUILD)
+        add_custom_target(STRIP_ALL ALL
+                COMMAND strip sysdarft-system
+                DEPENDS sysdarft-system Sysdarft
+                COMMENT "Stripping symbols...")
+    else ()
+        add_custom_target(STRIP_ALL ALL
+                COMMAND strip sysdarft-system
+                COMMAND strip libSysdarft.so
+                COMMAND strip libSysdarftResources.so
+                DEPENDS sysdarft-system Sysdarft
+                COMMENT "Stripping symbols...")
+    endif ()
+
 endif ()
 
 # Documentation

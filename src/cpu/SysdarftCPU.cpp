@@ -22,12 +22,12 @@
 #include <SysdarftDisks.h>
 #include <RealTimeClock.h>
 
-SysdarftCPU::SysdarftCPU(const uint64_t memory,
+SysdarftCPU::SysdarftCPU(const uint64_t memory, const std::string & font_name,
     const std::vector < uint8_t > & bios,
     const std::string & hdd,
     const std::string & fda,
     const std::string & fdb)
-        : SysdarftCPUInstructionExecutor(memory)
+        : SysdarftCPUInstructionExecutor(memory, font_name)
 {
     // load BIOS to memory
     constexpr uint64_t off = BIOS_START;

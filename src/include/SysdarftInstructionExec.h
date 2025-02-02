@@ -195,7 +195,7 @@ private:
 
 protected:
     // initialization
-    explicit SysdarftCPUInstructionExecutor(uint64_t memory);
+    explicit SysdarftCPUInstructionExecutor(uint64_t memory, const std::string & font_name);
 
     // general code execution
     void execute(__uint128_t timestamp);

@@ -108,12 +108,27 @@ _puts:
         xor .8bit       <%r3>,                      <%r3>
         mov .64bit      <%fer3>,                    <.last_offset>
         mov .16bit      <%exr0>,                    <*1&16($(0), %fer3, $(0))>
+
+        cmp .8bit       <%r2>,                      <$(127)>
+        je              <%cb>,                      <.backspace>
+
         call            <%cb>,                      <_putc>
 
         inc .16bit      <%exr0>
         cmp .16bit      <%exr0>,                    <$(2000)>
         je              <%cb>,                      <.newline>
 
+        mov .16bit      <*1&16($(0), %fer3, $(0))>, <%exr0>
+        SETCUSP
+        jmp             <%cb>,                      <.end>
+
+        .backspace:
+        cmp .16bit      <%exr0>,                    <$(0)>
+        je              <%cb>,                      <.end>
+        dec .16bit      <%exr0>
+        mov .16bit      <%exr1>,                    <$(' ')>
+        call            <%cb>,                      <_putc>
+        mov .64bit      <%fer3>,                    <.last_offset>
         mov .16bit      <*1&16($(0), %fer3, $(0))>, <%exr0>
         SETCUSP
 

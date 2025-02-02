@@ -43,7 +43,7 @@ static constexpr int V_HEIGHT = 25;
 class SYSDARFT_EXPORT_SYMBOL SysdarftCursesUI : public SysdarftCPUMemoryAccess
 {
 public:
-    explicit SysdarftCursesUI(uint64_t memory);
+    explicit SysdarftCursesUI(uint64_t memory, const std::string & font_name);
     ~SysdarftCursesUI() override;
     void initialize();
     void cleanup();
@@ -60,6 +60,7 @@ protected:
     std::atomic<bool> SystemHalted = false; // TODO: Shutdown should be an interruption
     std::atomic < bool > KeyboardIntAbort = false;
     std::atomic < bool > CtrlZShutdownRequested = false;
+    [[nodiscard]] bool get_is_inited() const { return is_inited; }
 
     int cursor_x;
     int cursor_y;

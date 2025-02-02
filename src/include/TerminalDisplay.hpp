@@ -23,7 +23,7 @@ public:
 
 class TerminalDisplay {
 public:
-    TerminalDisplay();
+    explicit TerminalDisplay(const std::string&  font_name_ = "JetBrainsMono_Medium");
     ~TerminalDisplay();
 
     // Start the window and the main loop in a separate thread.

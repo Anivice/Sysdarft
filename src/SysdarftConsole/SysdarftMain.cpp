@@ -23,6 +23,7 @@
 #include <string_view>
 #include <SysdarftMain.h>
 #include <SysdarftDebug.h>
+#include <resources.h>
 
 extern "C" void printLogo();
 
@@ -114,6 +115,7 @@ void resize_handler(int)
 
 uint64_t boot_sysdarft(
     const uint64_t memory_size,
+    const std::string & font_name,
     const std::string & bios,
     const std::string & hdd,
     const std::string & fda,
@@ -143,7 +145,7 @@ uint64_t boot_sysdarft(
 
     file.close();
 
-    SysdarftCPU CPUInstance(memory_size, bios_code, hdd, fda, fdb);
+    SysdarftCPU CPUInstance(memory_size, font_name, bios_code, hdd, fda, fdb);
 
     g_cpu_instance = &CPUInstance;
     std::signal(SIGWINCH, resize_handler);
@@ -385,8 +387,37 @@ int main(int argc, char** argv)
                 }
             }
 
+            std::string font = "JetBrainsMono_Medium";
+            if (parsed_options.contains("font")) {
+                font = parsed_options["font"].at(0);
+            }
+
+            if (font == "help")
+            {
+                std::cout << "Font can be an external file, or the following built-in fonts:" << std::endl;
+
+                for (auto & i : font_list_string_table) {
+                    std::cout << "    " << i + strlen("fonts_") << std::endl;
+                }
+
+                std::cout << std::endl;
+                return EXIT_SUCCESS;
+            }
+
             // boot system
-            return static_cast<int>(boot_sysdarft(memory_size, bios_path, hdd, fda, fdb, debug, ip, port, log_file, headless, gui));
+            return static_cast<int>(boot_sysdarft(
+                memory_size,
+                font,
+                bios_path,
+                hdd,
+                fda,
+                fdb,
+                debug,
+                ip,
+                port,
+                log_file,
+                headless,
+                gui));
         }
 
         std::cout   << "If you see this message, that means you have provided one or more arguments,\n"

@@ -116,6 +116,31 @@ int write_file(const char* filename, const unsigned char* data, const uint64_t l
     return 0;
 }
 
+/**
+ * fast_basename - Returns the basename portion of the given file path.
+ *
+ * @param path: The file path string.
+ *
+ * This function scans the string for directory separators ('/' and '\')
+ * and returns a pointer to the character immediately following the last
+ * separator. If no separator is found, it returns the original string.
+ */
+const char *fast_basename(const char *path)
+{
+    const char *base = path;
+
+    if (!path) {
+        return nullptr;
+    }
+
+    for (; *path; ++path) {
+        if (*path == '/' || *path == '\\') {
+            base = path + 1;
+        }
+    }
+    return base;
+}
+
 // Main function: Compress data from argv[1] to argv[2]
 int main(int argc, char* argv[])
 {
@@ -154,9 +179,11 @@ int main(int argc, char* argv[])
 
     free(compressed_data); // Free the compressed data
 
-    printf("Compression successful.\n");
-    printf("Original size: %llu bytes\n", (unsigned long long)src_size);
-    printf("Compressed size: %llu bytes\n", (unsigned long long)compressed_size);
-
+    printf("%s(%llu B) ==Compress=> %s(%llu B), ratio=%f%% \n",
+        source_file,
+        src_size,
+        fast_basename(dest_file),
+        compressed_size,
+        ((double)(src_size - compressed_size)/((double)src_size)) * 100);
     return EXIT_SUCCESS;
 }
