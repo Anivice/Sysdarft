@@ -23,10 +23,11 @@
 #include <SFML/Audio.hpp>
 #include <ncurses.h>
 #include <SysdarftCursesUI.h>
+#include <zlib_wrapper.h>
+#include <resources.h> // doesn't exist, generated automatically by CMake
 
 std::mutex bell_memory_access_mutex;
 std::vector < unsigned char > bell_sound_data_uncompressed;
-extern "C" unsigned char* decompress_data(const unsigned char* src, uint64_t len, uint64_t* decompressed_data_len);
 
 SysdarftCursesUI::SysdarftCursesUI(const uint64_t memory)
     :   SysdarftCPUMemoryAccess(memory),
@@ -45,8 +46,8 @@ SysdarftCursesUI::SysdarftCursesUI(const uint64_t memory)
     // uncompress sound
     std::lock_guard<std::mutex> lock(bell_memory_access_mutex);
     uint64_t bell_sound_data_len = 0;
-    const auto data = decompress_data(bell_sound, bell_sound_len, &bell_sound_data_len);
-    if (bell_sound_data_len != bell_sound_original_len) {
+    const auto data = decompress_data(sound_bell, sound_bell_len, &bell_sound_data_len);
+    if (bell_sound_data_len != sound_bell_original_len) {
         throw SysdarftBaseError("Sound file corrupted");
     }
 

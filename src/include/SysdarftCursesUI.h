@@ -29,9 +29,6 @@
 #include <string>
 #include <thread>
 
-extern unsigned char bell_sound[];
-extern unsigned int bell_sound_len;
-extern unsigned long long int bell_sound_original_len;
 extern std::vector < unsigned char > bell_sound_data_uncompressed;
 extern std::mutex bell_memory_access_mutex;
 

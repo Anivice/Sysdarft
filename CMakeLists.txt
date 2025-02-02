@@ -198,22 +198,134 @@ find_package(ZLIB REQUIRED)
 add_executable(compress utils/compress.c src/coding/zlib.c)
 target_link_libraries(compress PRIVATE ZLIB::ZLIB)
 
+function(get_basename input_path output_var)
+    # Extract the basename from the input_path
+    get_filename_component(basename "${input_path}" NAME)
+    # Return the result to the caller's scope
+    set(${output_var} "${basename}" PARENT_SCOPE)
+endfunction()
+
+function(add_compressed_resource_target TARGET NAME FILE)
+    message(STATUS "Generating ${CMAKE_CURRENT_BINARY_DIR}/resources/${TARGET} ...")
+    get_basename(${FILE} BASENAME)
+    add_custom_command(
+            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/resources/${TARGET}
+            COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/resources
+            COMMAND rm -rf ${FILE}
+            COMMAND cp "${CMAKE_CURRENT_SOURCE_DIR}/resources/${FILE}" ${CMAKE_CURRENT_BINARY_DIR}/resources/${BASENAME}
+            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/compress
+                        "${CMAKE_CURRENT_BINARY_DIR}/resources/${BASENAME}"
+                        "${CMAKE_CURRENT_BINARY_DIR}/resources/${BASENAME}.bin"
+            COMMAND xxd -n ${NAME} -i "${CMAKE_CURRENT_BINARY_DIR}/resources/${BASENAME}.bin" > ${CMAKE_CURRENT_BINARY_DIR}/resources/${TARGET}
+            COMMAND echo >> "${CMAKE_CURRENT_BINARY_DIR}/resources/${TARGET}"
+            COMMAND echo -n "unsigned long long int ${NAME}_original_len = " >> "${CMAKE_CURRENT_BINARY_DIR}/resources/${TARGET}"
+            COMMAND stat --format=\"%s\" "${CMAKE_CURRENT_BINARY_DIR}/resources/${BASENAME}" >> "${CMAKE_CURRENT_BINARY_DIR}/resources/${TARGET}"
+            COMMAND echo "\;" >> "${CMAKE_CURRENT_BINARY_DIR}/resources/${TARGET}"
+            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/resources/${FILE} compress
+            COMMENT "Building resource ${TARGET}.."
+    )
+endfunction()
+
+function(collect_resources out_map)
+    # Find all files in the resources directory (recursively)
+    file(GLOB_RECURSE _resources "${CMAKE_CURRENT_SOURCE_DIR}/resources/*")
+
+    set(result "")
+    foreach(res_file ${_resources})
+        # Compute the relative path from the resources directory
+        file(RELATIVE_PATH rel_path "${CMAKE_CURRENT_SOURCE_DIR}/resources" ${res_file})
+
+        # Get the file name without extension
+        get_filename_component(file_name ${rel_path} NAME_WE)
+
+        # Get the directory part of the relative path (if any)
+        get_filename_component(dir_name ${rel_path} DIRECTORY)
+
+        # Replace '-' with '_' in both file name and directory name
+        string(REPLACE "-" "_" file_name ${file_name})
+        string(REPLACE "-" "_" dir_name ${dir_name})
+
+        # If there is a directory part, replace directory separators with '_'
+        if(dir_name)
+            string(REPLACE "/" "_" dir_name ${dir_name})
+            set(identifier "${dir_name}_${file_name}")
+        else()
+            set(identifier "${file_name}")
+        endif()
+
+        # Append an entry of the form "identifier=full_file_path"
+        list(APPEND result "${identifier}=${res_file}")
+    endforeach()
+
+    # Return the simulated map in the caller's scope.
+    set(${out_map} "${result}" PARENT_SCOPE)
+endfunction()
+
+function(get_resource_value map key out_value)
+    set(result "")
+    foreach(item ${${map}})
+        if(item MATCHES "^${key}=(.*)$")
+            set(result "${CMAKE_MATCH_1}")
+            break()
+        endif()
+    endforeach()
+    set(${out_value} "${result}" PARENT_SCOPE)
+endfunction()
+
+collect_resources(RESOURCE_MAP)
+set(key_list "")
+set(file_list "")
+
+function(get_parent_and_basename input_path output_var)
+    # Extract the file name (basename) from the input path.
+    get_filename_component(basename "${input_path}" NAME)
+
+    # Extract the directory part of the input path.
+    get_filename_component(parent_dir "${input_path}" DIRECTORY)
+
+    # Get just the immediate parent's name.
+    get_filename_component(parent_name "${parent_dir}" NAME)
+
+    # If there is a parent directory, combine it with the basename.
+    if(parent_name)
+        set(result "${parent_name}/${basename}")
+    else()
+        set(result "${basename}")
+    endif()
+
+    # Return the result in the caller's scope.
+    set(${output_var} "${result}" PARENT_SCOPE)
+endfunction()
+
+foreach(item ${RESOURCE_MAP})
+    # Find the position of the '=' character.
+    string(FIND "${item}" "=" separator_index)
+    if(NOT separator_index EQUAL -1)
+        # Extract the key (everything before the '=')
+        string(SUBSTRING "${item}" 0 ${separator_index} key)
+        # Compute the start index for the value (character after '=')
+        math(EXPR value_index "${separator_index} + 1")
+        # Extract the value (everything after the '=')
+        string(SUBSTRING "${item}" ${value_index} -1 value)
+        get_parent_and_basename(${value} file)
+        add_compressed_resource_target(${key}.c ${key} ${file})
+        set(key_list "${key_list} ${key}")
+        list(APPEND file_list ${CMAKE_CURRENT_BINARY_DIR}/resources/${key}.c)
+    endif()
+endforeach()
+
 add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c
-        COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/resources
-        COMMAND rm -rf bell.wav
-        COMMAND cp "${CMAKE_CURRENT_SOURCE_DIR}/resources/bell.wav" bell.wav
-        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/compress
-                "${CMAKE_CURRENT_SOURCE_DIR}/resources/bell.wav"
-                "${CMAKE_CURRENT_BINARY_DIR}/resources/bell.bin"
-        COMMAND xxd -n bell_sound -i "${CMAKE_CURRENT_BINARY_DIR}/resources/bell.bin" > ${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c
-        COMMAND echo >> "${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c"
-        COMMAND echo -n "unsigned long long int bell_sound_original_len = " >> "${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c"
-        COMMAND stat --format=\"%s\" "${CMAKE_CURRENT_SOURCE_DIR}/resources/bell.wav" >> "${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c"
-        COMMAND echo "\;" >> "${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c"
-        DEPENDS resources/bell.wav compress
-        COMMENT "Building audio resources.."
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/resources/resources.h
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_resource_header.sh
+                    "${key_list}"
+                    "${CMAKE_CURRENT_BINARY_DIR}/resources/resources.h"
 )
+
+add_library(SysdarftResources SHARED
+        ${CMAKE_CURRENT_BINARY_DIR}/resources/resources.h
+        ${file_list}
+)
+set_target_properties(SysdarftResources PROPERTIES LINKER_LANGUAGE C)
 
 # Curses:
 find_package(Curses REQUIRED)
@@ -224,9 +336,10 @@ add_library(SysdarftCursesUI OBJECT
         src/include/TerminalDisplay.hpp
         src/KeyControl.c
         src/include/ASCIIKeymap.h
-        ${CMAKE_CURRENT_BINARY_DIR}/resources/bell.c)
-target_include_directories(SysdarftCursesUI PUBLIC src/include)
-target_link_libraries(SysdarftCursesUI PUBLIC ${CURSES_LIBRARIES}
+        ${CMAKE_CURRENT_BINARY_DIR}/resources/resources.h
+)
+target_include_directories(SysdarftCursesUI PUBLIC src/include ${CMAKE_CURRENT_BINARY_DIR}/resources)
+target_link_libraries(SysdarftCursesUI PUBLIC ${CURSES_LIBRARIES} SysdarftResources
         sfml-audio
         sfml-system
         ZLIB::ZLIB
@@ -385,6 +498,7 @@ if (NOT "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     add_custom_target(STRIP_ALL ALL
             COMMAND strip sysdarft-system
             COMMAND strip libSysdarft.so
+            COMMAND strip libSysdarftResources.so
             DEPENDS sysdarft-system Sysdarft
             COMMENT "Stripping symbols...")
 endif ()

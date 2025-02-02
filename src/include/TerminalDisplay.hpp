@@ -60,6 +60,8 @@ public:
     std::atomic < bool > cursor_visible = true;
 
 private:
+    std::mutex font_decompressed_mutex_;
+    std::vector < uint8_t > font_decompressed;
     WorkerThread mainLoopWorker;
     std::atomic<bool> is_inited { false };
 

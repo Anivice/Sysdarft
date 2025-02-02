@@ -3,9 +3,27 @@
 #include <SFML/Window/Keyboard.hpp>
 #include <SysdarftCursesUI.h>
 #include <TerminalDisplay.hpp>
+#include <zlib_wrapper.h>
+#include <resources.h> // doesn't exist, generated automatically
+#include <cstring>
 
 TerminalDisplay::TerminalDisplay() : mainLoopWorker(this, &TerminalDisplay::mainLoop)
 {
+    log("Decompressing font file...\n");
+
+    // uncompress sound
+    std::lock_guard<std::mutex> lock(font_decompressed_mutex_);
+    uint64_t font_decompressed_len = 0;
+    const auto data = decompress_data(fonts_JetBrainsMono_Medium, fonts_JetBrainsMono_Medium_len, &font_decompressed_len);
+    if (font_decompressed_len != fonts_JetBrainsMono_Medium_original_len) {
+        throw SysdarftBaseError("Font file corrupted");
+    }
+
+    font_decompressed.resize(font_decompressed_len);
+    std::memcpy(font_decompressed.data(), data, font_decompressed_len);
+    free(data);
+
+    log("Font file decompressed!\n");
     log("Instantiating display...\n");
 }
 
@@ -168,7 +186,7 @@ void TerminalDisplay::mainLoop(std::atomic<bool> & running_)
     constexpr float cellWidth = 10.f;
     constexpr float cellHeight = 20.f;
     const sf::Vector2u virtualSize { static_cast<unsigned int>(columns * cellWidth),
-                                       static_cast<unsigned int>(rows * cellHeight) };
+                                       static_cast<unsigned int>(rows * cellHeight) + 10 };
     constexpr uint64_t cursor_update_count = 500 / 16;
     constexpr char cursor_char = '_';
     uint64_t loop_counter = 0;
@@ -189,9 +207,12 @@ void TerminalDisplay::mainLoop(std::atomic<bool> & running_)
 
     // Load a monospaced font.
     sf::Font font;
-    if (!font.loadFromFile("JetBrainsMono-Medium.ttf")) {
-        log("Error: Could not load font file \"JetBrainsMono-Medium.ttf\".\n");
-        throw TerminalDisplayError("Could not load font."); // Abort
+    {
+        std::lock_guard lock(font_decompressed_mutex_);
+        if (!font.loadFromMemory(font_decompressed.data(), font_decompressed.size())) {
+            log("Error: Could not load font\n");
+            throw TerminalDisplayError("Could not load font."); // Abort
+        }
     }
 
     // Pre-create SFML Text objects for each character.
