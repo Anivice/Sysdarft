@@ -967,8 +967,8 @@ or function in `C` sense, is an **interruption routine**.
 
 #### Non-maskable Interruptions
 
-Interruptions with its code under or equals to `0x1F`, i.e., `31`, are not maskable,
-meaning that CPU will accept interruptions with code under or equals to `0x1F` regardless of the state of `IM`.
+Interruptions with its code under or equal to `0x1F`, i.e., `31`, are not maskable,
+meaning that CPU will accept interruptions with code under or equal to `0x1F` regardless of the state of `IM`.
 
 The following is a table describing each non-maskable interruption:
 
