@@ -141,7 +141,7 @@ threadA:
         jmp             <%cb>,                                      <.loop>
 
     .message:
-        .string < "Thread A" >
+        .string < "A" >
         .8bit_data < 0 >
 
 threadB:
@@ -153,7 +153,7 @@ threadB:
         jmp             <%cb>,                                      <.loop>
 
     .message:
-        .string < "Thread B" >
+        .string < "B" >
         .8bit_data < 0 >
 
 _rtc:
@@ -249,6 +249,7 @@ _start:
     mov .64bit          <*1&64($(0xA0000), $(16 * 0x80), $(8))>,    <int_puts>
     mov .64bit          <*1&64($(0xA0000), $(16 * 0x81), $(8))>,    <_rtc>
     mov .64bit          <*1&64($(0xA0000), $(16 * 0x09), $(8))>,    <_shutdown>
+    mov .64bit          <*1&64($(0xA0000), $(16 * 0x05), $(8))>,    <_shutdown>
 
     mov .64bit          <%dp>,                                      <_reg_threada>
     mov .64bit          <*1&64(%dp, $(160), $(0))>,                 <threadA>           ; IP

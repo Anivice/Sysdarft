@@ -101,7 +101,7 @@ uint64_t SysdarftCPU::Boot(const bool headless, const bool with_gui)
                 // signal capturing state where thread safety is harder to regulate.
                 // also, if we interrupt whist protector is locked, it will cause a deadlock
                 KeyboardIntAbort = false;
-                do_abort_0x05();
+                do_interruption(0x05);
             }
 
             // external device
@@ -113,7 +113,7 @@ uint64_t SysdarftCPU::Boot(const bool headless, const bool with_gui)
             }
         } catch (SysdarftCPUSubroutineRequestToAbortTheCurrentInstructionExecutionProcedureDueToError&) {
             try {
-                do_stackoverflow_0x07();
+                do_interruption(0x07);
             } catch (...) {
                 std::cerr << "Critical error detected in Sysdarft!" << std::endl;
                 show_context();

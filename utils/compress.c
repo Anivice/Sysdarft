@@ -179,7 +179,7 @@ int main(int argc, char* argv[])
 
     free(compressed_data); // Free the compressed data
 
-    printf("%s(%llu B) ==Compress=> %s(%llu B), %.2f%% of data compressed.\n",
+    printf("%s(%lu B) ==Compress=> %s(%lu B), %.2f%% of data compressed.\n",
         fast_basename(source_file),
         src_size,
         fast_basename(dest_file),

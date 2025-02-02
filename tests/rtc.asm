@@ -178,6 +178,7 @@ _start:
     mov .64bit          <%sb>,                                      <_stack_frame>
     mov .64bit          <*1&64($(0xA0000), $(16 * 128),  $(8))>,    <_int_rtc>
     mov .64bit          <*1&64($(0xA0000), $(16 * 5), $(8))>,       <_int_kb_abort>
+    mov .64bit          <*1&64($(0xA0000), $(16 * 9), $(8))>,       <_int_kb_abort>
     ; out .64bit          <$(RTC_TIME)>,                              <$(1560600000)>
     out .64bit          <$(RTC_INT)>,                               <$(0x4E2080)>   ; 1s, 0x80
 
