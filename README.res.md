@@ -101,5 +101,51 @@ All will generate a target executable `sysdarft-system`.
 ### Command Help:
 
 ```shell
-
+Usage: sysdarft-system [OPTIONS]
+Options:
+    -h, --help               Show this help message
+    -v, --version            Output version information
+    -m, --module <arg>       Load a module
+                                 This option can be used multiple times
+                                 to load multiple modules
+    -V, --verbose            Enable verbose mode
+    -c, --compile <arg>      Compile a file
+                                 This option can be used multiple times
+                                 to compile multiple files into one single binary
+    -o, --output <arg>       Compilation output file
+    -f, --format <arg>       Compile format. It can be bin, exe, or sys
+    -I, --include <arg>      Specify one or more include path
+    -R, --regex              If .equ preprocessor will be using regular expression
+                                 If this option is not set, .equ will simply replace the string
+                                 If this option is set, .equ will be processed
+                                 using `/usr/bin/sed -E 's/../../g'`
+                                 This will, of course, introduce performance downgrade when compiling
+    -d, --disassem <arg>     Disassemble a file
+    -g, --origin <arg>       Redefine origin for disassembler
+                                 When left unset, origin is 0
+    -b, --bios <arg>         Specify a BIOS firmware binary
+    -L, --hdd <arg>          Specify a Hard Disk
+    -A, --fda <arg>          Specify floppy disk A
+    -B, --fdb <arg>          Specify floppy disk B
+    -M, --memory <arg>       Specify memory size (in MB)
+                                 Left unset and the default size is 32MB
+    -S, --boot               Boot the system
+    -D, --debug <arg>        Boot the system with remote debug console
+                                 The system will not be started unless the debug console is connected
+                                 Disconnecting debug console will cause system to immediately halt,
+                                 which is equivalent to pulling the plug
+                                 Debug server expects this argument: [Debug Server IP Address]:[Port]
+    -N, --no-curses          Disable Curses, and use console output (will cause format issues)
+    -W, --with-gui           Launch GUI display
+    -F, --font <arg>         Specify a font name or a font file
+                                 Use `--font help` to list them
+    -C, --crow-log <arg>     Specify the log file of crow service
 ```
+
+For more details, please build `SYSDARFT SOFTWARE DEVELOPMENT MANUAL` using
+
+```shell
+    make Sysdarft.pdf
+```
+
+You will need a full set of LaTeX tools on your system.
