@@ -5,7 +5,7 @@ echo -n "Automatically generating README.md..."
 SOURCE_DIR="$1"
 cd "$SOURCE_DIR" || exit 1
 
-LIST=$(git ls-files | grep -v "wav\|png\|xcf\|pdf\|ttf");
+LIST=$(git ls-files | grep -v "wav\|png\|xcf\|pdf\|ttf\|AppImage");
 lines=0;
 size=0;
 for FILE in $LIST;
