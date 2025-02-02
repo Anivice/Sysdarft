@@ -7,6 +7,7 @@ SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 SYSDARFT_BIN="$1"
 SYSDARFT_LIBS="$2"
 TEMP_DIR="$3"
+ARCH="$4"
 IFS=' ' read -r -a SYSDARFT_LIBS <<< "$SYSDARFT_LIBS"
 
 echo "Finding all requirements for $SYSDARFT_BIN..."
@@ -77,4 +78,4 @@ cd "$TEMP_DIR" || exit 1
 
 echo "Building AppImage..."
 
-"$SCRIPT_DIR/../utils/appimagetool-x86_64.AppImage" "$TEMP_DIR"/Sysdarft.AppDir
+"$SCRIPT_DIR/../utils/appimagetool-$ARCH.AppImage" "$TEMP_DIR"/Sysdarft.AppDir

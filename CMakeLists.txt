@@ -564,8 +564,10 @@ if(DEFINED STATIC_BUILD AND STATIC_BUILD)
     add_custom_target(
             AppImage
             COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/single_executable_builder.sh
-            sysdarft-system "    "
-            "${CMAKE_BINARY_DIR}"
+                            sysdarft-system
+                            "    "
+                            "${CMAKE_BINARY_DIR}"
+                            ${CMAKE_SYSTEM_PROCESSOR}
             DEPENDS Sysdarft.pdf sysdarft-system
             COMMENT "Building AppImage..."
     )
@@ -573,9 +575,10 @@ else ()
     add_custom_target(
             AppImage
             COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/single_executable_builder.sh
-            sysdarft-system
-            "libSysdarft.so libSysdarftResources.so"
-            "${CMAKE_BINARY_DIR}"
+                            sysdarft-system
+                            "libSysdarft.so libSysdarftResources.so"
+                            "${CMAKE_BINARY_DIR}"
+                            ${CMAKE_SYSTEM_PROCESSOR}
             DEPENDS Sysdarft.pdf sysdarft-system
             COMMENT "Building AppImage..."
     )
