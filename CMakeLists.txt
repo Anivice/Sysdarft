@@ -568,7 +568,7 @@ if(DEFINED STATIC_BUILD AND STATIC_BUILD)
                             "    "
                             "${CMAKE_BINARY_DIR}"
                             ${CMAKE_SYSTEM_PROCESSOR}
-            DEPENDS Sysdarft.pdf sysdarft-system
+            DEPENDS sysdarft-system
             COMMENT "Building AppImage..."
     )
 else ()
@@ -579,7 +579,7 @@ else ()
                             "libSysdarft.so libSysdarftResources.so"
                             "${CMAKE_BINARY_DIR}"
                             ${CMAKE_SYSTEM_PROCESSOR}
-            DEPENDS Sysdarft.pdf sysdarft-system
+            DEPENDS sysdarft-system
             COMMENT "Building AppImage..."
     )
 endif ()

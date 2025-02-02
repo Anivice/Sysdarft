@@ -27,10 +27,35 @@
 
 extern "C" void printLogo();
 
+/**
+ * fast_basename - Returns the basename portion of the given file path.
+ *
+ * @param path: The file path string.
+ *
+ * This function scans the string for directory separators ('/' and '\')
+ * and returns a pointer to the character immediately following the last
+ * separator. If no separator is found, it returns the original string.
+ */
+const char *fast_basename(const char *path)
+{
+    const char *base = path;
+
+    if (!path) {
+        return nullptr;
+    }
+
+    for (; *path; ++path) {
+        if (*path == '/' || *path == '\\') {
+            base = path + 1;
+        }
+    }
+    return base;
+}
+
 void print_help(const char *program_name)
 {
     std::stringstream ss;
-    ss << "Usage: " << program_name << " [OPTIONS]\n"
+    ss << "Usage: " << fast_basename(program_name) << " [OPTIONS]\n"
        << "Options:\n";
 
     uint64_t max_length_of_arguments = 0;

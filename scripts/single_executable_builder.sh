@@ -44,7 +44,7 @@ for item in $FILE_LIST; do
     fi
 done
 
-cp "$TEMP_DIR"/Sysdarft.pdf "$TEMP_DIR"/Sysdarft.AppDir/usr/share/doc
+# cp "$TEMP_DIR"/Sysdarft.pdf "$TEMP_DIR"/Sysdarft.AppDir/usr/share/doc
 cp "$SCRIPT_DIR"/../resources/icon/sysdarft.svg "$TEMP_DIR"/Sysdarft.AppDir/usr/share/icons/hicolor/128x128/apps
 cp "$SCRIPT_DIR"/../resources/icon/sysdarft.svg "$TEMP_DIR"/Sysdarft.AppDir/
 
@@ -79,3 +79,5 @@ cd "$TEMP_DIR" || exit 1
 echo "Building AppImage..."
 
 "$SCRIPT_DIR/../utils/appimagetool-$ARCH.AppImage" "$TEMP_DIR"/Sysdarft.AppDir
+
+mv "$TEMP_DIR"/Sysdarft-"$ARCH".AppImage "$TEMP_DIR"/sysdarft-system
