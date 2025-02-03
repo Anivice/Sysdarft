@@ -20,7 +20,7 @@ TerminalDisplay::TerminalDisplay(const std::string& font_name_) :
     {
         if ("fonts_" + font_name_ == font_list_string_table[i])
         {
-            log("Loading font ", font_name_, "...\n");
+            log("[Display] Loading font ", font_name_, "...\n");
             font = font_list_reference_table[i];
             length = font_list_compressed_length_table[i];
             original_len = font_list_original_length_table[i];
@@ -34,46 +34,46 @@ TerminalDisplay::TerminalDisplay(const std::string& font_name_) :
         {
             font_file.seekg(0, std::ios::end);
             original_len = font_file.tellg();
-            log("Loading external font file...\n");
+            log("[Display] Loading external font file...\n");
             font_file.seekg(0, std::ios::beg);
             std::lock_guard<std::mutex> lock(font_decompressed_mutex_);
             font_decompressed.resize(original_len);
             font_file.read((char*)font_decompressed.data(), static_cast<long>(original_len));
             font_file.close();
-            log("Instantiating display...\n");
+            log("[Display] Instantiating display...\n");
             return;
         }
     }
 
     if (!font) {
-        log("Failed to load font ", font_name_, ", falling back to default font.\n");
+        log("[Display] Failed to load font ", font_name_, ", falling back to default font.\n");
         font = fonts_JetBrainsMono_Medium;
         length = fonts_JetBrainsMono_Medium_len;
         original_len = fonts_JetBrainsMono_Medium_original_len;
     }
 
-    log("Decompressing font file...\n");
+    log("[Display] Decompressing font file...\n");
     // uncompress font
     std::lock_guard<std::mutex> lock(font_decompressed_mutex_);
     uint64_t font_decompressed_len = 0;
     const auto data = decompress_data(font, length, &font_decompressed_len);
     if (font_decompressed_len != original_len) {
-        throw SysdarftBaseError("Font file corrupted");
+        throw SysdarftBaseError("[Display] Font file corrupted");
     }
 
     font_decompressed.resize(font_decompressed_len);
     std::memcpy(font_decompressed.data(), data, font_decompressed_len);
     free(data);
 
-    log("Font file decompressed!\n");
-    log("Instantiating display...\n");
+    log("[Display] Font file decompressed!\n");
+    log("[Display] Instantiating display...\n");
 }
 
 TerminalDisplay::~TerminalDisplay()
 {
-    log("Cleanup terminal display...");
+    log("[Display] Cleanup terminal display...\n");
     cleanup();
-    log("done\n");
+    log("[Display] done\n");
 }
 
 void TerminalDisplay::init()
@@ -82,7 +82,7 @@ void TerminalDisplay::init()
         return;
     }
 
-    log("Initializing terminal display...\n");
+    log("[Display] Initializing terminal display...\n");
     is_inited = true;
     mainLoopWorker.start();
 }
@@ -93,7 +93,7 @@ void TerminalDisplay::cleanup()
         return;
     }
 
-    log("Cleaning up GUI display...\n");
+    log("[Display] Cleaning up GUI display...\n");
     is_inited = false;
     mainLoopWorker.stop();
 }
@@ -255,7 +255,7 @@ void TerminalDisplay::mainLoop(std::atomic<bool> & running_)
     {
         std::lock_guard lock(font_decompressed_mutex_);
         if (!font.loadFromMemory(font_decompressed.data(), font_decompressed.size())) {
-            log("Error: Could not load font\n");
+            log("[Display] Error: Could not load font\n");
             throw TerminalDisplayError("Could not load font."); // Abort
         }
     }
@@ -394,8 +394,8 @@ void TerminalDisplay::mainLoop(std::atomic<bool> & running_)
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
-    log("Window closed.\n");
+    log("[Display] Window closed.\n");
     window.close();
 
-    log("Display thread quit.\n");
+    log("[Display] Display thread quit.\n");
 }

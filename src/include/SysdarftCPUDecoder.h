@@ -142,16 +142,16 @@ protected:
                              // These instructions have to output correct literals manually
     } OperandReferenceTable { };
 
-    uint64_t do_access_register_based_on_table();
+    [[nodiscard]] uint64_t do_access_register_based_on_table() const;
 
     template < typename DataType >
-    DataType do_width_ambiguous_access_memory_based_on_table()
+    [[nodiscard]] DataType do_width_ambiguous_access_memory_based_on_table() const
     {
         auto DP = OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryAddress;
         return Access.pop_memory_from<DataType>(0, DP);
     }
 
-    uint64_t do_access_width_specified_access_memory_based_on_table()
+    [[nodiscard]] uint64_t do_access_width_specified_access_memory_based_on_table() const
     {
         switch (OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryWidthBCD) {
         case _8bit_prefix: return do_width_ambiguous_access_memory_based_on_table<uint8_t>();
@@ -170,11 +170,11 @@ protected:
     void do_decode_memory_without_prefix();
     void do_decode_operand();
 
-    uint64_t do_access_operand_based_on_table();
+    [[nodiscard]] uint64_t do_access_operand_based_on_table() const;
     void store_value_to_operand_based_on_table(uint64_t value);
 
 public:
-    [[nodiscard]] uint64_t get_val() { return do_access_operand_based_on_table(); }
+    [[nodiscard]] uint64_t get_val() const { return do_access_operand_based_on_table(); }
     [[nodiscard]] uint64_t get_effective_addr() const { return OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryAddress; }
     void set_val(const uint64_t val) { store_value_to_operand_based_on_table(val); }
     [[nodiscard]] std::string get_literal() const { return OperandReferenceTable.literal; }

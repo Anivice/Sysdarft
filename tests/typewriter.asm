@@ -83,7 +83,7 @@ _newline:
     .exit:
 
     popall
-    int                 <$(0x15)>
+    int                 <$8(0x15)>
     ret
 
 ; _puts(%DB:%DP), null terminated string
@@ -153,7 +153,7 @@ _start:
     mov .64bit          <%dp>,                                      <.cache>
     xor .64bit          <%db>,                                      <%db>
     .loop:
-        int             <$(0x14)>
+        int             <$8(0x14)>
         mov .16bit      <*1&16(%db, %dp, $8(0))>,                   <%exr0>
         call            <%cb>,                                      <_puts>
         jmp             <%cb>,                                      <.loop>

@@ -88,8 +88,11 @@ void debug::_log(const ParamType &param, const Args &...args)
 
 template <typename... Args> void debug::d_log(const Args &...args)
 {
+    setvbuf(stderr, nullptr, _IONBF, 0);
     std::lock_guard lock(log_mutex);
     debug::_log(args...);
+    std::cerr << std::flush << std::flush;
+    fflush(stderr);
 }
 
 #endif // DEBUG_INL

@@ -128,16 +128,16 @@ void SysdarftRealTimeClock::update_time(std::atomic<bool> & running)
                     std::chrono::system_clock::now() - m_machineTime).count();
             const auto average_operation_time = time_elapsed_since_boot / timestamp;
             scale = (float)TARGET_NS / (float)average_operation_time;
-            if (debug::verbose) {
-                log("RTC lagged ", elapsed_ns - designed_duration, " nanoseconds\n");
-            }
+            // if (debug::verbose) {
+                // log("RTC lagged ", elapsed_ns - designed_duration, " nanoseconds\n");
+            // }
         }
     }
 
     const auto running_seconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::system_clock::now() - m_machineTime).count();
 
-    log("RTC updated time ", timestamp, " times in ", running_seconds,
+    log("[RTC] RTC updated time ", timestamp, " times in ", running_seconds,
         " nanoseconds, scale=", scale, ", "
         "average triggering interval ", running_seconds / timestamp, " per second.\n");
 }

@@ -51,7 +51,7 @@ SysdarftCursesUI::SysdarftCursesUI(const uint64_t memory, const std::string & fo
         video_memory[i] = ' ';
     }
 
-    log("Decompressing sound file...\n");
+    log("[Display] Decompressing sound file...\n");
 
     // uncompress sound
     std::lock_guard<std::mutex> lock(bell_memory_access_mutex);
@@ -65,7 +65,7 @@ SysdarftCursesUI::SysdarftCursesUI(const uint64_t memory, const std::string & fo
     std::memcpy(bell_sound_data_uncompressed.data(), data, bell_sound_data_len);
     free(data);
 
-    log("Sound file decompressed!\n");
+    log("[Display] Sound file decompressed!\n");
 
     ConsoleInputThread.start();
 }
@@ -73,7 +73,7 @@ SysdarftCursesUI::SysdarftCursesUI(const uint64_t memory, const std::string & fo
 SysdarftCursesUI::~SysdarftCursesUI()
 {
     g_cpu_instance = nullptr;
-    log("Cleaning up UI instances...\n");
+    log("[Display] Cleaning up UI instances...\n");
     running = false;
     for (auto & thread : sound_thread_pool)
     {
@@ -82,13 +82,13 @@ SysdarftCursesUI::~SysdarftCursesUI()
         }
     }
 
-    log("Shutdown Input Monitor...");
+    log("[Display] Shutdown Input Monitor...\n");
     ConsoleInputThread.stop();
-    log("done\n");
+    log("[Display] done\n");
 
-    log("Shutdown GUI...");
+    log("[Display] Shutdown GUI...\n");
     GUIDisplay.cleanup();
-    log("done\n");
+    log("[Display] done\n");
 }
 
 void SysdarftCursesUI::initialize()
@@ -305,7 +305,7 @@ void SysdarftCursesUI::play_bell_sound(const std::atomic < bool > & running_flag
         if (!buffer.loadFromMemory(bell_sound_data_uncompressed.data(),
                 bell_sound_data_uncompressed.size()))
         {
-            log("Failed to load bell wav from memory");
+            log("[Display] Failed to load bell wav from memory");
             return;
         }
     }

@@ -23,7 +23,7 @@
 #include <EncodingDecoding.h>
 #include <SysdarftCPUDecoder.h>
 
-uint64_t OperandType::do_access_register_based_on_table()
+uint64_t OperandType::do_access_register_based_on_table() const
 {
     switch (OperandReferenceTable.OperandInfo.RegisterValue.RegisterWidthBCD) {
     case _8bit_prefix:
@@ -258,7 +258,7 @@ void OperandType::do_decode_operand()
 #endif // __DEBUG__
 }
 
-uint64_t OperandType::do_access_operand_based_on_table()
+uint64_t OperandType::do_access_operand_based_on_table() const
 {
     switch (OperandReferenceTable.OperandType) {
     case RegisterOperand: return do_access_register_based_on_table();

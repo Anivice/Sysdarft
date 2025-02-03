@@ -187,5 +187,7 @@ void SysdarftCPUInstructionExecutor::loop(__uint128_t, WidthAndOperandsType & Wi
         SysdarftRegister::store<CodeBaseType>(addr_base);
         SysdarftRegister::store<InstructionPointerType>(ip);
         SysdarftRegister::store<FullyExtendedRegisterType, 3>(cx);
+    } else /* cx == 0 */ {
+        SysdarftRegister::store<FullyExtendedRegisterType, 3>(0);
     }
 }

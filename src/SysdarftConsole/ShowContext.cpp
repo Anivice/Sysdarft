@@ -409,7 +409,8 @@ std::string show_context(SysdarftCPU &CPUInstance,
         }
     };
 
-    ss << " =============> " << current_instruction(opcode, Arg) << "\n";
+    ss << "=> " << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << actual_ip
+                         << current_instruction(opcode, Arg) << "\n";
     show_next_8_instructions();
 
     // return result

@@ -94,6 +94,13 @@ SysdarftCPUInstructionExecutor::SysdarftCPUInstructionExecutor(const uint64_t me
     bindIsBreakHere(this, &SysdarftCPUInstructionExecutor::default_is_break_here);
 }
 
+inline std::string to_hex_string(const uint64_t value)
+{
+    std::stringstream ss;
+    ss << "0x" << std::hex << std::uppercase << value;
+    return ss.str();
+}
+
 void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
 {
     try {
@@ -110,8 +117,16 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
 
 #ifdef __DEBUG__
             if (debug::verbose) {
-                log("[CPU] ", literal, "\n");
-                show_context();
+                log(literal,
+                    (operands.size() == 2 ?
+                        " /* " + operands.at(0).get_literal() + " == " + to_hex_string(operands.at(0).get_val()) + ", "
+                               + operands.at(1).get_literal() + " == " + to_hex_string(operands.at(1).get_val()) + " */"
+                        : operands.size() == 1 ?
+                        " /* " + operands.at(0).get_literal() + " == " + to_hex_string(operands.at(0).get_val()) + " */"
+                        : ""));
+                if (opcode == OPCODE_LOOP || opcode == OPCODE_MOVS || opcode == OPCODE_INS || opcode == OPCODE_OUTS) {
+                    log(" /* %FER3 == ", SysdarftRegister::load<FullyExtendedRegisterType, 3>(), " */");
+                }
             }
 #endif
 
@@ -122,6 +137,25 @@ void SysdarftCPUInstructionExecutor::execute(const __uint128_t timestamp)
             }
 
             (this->*ExecutorMap.at(opcode))(timestamp, Arg);
+#ifdef __DEBUG__
+            if (debug::verbose) {
+                log(" >",
+                    (operands.size() == 2 ?
+                        " /* " + operands.at(0).get_literal() + " == " + to_hex_string(operands.at(0).get_val()) + ", "
+                               + operands.at(1).get_literal() + " == " + to_hex_string(operands.at(1).get_val()) + " */"
+                        : operands.size() == 1 ?
+                        " /* " + operands.at(0).get_literal() + " == " + to_hex_string(operands.at(0).get_val()) + " */"
+                        : ""));
+                if (opcode == OPCODE_LOOP || opcode == OPCODE_MOVS || opcode == OPCODE_INS || opcode == OPCODE_OUTS) {
+                    log(" /* %FER3 == ", SysdarftRegister::load<FullyExtendedRegisterType, 3>(), " */\n");
+                } else {
+                    log("\n");
+                }
+
+                // flush the fuck out of stderr
+                std::cerr << std::flush << std::flush << std::flush << std::flush << std::flush << std::flush;
+            }
+#endif
         }
         catch (SysdarftDeviceIOError&) {
             SysdarftRegister::store<ExtendedRegisterType, 0>(0xF0);
