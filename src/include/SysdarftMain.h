@@ -74,14 +74,13 @@ const option_complicated long_options[] = {
                                                                                                 "This option can be used multiple times\n"
                                                                                                 "to compile multiple files into one single binary"},
     {"output",  required_argument,  nullptr, 'o',   "Compilation output file"},
-    {"format",  required_argument,  nullptr, 'f',   "Compile format. It can be bin, exe, sys, or obj"},
+    {"format",  required_argument,  nullptr, 'f',   "Compile format. It can be bin, exe, or sys"},
     {"include",         required_argument,  nullptr, 'I',   "Specify one or more include path"},
     {"regex",   no_argument,        nullptr, 'R',   "If .equ preprocessor will be using regular expression\n"
                                                                                                 "If this option is not set, .equ will simply replace the string\n"
                                                                                                 "If this option is set, .equ will be processed\n"
                                                                                                 "using `/usr/bin/sed -E 's/../../g'`\n"
                                                                                                 "This will, of course, introduce performance downgrade when compiling"},
-    {"link",            required_argument,  nullptr, 'l',         "Link one or more object files\nThis option can be used multiple times to link multiple files"},
     {"disassem",required_argument,  nullptr, 'd',   "Disassemble a file"},
     {"origin",  required_argument,  nullptr, 'g',   "Redefine origin for disassembler\n"
                                                                                                 "When left unset, origin is 0"},
@@ -108,7 +107,7 @@ using ParsedOptions = std::map<std::string, std::vector<std::string>>;
 using ParsedArgs = std::pair<ParsedOptions, std::vector<std::string>>;
 ParsedArgs get_args(int argc, char** argv, option long_options[]);
 
-enum COMPILATION_MODE { BIN, EXE, SYS, OBJ, LINK };
+enum COMPILATION_MODE { BIN, EXE, SYS };
 void compile_to_binary(const std::vector<std::string> &, const std::string &, bool, COMPILATION_MODE compile_mode,
                        const std::vector<std::string> &include_path);
 void disassemble(const std::string & binary_filename, uint64_t org, COMPILATION_MODE compile_mode);
