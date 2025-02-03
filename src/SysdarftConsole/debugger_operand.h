@@ -62,6 +62,7 @@ protected:
 
         struct {
             uint64_t ConstantValue;
+            uint8_t ConstantWidth;
             struct {
                 uint8_t RegisterWidthBCD;
                 uint8_t RegisterIndex;
@@ -69,7 +70,7 @@ protected:
 
             struct {
                 uint64_t MemoryAddress;
-                uint8_t RegisterWidthBCD;
+                uint8_t MemoryWidthBCD;
             } CalculatedMemoryAddress;
         } OperandInfo { };
 

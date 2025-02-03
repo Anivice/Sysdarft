@@ -18,6 +18,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <type_traits>
 #include <iomanip>
 #include <InstructionSet.h>
 #include <EncodingDecoding.h>
@@ -164,17 +165,39 @@ void OperandType::do_decode_constant_without_prefix()
     }
 
     OperandReferenceTable.OperandInfo.ConstantValue = num;
+    OperandReferenceTable.OperandInfo.ConstantWidth = prefix;
+
 #ifdef __DEBUG__
     ss << "0x" << std::uppercase << std::hex << num;
     OperandReferenceTable.literal = "$" + prefix_literal + "(" + ss.str() + ")";
 #endif // __DEBUG__
 }
 
+template < typename Type, unsigned BitWidth = sizeof(Type) * 8 >
+int64_t convert_to_64bit_signed(const Type data)
+{
+    uint64_t compliment = 0;
+    uint64_t complimented_data = 0;
+    int64_t result = 0;
+    switch (BitWidth) {
+    case 8: compliment = 0xFFFFFFFFFFFFFF00; break;
+    case 16: compliment = 0xFFFFFFFFFFFF0000; break;
+    case 32: compliment = 0xFFFFFFFF00000000; break;
+    case 64: compliment = 0; break;
+    default: throw IllegalInstruction("Unknown bitwidth");
+    }
+
+    complimented_data = data | compliment;
+    result = *(int64_t*)&complimented_data;
+    return result;
+}
+
 void OperandType::do_decode_memory_without_prefix()
 {
     const auto WidthBCD = Access.pop_code8();
     std::string literal1, literal2, literal3;
-    uint64_t base, off1, off2;
+    uint64_t base, off1;
+    int64_t off2;
 
     auto decode_each_parameter = [&](std::string & literal, uint64_t & val)
     {
@@ -183,11 +206,15 @@ void OperandType::do_decode_memory_without_prefix()
         case REGISTER_PREFIX:
             do_decode_register_without_prefix();
             val = do_access_register_based_on_table();
+#ifdef __DEBUG__
             literal = OperandReferenceTable.literal;
+#endif
             break;
         case CONSTANT_PREFIX:
             do_decode_constant_without_prefix();
+#ifdef __DEBUG__
             literal = OperandReferenceTable.literal;
+#endif
             val = OperandReferenceTable.OperandInfo.ConstantValue;
             break;
         default: throw IllegalInstruction("Illegal memory operand");
@@ -196,7 +223,43 @@ void OperandType::do_decode_memory_without_prefix()
 
     decode_each_parameter(literal1, base);
     decode_each_parameter(literal2, off1);
-    decode_each_parameter(literal3, off2);
+    // decode_each_parameter(literal3, off2);
+
+    switch(/*auto prefix = */Access.pop_code8())
+    {
+    case REGISTER_PREFIX: {
+        do_decode_register_without_prefix();
+#ifdef __DEBUG__
+        literal3 = OperandReferenceTable.literal;
+#endif
+        const auto val = do_access_register_based_on_table();
+        switch (OperandReferenceTable.OperandInfo.RegisterValue.RegisterWidthBCD) {
+        case _8bit_prefix:  off2 = convert_to_64bit_signed(*(uint8_t*)&val);  break;
+        case _16bit_prefix: off2 = convert_to_64bit_signed(*(uint16_t*)&val); break;
+        case _32bit_prefix: off2 = convert_to_64bit_signed(*(uint32_t*)&val); break;
+        case _64bit_prefix: off2 = convert_to_64bit_signed(*(uint64_t*)&val); break;
+        default: throw IllegalInstruction("Unknown register width");
+        }
+        break;
+    }
+    case CONSTANT_PREFIX: {
+        do_decode_constant_without_prefix();
+        const auto val = OperandReferenceTable.OperandInfo.ConstantValue;
+        switch (OperandReferenceTable.OperandInfo.ConstantWidth) {
+        case _8bit_prefix:  off2 = convert_to_64bit_signed(*(uint8_t*)&val);  break;
+        case _16bit_prefix: off2 = convert_to_64bit_signed(*(uint16_t*)&val); break;
+        case _32bit_prefix: off2 = convert_to_64bit_signed(*(uint32_t*)&val); break;
+        case _64bit_prefix: off2 = convert_to_64bit_signed(*(uint64_t*)&val); break;
+        default: throw IllegalInstruction("Unknown register width");
+        }
+#ifdef __DEBUG__
+        literal3 = std::to_string(off2);
+#endif
+        break;
+    }
+    default: throw IllegalInstruction("Illegal memory operand");
+    }
+
     const uint8_t ratio_bcd = Access.pop_code8();
     uint8_t ratio = 0;
 
@@ -209,7 +272,7 @@ void OperandType::do_decode_memory_without_prefix()
     default: throw IllegalInstruction("Unknown ratio");
     }
 
-    const uint64_t calculated_address = (base + off1 + *(int64_t*)(&off2)) * ratio;
+    const uint64_t calculated_address = (base + off1 + off2) * ratio;
     OperandReferenceTable.OperandType = MemoryOperand;
     OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryAddress = calculated_address;
     OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryWidthBCD = WidthBCD;
