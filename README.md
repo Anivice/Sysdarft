@@ -1,6 +1,6 @@
 # Sysdarft
-![Lines of Code](https://img.shields.io/badge/ProjectLines-44694-cyan)
-![Size of Code](https://img.shields.io/badge/ProjectSize-2048%20K-yellow)
+![Lines of Code](https://img.shields.io/badge/ProjectLines-44649-cyan)
+![Size of Code](https://img.shields.io/badge/ProjectSize-2044%20K-yellow)
 [![Automated CMake Test Workflow](https://github.com/Anivice/Sysdarft/actions/workflows/CMake_GitHub_Action.yml/badge.svg)](https://github.com/Anivice/Sysdarft/actions/workflows/CMake_GitHub_Action.yml)
 
 <!--

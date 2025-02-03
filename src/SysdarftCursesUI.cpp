@@ -103,8 +103,17 @@ void SysdarftCursesUI::initialize()
     const auto noecho_status = noecho();             // Don't echo typed characters
     const auto keypad_status = keypad(stdscr, TRUE); // Enable special keys
 
+    if (!window || cbreak_status != 0 || noecho_status != 0 || keypad_status != 0)
+    {
+        throw std::runtime_error("Failed to initialize curses");
+    }
+
     recalc_offsets();
-    const auto clear_status = clear();
+    if (const auto clear_status = clear(); clear_status != 0)
+    {
+        throw std::runtime_error("Failed to clear curses screen");
+    }
+
     render_screen();
     set_cursor_visibility(true);
     std::signal(SIGINT, SIG_IGN);

@@ -26,7 +26,7 @@
 \begin{center}
 SYSDARFT SOFTWARE DEVELOPMENT REFERENCE MANUAL
 
-VERSION 0.0.1-Alpha
+VERSION 0.0.2-Alpha
 
     Anivice Ives
 \end{center}
@@ -1150,14 +1150,11 @@ representing a total `16` registers as designed.
 
 ### Constant
 
-Constants are always $64$-bit in width with `0x02` as its indication,
-since constant does not enforce a data width in its expression.
-However, constants are confined by operation data width still,
-and data beyond specified operation data width is capped and discarded.
+Constants can vary in width (`8`, `16`, `32`, and `64`) with `0x02` as its indication.
 
 | Byte 0, Constant Identification | Byte 1, Data Width, Always `64` | Byte 2-9, Binary Number |
 |---------------------------------|---------------------------------|-------------------------|
-| `0x02`                          | `0x64`                          | Constant Binary Number  |
+| `0x02`                          | `0x08`/`0x16`/`0x32`/`0x64`     | Constant Binary Number  |
 
 ### Memory Reference
 
@@ -1984,11 +1981,11 @@ while `EXR0` being `0xF1` indicates no external device provides communication on
 %ifndef _INTERRUPT_ASM_
 %define _INTERRUPT_ASM_
 
-.equ 'REFRESH', 'int < $(0x18) >'
-.equ 'SETCUSP', 'int < $(0x11) >'
-.equ 'INTGETC', 'int < $(0x14) >'
+.equ 'REFRESH', 'int < $8(0x18) >'
+.equ 'SETCUSP', 'int < $8(0x11) >'
+.equ 'INTGETC', 'int < $8(0x14) >'
 
-%define KBFLUSH int < $(0x19) >
+%define KBFLUSH int < $8(0x19) >
 
 %endif ; _INTERRUPT_ASM_
 ```
@@ -2019,15 +2016,15 @@ while `EXR0` being `0xF1` indicates no external device provides communication on
 %ifndef _IO_PORT_ASM_
 %define _IO_PORT_ASM_
 
-.equ 'DISK_SIZE',           '< $(0x136) >'
-.equ 'DISK_START_SEC',      '< $(0x137) >'
-.equ 'DISK_OPS_SEC_CNT',    '< $(0x138) >'
-.equ 'DISK_INPUT',          '< $(0x139) >'
+.equ 'DISK_SIZE',           '< $64(0x136) >'
+.equ 'DISK_START_SEC',      '< $64(0x137) >'
+.equ 'DISK_OPS_SEC_CNT',    '< $64(0x138) >'
+.equ 'DISK_INPUT',          '< $64(0x139) >'
 
-.equ 'FDA_SIZE',            '< $(0x116) >'
-.equ 'FDA_START_SEC',       '< $(0x117) >'
-.equ 'FDA_OPS_SEC_CNT',     '< $(0x118) >'
-.equ 'FDA_OUTPUT',          '< $(0x11A) >'
+.equ 'FDA_SIZE',            '< $64(0x116) >'
+.equ 'FDA_START_SEC',       '< $64(0x117) >'
+.equ 'FDA_OPS_SEC_CNT',     '< $64(0x118) >'
+.equ 'FDA_OUTPUT',          '< $64(0x11A) >'
 
 ; floppy disk B
 
@@ -2036,6 +2033,9 @@ while `EXR0` being `0xF1` indicates no external device provides communication on
 %define FDB_OPS_SEC_CONT    0x128
 %define FDB_INPUT           0x129
 %define FDB_OUTPUT          0x12A
+
+.equ 'RTC_TIME',    '0x70'
+.equ 'RTC_INT',     '0x71'
 
 %endif ; _IO_PORT_ASM_
 ```
@@ -2085,7 +2085,7 @@ jmp                     <%cb>,                      <_start>
 ; _putc(%EXR0, linear position, %EXR1, ASCII Code)
 _putc:
     pushall
-    mov     .64bit      <%db>,                      <$(0xB8000)>    
+    mov     .64bit      <%db>,                      <$64(0xB8000)>
     push    .16bit      <%exr1>                                     
     xor     .16bit      <%exr1>,                    <%exr1>         
     xor     .32bit      <%her1>,                    <%her1>         
@@ -2093,7 +2093,7 @@ _putc:
                                                                     
                                                                     
     pop     .16bit      <%exr0>                                     
-    mov     .8bit       <*1&8(%db, %dp, $(0))>,     <%r0>           
+    mov     .8bit       <*1&8(%db, %dp, $8(0))>,    <%r0>
 
     REFRESH
 
@@ -2103,76 +2103,76 @@ _putc:
 ; _newline(%EXR0, linear address)
 _newline:
     pushall
-    int                 <$(0x15)>
-    div     .16bit      <$(80)>
+    int                 <$8(0x15)>
+    div     .16bit      <$16(80)>
     ; EXR0 quotient(row), EXR1 reminder(col)
-    cmp     .16bit      <%exr0>,                    <$(24)>
+    cmp     .16bit      <%exr0>,                    <$16(24)>
     jbe                 <%cb>,                      <.scroll>
 
     xor     .16bit      <%exr1>,                    <%exr1>
     inc     .16bit      <%exr0>
-    mul     .16bit      <$(80)>
+    mul     .16bit      <$16(80)>
     SETCUSP
     REFRESH
-    jmp                 <%cb>,                      < .exit>
+    jmp         <%cb>,      < .exit>
 
     .scroll:
         ; move content (scroll up)
-        mov .64bit      <%db>,                      <$(0xB8000)>
+        mov .64bit      <%db>,                      <$64(0xB8000)>
         xor .64bit      <%dp>,                      <%dp>
-        mov .64bit      <%eb>,                      <$(0xB8000 + 80)>
+        mov .64bit      <%eb>,                      <$64(0xB8000 + 80)>
         xor .64bit      <%ep>,                      <%ep>
-        mov .64bit      <%fer3>,                    <$(2000 - 80)>
+        mov .64bit      <%fer3>,                    <$64(2000 - 80)>
         movs
 
         ; clear last line
-        mov .64bit      <%fer3>,                    <$(80)>
-        mov .64bit      <%eb>,                      <$(0xB8000)>
-        mov .64bit      <%ep>,                      <$(2000 - 80)>
+        mov .64bit      <%fer3>,                    <$64(80)>
+        mov .64bit      <%eb>,                      <$64(0xB8000)>
+        mov .64bit      <%ep>,                      <$64(2000 - 80)>
         xor .64bit      <%dp>,                      <%dp>
         .scroll.loop:
-            mov .8bit   <*1&8(%eb, %ep, %dp)>,      <$(' ')>
+            mov .8bit   <*1&8(%eb, %ep, %dp)>,      <$8(' ')>
             inc .64bit  <%dp>
             loop        <%cb>,                      <.scroll.loop>
 
-        mov .16bit      <%exr0>,                    <$(2000 - 80)>
+        mov .16bit      <%exr0>,                    <$16(2000 - 80)>
         SETCUSP
         REFRESH
     .exit:
 
     popall
-    int                 <$(0x15)>
+    int                 <$8(0x15)>
     ret
 
 ; _puts(%DB:%DP), null terminated string
 _puts:
     pushall
     .loop:
-        mov .8bit       <%r2>,                      <*1&8(%db, %dp, $(0))>      
+        mov .8bit       <%r2>,                      <*1&8(%db, %dp, $8(0))>
 
-        cmp .8bit       <%r2>,                      <$(0)>
+        cmp .8bit       <%r2>,                      <$8(0)>
         je              <%cb>,                      <.exit>
 
-        cmp .8bit       <%r2>,                      <$(0x0A)>
+        cmp .8bit       <%r2>,                      <$8(0x0A)>
         jne             <%cb>,                      <.skip_newline>
 
         .newline:
         call            <%cb>,                      <_newline>
         mov .64bit      <%fer3>,                    <.last_offset>
-        mov .16bit      <*1&16($(0), %fer3, $(0))>, <%exr0>
+        mov .16bit      <*1&16($8(0), %fer3, $8(0))>, <%exr0>
         jmp             <%cb>,      <.end>
 
         .skip_newline:
         xor .8bit       <%r3>,                      <%r3>
         mov .64bit      <%fer3>,                    <.last_offset>
-        mov .16bit      <%exr0>,                    <*1&16($(0), %fer3, $(0))>
+        mov .16bit      <%exr0>,                    <*1&16($8(0), %fer3, $8(0))>
         call            <%cb>,                      <_putc>
 
         inc .16bit      <%exr0>
-        cmp .16bit      <%exr0>,                    <$(2000)>
+        cmp .16bit      <%exr0>,                    <$16(2000)>
         je              <%cb>,                      <.newline>
 
-        mov .16bit      <*1&16($(0), %fer3, $(0))>, <%exr0>
+        mov .16bit      <*1&16($8(0), %fer3, $8(0))>, <%exr0>
         SETCUSP
 
         .end:
@@ -2192,16 +2192,16 @@ _print_num:
 
     xor .64bit          <%fer2>,                    <%fer2>       ; record occurrences of digits
     .loop:
-        div .64bit      <$(10)>
+        div .64bit      <$64(10)>
         ; %fer0 ==> ori
         ; %fer1 ==> reminder
         mov  .64bit     <%fer3>,                    <%fer1>
-        add  .64bit     <%fer3>,                    <$('0')>
+        add  .64bit     <%fer3>,                    <$64('0')>
         push .64bit     <%fer3>
 
         inc .64bit      <%fer2>
 
-        cmp .64bit      <%fer0>,                    <$(0x00)>
+        cmp .64bit      <%fer0>,                    <$64(0x00)>
         jne             <%cb>,                      <.loop>
 
     xor .64bit          <%db>,                      <%db>
@@ -2210,11 +2210,11 @@ _print_num:
     mov .64bit          <%fer3>,                    <%fer2>
     .loop_pop:
         pop .64bit      <%fer0>
-        mov .8bit       <*1&8(%db, %dp, $(0))>,     <%r0>
+        mov .8bit       <*1&8(%db, %dp, $8(0))>,    <%r0>
         inc .64bit      <%dp>
         loop            <%cb>,                      <.loop_pop>
 
-    mov .8bit           <*1&8(%db, %dp, $(0))>,     <$(0)>
+    mov .8bit           <*1&8(%db, %dp, $8(0))>,    <$8(0)>
     mov .64bit          <%dp>,                      <.cache>
     call                <%cb>,                      <_puts>
 
@@ -2229,7 +2229,7 @@ _reads:
     pushall
     in .64bit           DISK_SIZE,                  <%fer3>
     ; max 640 KB, meaning 1280 sectors
-    cmp .64bit          <%fer3>,                    <$(1280)>
+    cmp .64bit          <%fer3>,                    <$64(1280)>
     jl                  <%cb>,                      <.skip.trunc>
 
     mov .64bit          <%dp>,                      <.message.disk.too.big>
@@ -2240,7 +2240,7 @@ _reads:
     mov .64bit          <%dp>,                      < .message.disk.too.big.tail >
     call                <%cb>,                      <_puts>
 
-    mov .64bit          <%fer3>,                    <$(1280)>
+    mov .64bit          <%fer3>,                    <$64(1280)>
 
     mov .64bit          <%dp>,                      <.message.disk.resize>
     call                <%cb>,                      <_puts>
@@ -2264,16 +2264,16 @@ _reads:
     xor .64bit          <%db>,                      <%db>
     call                <%cb>,                      <_puts>
 
-    out .64bit          DISK_START_SEC,             <$(0)>
+    out .64bit          DISK_START_SEC,             <$64(0)>
     out .64bit          DISK_OPS_SEC_CNT,           <%fer3>
-    mul .64bit          <$(512)>
+    mul .64bit          <$64(512)>
     mov .64bit          <%fer3>,                    <%fer0>
     xor .64bit          <%dp>,                      <%dp>
     xor .64bit          <%db>,                      <%db>
     ins .64bit          DISK_INPUT
 
     mov .64bit          <%fer0>,                    <.ret>
-    mov .64bit          <*1&64(%fer0, $(0), $(0))>, <%fer3>
+    mov .64bit          <*1&64(%fer0, $8(0), $8(0))>, <%fer3>
 
     mov .64bit          <%dp>,                      <.message.done>
     xor .64bit          <%db>,                      <%db>
@@ -2282,7 +2282,7 @@ _reads:
     popall
 
     mov .64bit          <%fer0>,                    <.ret>
-    mov .64bit          <%fer0>,                    <*1&64(%fer0, $(0), $(0))>
+    mov .64bit          <%fer0>,                    <*1&64(%fer0, $8(0), $8(0))>
 
     ret
 
@@ -2330,12 +2330,12 @@ _writes:
 
     ; %fer0 <== A: size
     mov .64bit          <%fer0>,                    <%fer3>
-    mul .64bit          <$(512)>
+    mul .64bit          <$64(512)>
 
     ; compare %fer0 and %fer4
     cmp .64bit          <%fer0>,                    <%fer4>
     jbe                 <%cb>,                      <.skip.trunc>
-    add .64bit          <%sp>,                      <$(8)>
+    add .64bit          <%sp>,                      <$64(8)>
     push .64bit         <%fer0>
 
     mov .64bit          <%dp>,                      <.message.disk.too.small>
@@ -2365,9 +2365,9 @@ _writes:
 
     pop .64bit          <%fer0>
     push .64bit         <%fer0>
-    div .64bit          <$(512)>
+    div .64bit          <$64(512)>
 
-    out .64bit          FDA_START_SEC,              <$(0)>
+    out .64bit          FDA_START_SEC,              <$64(0)>
     out .64bit          FDA_OPS_SEC_CNT,            <%fer0>
     pop .64bit          <%fer3>
     xor .64bit          <%dp>,                      <%dp>
@@ -2404,7 +2404,7 @@ _writes:
     .8bit_data < 0 >
 
 _int_0x02_io_error:
-    cmp .16bit          <%exr0>,                    <$(0xF0)>
+    cmp .16bit          <%exr0>,                    <$16(0xF0)>
     je                  <%cb>,                      <.io_error>
 
     ; no such device
@@ -2413,7 +2413,7 @@ _int_0x02_io_error:
     call                <%cb>,                      <_puts>
     KBFLUSH
     INTGETC
-    mov .64bit          <%fer0>,                    <$(6)>
+    mov .64bit          <%fer0>,                    <$64(6)>
     jmp                 <%cb>,                      <.error.type.end>
 
     .io_error:
@@ -2422,7 +2422,7 @@ _int_0x02_io_error:
     call                <%cb>,                      <_puts>
     KBFLUSH
     INTGETC
-    mov .64bit          <%fer0>,                    <$(5)>
+    mov .64bit          <%fer0>,                    <$64(5)>
 
     .error.type.end:
     hlt
@@ -2437,10 +2437,10 @@ _int_0x02_io_error:
 
 _start:
     mov .64bit          <%sb>,                      <_stack_frame>
-    mov .64bit          <%sp>,                      <$(0xFFF)>
+    mov .64bit          <%sp>,                      <$64(0xFFF)>
 
     ; install error handler
-    mov .64bit          <*1&64($(0xA0000), $(0x02 * 16), $(8))>, <_int_0x02_io_error>
+    mov .64bit          <*1&64($32(0xA0000), $16(0x02 * 16), $8(8))>, <_int_0x02_io_error>
 
     ; show welcome message
     mov .64bit          <%dp>,                      <.welcome>
@@ -2513,623 +2513,593 @@ disk_io.sys        FORMAT    SYS
 
 SYMBOL TABLE - SIZE 47:
 00000000000C180E                             _putc
-00000000000C1865                             _newline
-00000000000C18D7                             _newline_scroll
-00000000000C194A                             _newline_scroll_loop
-00000000000C199A                             _newline_exit
-00000000000C19A7                             _puts
-00000000000C19A8                             _puts_loop
-00000000000C19FA                             _puts_newline
-00000000000C1A44                             _puts_skip_newline
-00000000000C1AD4                             _puts_end
-00000000000C1AE7                             _puts_exit
-00000000000C1AE9                             _puts_last_offset
-00000000000C1AEB                             _print_num
-00000000000C1AF4                             _print_num_loop
-00000000000C1B5D                             _print_num_loop_pop
-00000000000C1BCB                             _print_num_cache
-00000000000C1BDB                             _reads
-00000000000C1CBF                             _reads_skip_trunc
-00000000000C1E1C                             _reads_ret
-00000000000C1E24                             _reads_message_disk_size
-00000000000C1E37                             _reads_message_sector
-00000000000C1E42                             _reads_message_reading
-00000000000C1E52                             _reads_message_done
-00000000000C1E59                             _reads_message_disk_too_big
-00000000000C1E6E                             _reads_message_disk_too_big_tail
-00000000000C1E7A                             _reads_message_disk_resize
-00000000000C1E92                             _reads_message_disk_resize_tail
-00000000000C1E9D                             _writes
-00000000000C1F65                             _writes_skip_trunc
-00000000000C2048                             _writes_message_disk_size
-00000000000C205F                             _writes_message_sector
-00000000000C206A                             _writes_message_writing
-00000000000C2089                             _writes_message_disk_too_small
-00000000000C209F                             _writes_message_disk_resize
-00000000000C20B8                             _writes_message_disk_resize_tail
-00000000000C20C1                             _int_0x02_io_error
-00000000000C2136                             _int_0x02_io_error_io_error
-00000000000C2180                             _int_0x02_io_error_error_type_end
-00000000000C2181                             _int_0x02_io_error_message_io_error
-00000000000C21A8                             _int_0x02_io_error_message_no_such_dev
-00000000000C21D7                             _start
-00000000000C2334                             _start_welcome
-00000000000C24CD                             _start_reading_from_disk
-00000000000C24E3                             _start_press_to_write_to_floppy
-00000000000C250C                             _start_writint_to_floppy
-00000000000C2529                             _start_exit_message
-00000000000C2547                             _stack_frame
+00000000000C1857                             _newline
+00000000000C18A2                             _newline_scroll
+00000000000C1915                             _newline_scroll_loop
+00000000000C194A                             _newline_exit
+00000000000C1950                             _puts
+00000000000C1951                             _puts_loop
+00000000000C198E                             _puts_newline
+00000000000C19CA                             _puts_skip_newline
+00000000000C1A31                             _puts_end
+00000000000C1A44                             _puts_exit
+00000000000C1A46                             _puts_last_offset
+00000000000C1A48                             _print_num
+00000000000C1A51                             _print_num_loop
+00000000000C1ABA                             _print_num_loop_pop
+00000000000C1B13                             _print_num_cache
+00000000000C1B23                             _reads
+00000000000C1C07                             _reads_skip_trunc
+00000000000C1D48                             _reads_ret
+00000000000C1D50                             _reads_message_disk_size
+00000000000C1D63                             _reads_message_sector
+00000000000C1D6E                             _reads_message_reading
+00000000000C1D7E                             _reads_message_done
+00000000000C1D85                             _reads_message_disk_too_big
+00000000000C1D9A                             _reads_message_disk_too_big_tail
+00000000000C1DA6                             _reads_message_disk_resize
+00000000000C1DBE                             _reads_message_disk_resize_tail
+00000000000C1DC9                             _writes
+00000000000C1E91                             _writes_skip_trunc
+00000000000C1F74                             _writes_message_disk_size
+00000000000C1F8B                             _writes_message_sector
+00000000000C1F96                             _writes_message_writing
+00000000000C1FB5                             _writes_message_disk_too_small
+00000000000C1FCB                             _writes_message_disk_resize
+00000000000C1FE4                             _writes_message_disk_resize_tail
+00000000000C1FED                             _int_0x02_io_error
+00000000000C204E                             _int_0x02_io_error_io_error
+00000000000C208A                             _int_0x02_io_error_error_type_end
+00000000000C208B                             _int_0x02_io_error_message_io_error
+00000000000C20B2                             _int_0x02_io_error_message_no_such_dev
+00000000000C20E1                             _start
+00000000000C2203                             _start_welcome
+00000000000C239C                             _start_reading_from_disk
+00000000000C23B2                             _start_press_to_write_to_floppy
+00000000000C23DB                             _start_writint_to_floppy
+00000000000C23F8                             _start_exit_message
+00000000000C2416                             _stack_frame
 
 
-00000000000C1800: 30 01 64 A2 02 64 D7 21     JMP <%CB>, <$(0xC21D7)>
+00000000000C1800: 30 01 64 A2 02 64 E1 20     JMP <%CB>, <$64(0xC20E1)>
                   0C 00 00 00 00 00 
 
 
 <_putc> :
 00000000000C180E: 24                          PUSHALL
-00000000000C180F: 20 64 01 64 A3 02 64 00     MOV .64bit <%DB>, <$(0xB8000)>
+00000000000C180F: 20 64 01 64 A3 02 64 00     MOV .64bit <%DB>, <$64(0xB8000)>
                   80 0B 00 00 00 00 00 
 00000000000C181E: 22 16 01 16 01              PUSH .16bit <%EXR1>
 00000000000C1823: 12 16 01 16 01 01 16 01     XOR .16bit <%EXR1>, <%EXR1>
 00000000000C182B: 12 32 01 32 01 01 32 01     XOR .32bit <%HER1>, <%HER1>
 00000000000C1833: 20 64 01 64 A4 01 64 00     MOV .64bit <%DP>, <%FER0>
 00000000000C183B: 23 16 01 16 00              POP .16bit <%EXR0>
-00000000000C1840: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $(0x0))>, <%R0>
-                  64 A4 02 64 00 00 00 00 
-                  00 00 00 00 01 01 08 00 
-00000000000C1858: 39 02 64 18 00 00 00 00     INT <$(0x18)>
-                  00 00 00 
-00000000000C1863: 25                          POPALL
-00000000000C1864: 32                          RET
+00000000000C1840: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $8(0x0))>, <%R0>
+                  64 A4 02 08 00 01 01 08 
+                  00 
+00000000000C1851: 39 02 08 18                 INT <$8(0x18)>
+00000000000C1855: 25                          POPALL
+00000000000C1856: 32                          RET
 
 
 <_newline> :
-00000000000C1865: 24                          PUSHALL
-00000000000C1866: 39 02 64 15 00 00 00 00     INT <$(0x15)>
-                  00 00 00 
-00000000000C1871: 08 16 02 64 50 00 00 00     DIV .16bit <$(0x50)>
-                  00 00 00 00 
-00000000000C187D: 0A 16 01 16 00 02 64 18     CMP .16bit <%EXR0>, <$(0x18)>
-                  00 00 00 00 00 00 00 
-00000000000C188C: 37 01 64 A2 02 64 D7 18     JBE <%CB>, <$(0xC18D7)>
+00000000000C1857: 24                          PUSHALL
+00000000000C1858: 39 02 08 15                 INT <$8(0x15)>
+00000000000C185C: 08 16 02 16 50 00           DIV .16bit <$16(0x50)>
+00000000000C1862: 0A 16 01 16 00 02 16 18     CMP .16bit <%EXR0>, <$16(0x18)>
+                  00 
+00000000000C186B: 37 01 64 A2 02 64 A2 18     JBE <%CB>, <$64(0xC18A2)>
                   0C 00 00 00 00 00 
-00000000000C189A: 12 16 01 16 01 01 16 01     XOR .16bit <%EXR1>, <%EXR1>
-00000000000C18A2: 0B 16 01 16 00              INC .16bit <%EXR0>
-00000000000C18A7: 06 16 02 64 50 00 00 00     MUL .16bit <$(0x50)>
-                  00 00 00 00 
-00000000000C18B3: 39 02 64 11 00 00 00 00     INT <$(0x11)>
-                  00 00 00 
-00000000000C18BE: 39 02 64 18 00 00 00 00     INT <$(0x18)>
-                  00 00 00 
-00000000000C18C9: 30 01 64 A2 02 64 9A 19     JMP <%CB>, <$(0xC199A)>
+00000000000C1879: 12 16 01 16 01 01 16 01     XOR .16bit <%EXR1>, <%EXR1>
+00000000000C1881: 0B 16 01 16 00              INC .16bit <%EXR0>
+00000000000C1886: 06 16 02 16 50 00           MUL .16bit <$16(0x50)>
+00000000000C188C: 39 02 08 11                 INT <$8(0x11)>
+00000000000C1890: 39 02 08 18                 INT <$8(0x18)>
+00000000000C1894: 30 01 64 A2 02 64 4A 19     JMP <%CB>, <$64(0xC194A)>
                   0C 00 00 00 00 00 
 
 
 <_newline_scroll> :
-00000000000C18D7: 20 64 01 64 A3 02 64 00     MOV .64bit <%DB>, <$(0xB8000)>
+00000000000C18A2: 20 64 01 64 A3 02 64 00     MOV .64bit <%DB>, <$64(0xB8000)>
                   80 0B 00 00 00 00 00 
-00000000000C18E6: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
-00000000000C18EE: 20 64 01 64 A5 02 64 50     MOV .64bit <%EB>, <$(0xB8050)>
+00000000000C18B1: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
+00000000000C18B9: 20 64 01 64 A5 02 64 50     MOV .64bit <%EB>, <$64(0xB8050)>
                   80 0B 00 00 00 00 00 
-00000000000C18FD: 12 64 01 64 A6 01 64 A6     XOR .64bit <%EP>, <%EP>
-00000000000C1905: 20 64 01 64 03 02 64 80     MOV .64bit <%FER3>, <$(0x780)>
+00000000000C18C8: 12 64 01 64 A6 01 64 A6     XOR .64bit <%EP>, <%EP>
+00000000000C18D0: 20 64 01 64 03 02 64 80     MOV .64bit <%FER3>, <$64(0x780)>
                   07 00 00 00 00 00 00 
-00000000000C1914: 28                          MOVS
-00000000000C1915: 20 64 01 64 03 02 64 50     MOV .64bit <%FER3>, <$(0x50)>
+00000000000C18DF: 28                          MOVS
+00000000000C18E0: 20 64 01 64 03 02 64 50     MOV .64bit <%FER3>, <$64(0x50)>
                   00 00 00 00 00 00 00 
-00000000000C1924: 20 64 01 64 A5 02 64 00     MOV .64bit <%EB>, <$(0xB8000)>
+00000000000C18EF: 20 64 01 64 A5 02 64 00     MOV .64bit <%EB>, <$64(0xB8000)>
                   80 0B 00 00 00 00 00 
-00000000000C1933: 20 64 01 64 A6 02 64 80     MOV .64bit <%EP>, <$(0x780)>
+00000000000C18FE: 20 64 01 64 A6 02 64 80     MOV .64bit <%EP>, <$64(0x780)>
                   07 00 00 00 00 00 00 
-00000000000C1942: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
+00000000000C190D: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
 
 
 <_newline_scroll_loop> :
-00000000000C194A: 20 08 03 08 01 64 A5 01     MOV .8bit  <*1&8(%EB, %EP, %DP)>, <$(0x20)>
-                  64 A6 01 64 A4 01 02 64 
-                  20 00 00 00 00 00 00 00 
-00000000000C1962: 0B 64 01 64 A4              INC .64bit <%DP>
-00000000000C1967: 60 01 64 A2 02 64 4A 19     LOOP <%CB>, <$(0xC194A)>
+00000000000C1915: 20 08 03 08 01 64 A5 01     MOV .8bit  <*1&8(%EB, %EP, %DP)>, <$8(0x20)>
+                  64 A6 01 64 A4 01 02 08 
+                  20 
+00000000000C1926: 0B 64 01 64 A4              INC .64bit <%DP>
+00000000000C192B: 60 01 64 A2 02 64 15 19     LOOP <%CB>, <$64(0xC1915)>
                   0C 00 00 00 00 00 
-00000000000C1975: 20 16 01 16 00 02 64 80     MOV .16bit <%EXR0>, <$(0x780)>
-                  07 00 00 00 00 00 00 
-00000000000C1984: 39 02 64 11 00 00 00 00     INT <$(0x11)>
-                  00 00 00 
-00000000000C198F: 39 02 64 18 00 00 00 00     INT <$(0x18)>
-                  00 00 00 
+00000000000C1939: 20 16 01 16 00 02 16 80     MOV .16bit <%EXR0>, <$16(0x780)>
+                  07 
+00000000000C1942: 39 02 08 11                 INT <$8(0x11)>
+00000000000C1946: 39 02 08 18                 INT <$8(0x18)>
 
 
 <_newline_exit> :
-00000000000C199A: 25                          POPALL
-00000000000C199B: 39 02 64 15 00 00 00 00     INT <$(0x15)>
-                  00 00 00 
-00000000000C19A6: 32                          RET
+00000000000C194A: 25                          POPALL
+00000000000C194B: 39 02 08 15                 INT <$8(0x15)>
+00000000000C194F: 32                          RET
 
 
 <_puts> :
-00000000000C19A7: 24                          PUSHALL
+00000000000C1950: 24                          PUSHALL
 
 
 <_puts_loop> :
-00000000000C19A8: 20 08 01 08 02 03 08 01     MOV .8bit  <%R2>, <*1&8(%DB, %DP, $(0x0))>
-                  64 A3 01 64 A4 02 64 00 
-                  00 00 00 00 00 00 00 01 
-00000000000C19C0: 0A 08 01 08 02 02 64 00     CMP .8bit  <%R2>, <$(0x0)>
-                  00 00 00 00 00 00 00 
-00000000000C19CF: 33 01 64 A2 02 64 E7 1A     JE <%CB>, <$(0xC1AE7)>
+00000000000C1951: 20 08 01 08 02 03 08 01     MOV .8bit  <%R2>, <*1&8(%DB, %DP, $8(0x0))>
+                  64 A3 01 64 A4 02 08 00 
+                  01 
+00000000000C1962: 0A 08 01 08 02 02 08 00     CMP .8bit  <%R2>, <$8(0x0)>
+00000000000C196A: 33 01 64 A2 02 64 44 1A     JE <%CB>, <$64(0xC1A44)>
                   0C 00 00 00 00 00 
-00000000000C19DD: 0A 08 01 08 02 02 64 0A     CMP .8bit  <%R2>, <$(0xA)>
-                  00 00 00 00 00 00 00 
-00000000000C19EC: 34 01 64 A2 02 64 44 1A     JNE <%CB>, <$(0xC1A44)>
+00000000000C1978: 0A 08 01 08 02 02 08 0A     CMP .8bit  <%R2>, <$8(0xA)>
+00000000000C1980: 34 01 64 A2 02 64 CA 19     JNE <%CB>, <$64(0xC19CA)>
                   0C 00 00 00 00 00 
 
 
 <_puts_newline> :
-00000000000C19FA: 31 01 64 A2 02 64 65 18     CALL <%CB>, <$(0xC1865)>
+00000000000C198E: 31 01 64 A2 02 64 57 18     CALL <%CB>, <$64(0xC1857)>
                   0C 00 00 00 00 00 
-00000000000C1A08: 20 64 01 64 03 02 64 E9     MOV .64bit <%FER3>, <$(0xC1AE9)>
+00000000000C199C: 20 64 01 64 03 02 64 46     MOV .64bit <%FER3>, <$64(0xC1A46)>
                   1A 0C 00 00 00 00 00 
-00000000000C1A17: 20 16 03 16 02 64 00 00     MOV .16bit <*1&16($(0x0), %FER3, $(0x0))>, <%EXR0>
-                  00 00 00 00 00 00 01 64 
-                  03 02 64 00 00 00 00 00 
-                  00 00 00 01 01 16 00 
-00000000000C1A36: 30 01 64 A2 02 64 D4 1A     JMP <%CB>, <$(0xC1AD4)>
+00000000000C19AB: 20 16 03 16 02 08 00 01     MOV .16bit <*1&16($8(0x0), %FER3, $8(0x0))>, <%EXR0>
+                  64 03 02 08 00 01 01 16 
+                  00 
+00000000000C19BC: 30 01 64 A2 02 64 31 1A     JMP <%CB>, <$64(0xC1A31)>
                   0C 00 00 00 00 00 
 
 
 <_puts_skip_newline> :
-00000000000C1A44: 12 08 01 08 03 01 08 03     XOR .8bit  <%R3>, <%R3>
-00000000000C1A4C: 20 64 01 64 03 02 64 E9     MOV .64bit <%FER3>, <$(0xC1AE9)>
+00000000000C19CA: 12 08 01 08 03 01 08 03     XOR .8bit  <%R3>, <%R3>
+00000000000C19D2: 20 64 01 64 03 02 64 46     MOV .64bit <%FER3>, <$64(0xC1A46)>
                   1A 0C 00 00 00 00 00 
-00000000000C1A5B: 20 16 01 16 00 03 16 02     MOV .16bit <%EXR0>, <*1&16($(0x0), %FER3, $(0x0))>
-                  64 00 00 00 00 00 00 00 
-                  00 01 64 03 02 64 00 00 
-                  00 00 00 00 00 00 01 
-00000000000C1A7A: 31 01 64 A2 02 64 0E 18     CALL <%CB>, <$(0xC180E)>
+00000000000C19E1: 20 16 01 16 00 03 16 02     MOV .16bit <%EXR0>, <*1&16($8(0x0), %FER3, $8(0x0))>
+                  08 00 01 64 03 02 08 00 
+                  01 
+00000000000C19F2: 31 01 64 A2 02 64 0E 18     CALL <%CB>, <$64(0xC180E)>
                   0C 00 00 00 00 00 
-00000000000C1A88: 0B 16 01 16 00              INC .16bit <%EXR0>
-00000000000C1A8D: 0A 16 01 16 00 02 64 D0     CMP .16bit <%EXR0>, <$(0x7D0)>
-                  07 00 00 00 00 00 00 
-00000000000C1A9C: 33 01 64 A2 02 64 FA 19     JE <%CB>, <$(0xC19FA)>
+00000000000C1A00: 0B 16 01 16 00              INC .16bit <%EXR0>
+00000000000C1A05: 0A 16 01 16 00 02 16 D0     CMP .16bit <%EXR0>, <$16(0x7D0)>
+                  07 
+00000000000C1A0E: 33 01 64 A2 02 64 8E 19     JE <%CB>, <$64(0xC198E)>
                   0C 00 00 00 00 00 
-00000000000C1AAA: 20 16 03 16 02 64 00 00     MOV .16bit <*1&16($(0x0), %FER3, $(0x0))>, <%EXR0>
-                  00 00 00 00 00 00 01 64 
-                  03 02 64 00 00 00 00 00 
-                  00 00 00 01 01 16 00 
-00000000000C1AC9: 39 02 64 11 00 00 00 00     INT <$(0x11)>
-                  00 00 00 
+00000000000C1A1C: 20 16 03 16 02 08 00 01     MOV .16bit <*1&16($8(0x0), %FER3, $8(0x0))>, <%EXR0>
+                  64 03 02 08 00 01 01 16 
+                  00 
+00000000000C1A2D: 39 02 08 11                 INT <$8(0x11)>
 
 
 <_puts_end> :
-00000000000C1AD4: 0B 64 01 64 A4              INC .64bit <%DP>
-00000000000C1AD9: 30 01 64 A2 02 64 A8 19     JMP <%CB>, <$(0xC19A8)>
+00000000000C1A31: 0B 64 01 64 A4              INC .64bit <%DP>
+00000000000C1A36: 30 01 64 A2 02 64 51 19     JMP <%CB>, <$64(0xC1951)>
                   0C 00 00 00 00 00 
 
 
 <_puts_exit> :
-00000000000C1AE7: 25                          POPALL
-00000000000C1AE8: 32                          RET
+00000000000C1A44: 25                          POPALL
+00000000000C1A45: 32                          RET
 
 
 <_puts_last_offset> :
-00000000000C1AE9: 00                          NOP
-00000000000C1AEA: 00                          NOP
+00000000000C1A46: 00                          NOP
+00000000000C1A47: 00                          NOP
 
 
 <_print_num> :
-00000000000C1AEB: 24                          PUSHALL
-00000000000C1AEC: 12 64 01 64 02 01 64 02     XOR .64bit <%FER2>, <%FER2>
+00000000000C1A48: 24                          PUSHALL
+00000000000C1A49: 12 64 01 64 02 01 64 02     XOR .64bit <%FER2>, <%FER2>
 
 
 <_print_num_loop> :
-00000000000C1AF4: 08 64 02 64 0A 00 00 00     DIV .64bit <$(0xA)>
+00000000000C1A51: 08 64 02 64 0A 00 00 00     DIV .64bit <$64(0xA)>
                   00 00 00 00 
-00000000000C1B00: 20 64 01 64 03 01 64 01     MOV .64bit <%FER3>, <%FER1>
-00000000000C1B08: 01 64 01 64 03 02 64 30     ADD .64bit <%FER3>, <$(0x30)>
+00000000000C1A5D: 20 64 01 64 03 01 64 01     MOV .64bit <%FER3>, <%FER1>
+00000000000C1A65: 01 64 01 64 03 02 64 30     ADD .64bit <%FER3>, <$64(0x30)>
                   00 00 00 00 00 00 00 
-00000000000C1B17: 22 64 01 64 03              PUSH .64bit <%FER3>
-00000000000C1B1C: 0B 64 01 64 02              INC .64bit <%FER2>
-00000000000C1B21: 0A 64 01 64 00 02 64 00     CMP .64bit <%FER0>, <$(0x0)>
+00000000000C1A74: 22 64 01 64 03              PUSH .64bit <%FER3>
+00000000000C1A79: 0B 64 01 64 02              INC .64bit <%FER2>
+00000000000C1A7E: 0A 64 01 64 00 02 64 00     CMP .64bit <%FER0>, <$64(0x0)>
                   00 00 00 00 00 00 00 
-00000000000C1B30: 34 01 64 A2 02 64 F4 1A     JNE <%CB>, <$(0xC1AF4)>
+00000000000C1A8D: 34 01 64 A2 02 64 51 1A     JNE <%CB>, <$64(0xC1A51)>
                   0C 00 00 00 00 00 
-00000000000C1B3E: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1B46: 20 64 01 64 A4 02 64 CB     MOV .64bit <%DP>, <$(0xC1BCB)>
+00000000000C1A9B: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1AA3: 20 64 01 64 A4 02 64 13     MOV .64bit <%DP>, <$64(0xC1B13)>
                   1B 0C 00 00 00 00 00 
-00000000000C1B55: 20 64 01 64 03 01 64 02     MOV .64bit <%FER3>, <%FER2>
+00000000000C1AB2: 20 64 01 64 03 01 64 02     MOV .64bit <%FER3>, <%FER2>
 
 
 <_print_num_loop_pop> :
-00000000000C1B5D: 23 64 01 64 00              POP .64bit <%FER0>
-00000000000C1B62: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $(0x0))>, <%R0>
-                  64 A4 02 64 00 00 00 00 
-                  00 00 00 00 01 01 08 00 
-00000000000C1B7A: 0B 64 01 64 A4              INC .64bit <%DP>
-00000000000C1B7F: 60 01 64 A2 02 64 5D 1B     LOOP <%CB>, <$(0xC1B5D)>
+00000000000C1ABA: 23 64 01 64 00              POP .64bit <%FER0>
+00000000000C1ABF: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $8(0x0))>, <%R0>
+                  64 A4 02 08 00 01 01 08 
+                  00 
+00000000000C1AD0: 0B 64 01 64 A4              INC .64bit <%DP>
+00000000000C1AD5: 60 01 64 A2 02 64 BA 1A     LOOP <%CB>, <$64(0xC1ABA)>
                   0C 00 00 00 00 00 
-00000000000C1B8D: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $(0x0))>, <$(0x0)>
-                  64 A4 02 64 00 00 00 00 
-                  00 00 00 00 01 02 64 00 
-                  00 00 00 00 00 00 00 
-00000000000C1BAC: 20 64 01 64 A4 02 64 CB     MOV .64bit <%DP>, <$(0xC1BCB)>
+00000000000C1AE3: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $8(0x0))>, <$8(0x0)>
+                  64 A4 02 08 00 01 02 08 
+                  00 
+00000000000C1AF4: 20 64 01 64 A4 02 64 13     MOV .64bit <%DP>, <$64(0xC1B13)>
                   1B 0C 00 00 00 00 00 
-00000000000C1BBB: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1B03: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C1BC9: 25                          POPALL
-00000000000C1BCA: 32                          RET
+00000000000C1B11: 25                          POPALL
+00000000000C1B12: 32                          RET
 
 
 <_print_num_cache> :
-00000000000C1BCB: 00                          NOP
-00000000000C1BCC: 00                          NOP
-00000000000C1BCD: 00                          NOP
+00000000000C1B13: 00                          NOP
+00000000000C1B14: 00                          NOP
+00000000000C1B15: 00                          NOP
 
- ... PADDLING 0x00 APPEARED 16 TIMES SINCE 00000000000C1BCB...
+ ... PADDLING 0x00 APPEARED 16 TIMES SINCE 00000000000C1B13...
 
 
 
 <_reads> :
-00000000000C1BDB: 24                          PUSHALL
-00000000000C1BDC: 50 64 02 64 36 01 00 00     IN .64bit <$(0x136)>, <%FER3>
+00000000000C1B23: 24                          PUSHALL
+00000000000C1B24: 50 64 02 64 36 01 00 00     IN .64bit <$64(0x136)>, <%FER3>
                   00 00 00 00 01 64 03 
-00000000000C1BEB: 0A 64 01 64 03 02 64 00     CMP .64bit <%FER3>, <$(0x500)>
+00000000000C1B33: 0A 64 01 64 03 02 64 00     CMP .64bit <%FER3>, <$64(0x500)>
                   05 00 00 00 00 00 00 
-00000000000C1BFA: 36 01 64 A2 02 64 BF 1C     JL <%CB>, <$(0xC1CBF)>
+00000000000C1B42: 36 01 64 A2 02 64 07 1C     JL <%CB>, <$64(0xC1C07)>
                   0C 00 00 00 00 00 
-00000000000C1C08: 20 64 01 64 A4 02 64 59     MOV .64bit <%DP>, <$(0xC1E59)>
-                  1E 0C 00 00 00 00 00 
-00000000000C1C17: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1C1F: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1B50: 20 64 01 64 A4 02 64 85     MOV .64bit <%DP>, <$64(0xC1D85)>
+                  1D 0C 00 00 00 00 00 
+00000000000C1B5F: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1B67: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C1C2D: 20 64 01 64 00 01 64 03     MOV .64bit <%FER0>, <%FER3>
-00000000000C1C35: 31 01 64 A2 02 64 EB 1A     CALL <%CB>, <$(0xC1AEB)>
+00000000000C1B75: 20 64 01 64 00 01 64 03     MOV .64bit <%FER0>, <%FER3>
+00000000000C1B7D: 31 01 64 A2 02 64 48 1A     CALL <%CB>, <$64(0xC1A48)>
                   0C 00 00 00 00 00 
-00000000000C1C43: 20 64 01 64 A4 02 64 6E     MOV .64bit <%DP>, <$(0xC1E6E)>
-                  1E 0C 00 00 00 00 00 
-00000000000C1C52: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1B8B: 20 64 01 64 A4 02 64 9A     MOV .64bit <%DP>, <$64(0xC1D9A)>
+                  1D 0C 00 00 00 00 00 
+00000000000C1B9A: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C1C60: 20 64 01 64 03 02 64 00     MOV .64bit <%FER3>, <$(0x500)>
+00000000000C1BA8: 20 64 01 64 03 02 64 00     MOV .64bit <%FER3>, <$64(0x500)>
                   05 00 00 00 00 00 00 
-00000000000C1C6F: 20 64 01 64 A4 02 64 7A     MOV .64bit <%DP>, <$(0xC1E7A)>
-                  1E 0C 00 00 00 00 00 
-00000000000C1C7E: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1BB7: 20 64 01 64 A4 02 64 A6     MOV .64bit <%DP>, <$64(0xC1DA6)>
+                  1D 0C 00 00 00 00 00 
+00000000000C1BC6: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C1C8C: 20 64 01 64 00 01 64 03     MOV .64bit <%FER0>, <%FER3>
-00000000000C1C94: 31 01 64 A2 02 64 EB 1A     CALL <%CB>, <$(0xC1AEB)>
+00000000000C1BD4: 20 64 01 64 00 01 64 03     MOV .64bit <%FER0>, <%FER3>
+00000000000C1BDC: 31 01 64 A2 02 64 48 1A     CALL <%CB>, <$64(0xC1A48)>
                   0C 00 00 00 00 00 
-00000000000C1CA2: 20 64 01 64 A4 02 64 92     MOV .64bit <%DP>, <$(0xC1E92)>
-                  1E 0C 00 00 00 00 00 
-00000000000C1CB1: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1BEA: 20 64 01 64 A4 02 64 BE     MOV .64bit <%DP>, <$64(0xC1DBE)>
+                  1D 0C 00 00 00 00 00 
+00000000000C1BF9: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
 
 
 <_reads_skip_trunc> :
-00000000000C1CBF: 20 64 01 64 A4 02 64 24     MOV .64bit <%DP>, <$(0xC1E24)>
-                  1E 0C 00 00 00 00 00 
-00000000000C1CCE: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1CD6: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1C07: 20 64 01 64 A4 02 64 50     MOV .64bit <%DP>, <$64(0xC1D50)>
+                  1D 0C 00 00 00 00 00 
+00000000000C1C16: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1C1E: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C1CE4: 20 64 01 64 00 01 64 03     MOV .64bit <%FER0>, <%FER3>
-00000000000C1CEC: 31 01 64 A2 02 64 EB 1A     CALL <%CB>, <$(0xC1AEB)>
+00000000000C1C2C: 20 64 01 64 00 01 64 03     MOV .64bit <%FER0>, <%FER3>
+00000000000C1C34: 31 01 64 A2 02 64 48 1A     CALL <%CB>, <$64(0xC1A48)>
                   0C 00 00 00 00 00 
-00000000000C1CFA: 20 64 01 64 A4 02 64 37     MOV .64bit <%DP>, <$(0xC1E37)>
-                  1E 0C 00 00 00 00 00 
-00000000000C1D09: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1D11: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1C42: 20 64 01 64 A4 02 64 63     MOV .64bit <%DP>, <$64(0xC1D63)>
+                  1D 0C 00 00 00 00 00 
+00000000000C1C51: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1C59: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C1D1F: 20 64 01 64 A4 02 64 42     MOV .64bit <%DP>, <$(0xC1E42)>
-                  1E 0C 00 00 00 00 00 
-00000000000C1D2E: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1D36: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1C67: 20 64 01 64 A4 02 64 6E     MOV .64bit <%DP>, <$64(0xC1D6E)>
+                  1D 0C 00 00 00 00 00 
+00000000000C1C76: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1C7E: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C1D44: 51 64 02 64 37 01 00 00     OUT .64bit <$(0x137)>, <$(0x0)>
+00000000000C1C8C: 51 64 02 64 37 01 00 00     OUT .64bit <$64(0x137)>, <$64(0x0)>
                   00 00 00 00 02 64 00 00 
                   00 00 00 00 00 00 
-00000000000C1D5A: 51 64 02 64 38 01 00 00     OUT .64bit <$(0x138)>, <%FER3>
+00000000000C1CA2: 51 64 02 64 38 01 00 00     OUT .64bit <$64(0x138)>, <%FER3>
                   00 00 00 00 01 64 03 
-00000000000C1D69: 06 64 02 64 00 02 00 00     MUL .64bit <$(0x200)>
+00000000000C1CB1: 06 64 02 64 00 02 00 00     MUL .64bit <$64(0x200)>
                   00 00 00 00 
-00000000000C1D75: 20 64 01 64 03 01 64 00     MOV .64bit <%FER3>, <%FER0>
-00000000000C1D7D: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
-00000000000C1D85: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1D8D: 52 64 02 64 39 01 00 00     INS .64bit <$(0x139)>
+00000000000C1CBD: 20 64 01 64 03 01 64 00     MOV .64bit <%FER3>, <%FER0>
+00000000000C1CC5: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
+00000000000C1CCD: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1CD5: 52 64 02 64 39 01 00 00     INS .64bit <$64(0x139)>
                   00 00 00 00 
-00000000000C1D99: 20 64 01 64 00 02 64 1C     MOV .64bit <%FER0>, <$(0xC1E1C)>
-                  1E 0C 00 00 00 00 00 
-00000000000C1DA8: 20 64 03 64 01 64 00 02     MOV .64bit <*1&64(%FER0, $(0x0), $(0x0))>, <%FER3>
-                  64 00 00 00 00 00 00 00 
-                  00 02 64 00 00 00 00 00 
-                  00 00 00 01 01 64 03 
-00000000000C1DC7: 20 64 01 64 A4 02 64 52     MOV .64bit <%DP>, <$(0xC1E52)>
-                  1E 0C 00 00 00 00 00 
-00000000000C1DD6: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1DDE: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1CE1: 20 64 01 64 00 02 64 48     MOV .64bit <%FER0>, <$64(0xC1D48)>
+                  1D 0C 00 00 00 00 00 
+00000000000C1CF0: 20 64 03 64 01 64 00 02     MOV .64bit <*1&64(%FER0, $8(0x0), $8(0x0))>, <%FER3>
+                  08 00 02 08 00 01 01 64 
+                  03 
+00000000000C1D01: 20 64 01 64 A4 02 64 7E     MOV .64bit <%DP>, <$64(0xC1D7E)>
+                  1D 0C 00 00 00 00 00 
+00000000000C1D10: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1D18: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C1DEC: 25                          POPALL
-00000000000C1DED: 20 64 01 64 00 02 64 1C     MOV .64bit <%FER0>, <$(0xC1E1C)>
-                  1E 0C 00 00 00 00 00 
-00000000000C1DFC: 20 64 01 64 00 03 64 01     MOV .64bit <%FER0>, <*1&64(%FER0, $(0x0), $(0x0))>
-                  64 00 02 64 00 00 00 00 
-                  00 00 00 00 02 64 00 00 
-                  00 00 00 00 00 00 01 
-00000000000C1E1B: 32                          RET
+00000000000C1D26: 25                          POPALL
+00000000000C1D27: 20 64 01 64 00 02 64 48     MOV .64bit <%FER0>, <$64(0xC1D48)>
+                  1D 0C 00 00 00 00 00 
+00000000000C1D36: 20 64 01 64 00 03 64 01     MOV .64bit <%FER0>, <*1&64(%FER0, $8(0x0), $8(0x0))>
+                  64 00 02 08 00 02 08 00 
+                  01 
+00000000000C1D47: 32                          RET
 
 
 <_reads_ret> :
-00000000000C1E1C: 00                          NOP
-00000000000C1E1D: 00                          NOP
-00000000000C1E1E: 00                          NOP
+00000000000C1D48: 00                          NOP
+00000000000C1D49: 00                          NOP
+00000000000C1D4A: 00                          NOP
 
- ... PADDLING 0x00 APPEARED 8 TIMES SINCE 00000000000C1E1C...
+ ... PADDLING 0x00 APPEARED 8 TIMES SINCE 00000000000C1D48...
 
 
 
 <_reads_message_disk_size> :
-00000000000C1E24: 4465 7465 6374 6564 2064 6973 6B20 6861    Detected disk ha
-00000000000C1E34: 7320 0020 7365 6374 6F72 732E 0A00 5265    s . sectors...Re
-00000000000C1E44: 6164 696E 6720 6469 736B 2E2E 2E           ading disk...
+00000000000C1D50: 4465 7465 6374 6564 2064 6973 6B20 6861    Detected disk ha
+00000000000C1D60: 7320 0020 7365 6374 6F72 732E 0A00 5265    s . sectors...Re
+00000000000C1D70: 6164 696E 6720 6469 736B 2E2E 2E           ading disk...
 
-00000000000C1E51: 00                          NOP
+00000000000C1D7D: 00                          NOP
 
 
 <_reads_message_done> :
-00000000000C1E52: 646F 6E65 2E0A 0053 697A 6520 6F66 2043    done...Size of C
+00000000000C1D7E: 646F 6E65 2E0A 0053 697A 6520 6F66 2043    done...Size of C
 
-00000000000C1E62: 3A                          INT3
-00000000000C1E63: 2074 6F6F 2062 6967 2028                    too big (
+00000000000C1D8E: 3A                          INT3
+00000000000C1D8F: 2074 6F6F 2062 6967 2028                    too big (
 
-00000000000C1E6D: 00                          NOP
+00000000000C1D99: 00                          NOP
 
 
 <_reads_message_disk_too_big_tail> :
-00000000000C1E6E: 2073 6563 746F 7273 292E 0A                 sectors)..
+00000000000C1D9A: 2073 6563 746F 7273 292E 0A                 sectors)..
 
-00000000000C1E79: 00                          NOP
+00000000000C1DA5: 00                          NOP
 
 
 <_reads_message_disk_resize> :
-00000000000C1E7A: 5265 7369 7A65 6420 7265 6164 206C 656E    Resized read len
-00000000000C1E8A: 6774 6820 746F 2000 2073 6563 746F 7273    gth to . sectors
-00000000000C1E9A: 2E0A 00                                    ...
+00000000000C1DA6: 5265 7369 7A65 6420 7265 6164 206C 656E    Resized read len
+00000000000C1DB6: 6774 6820 746F 2000 2073 6563 746F 7273    gth to . sectors
+00000000000C1DC6: 2E0A 00                                    ...
 
 
 
 <_writes> :
-00000000000C1E9D: 24                          PUSHALL
-00000000000C1E9E: 50 64 02 64 16 01 00 00     IN .64bit <$(0x116)>, <%FER3>
+00000000000C1DC9: 24                          PUSHALL
+00000000000C1DCA: 50 64 02 64 16 01 00 00     IN .64bit <$64(0x116)>, <%FER3>
                   00 00 00 00 01 64 03 
-00000000000C1EAD: 22 64 01 64 00              PUSH .64bit <%FER0>
-00000000000C1EB2: 20 64 01 64 04 01 64 00     MOV .64bit <%FER4>, <%FER0>
-00000000000C1EBA: 20 64 01 64 00 01 64 03     MOV .64bit <%FER0>, <%FER3>
-00000000000C1EC2: 06 64 02 64 00 02 00 00     MUL .64bit <$(0x200)>
+00000000000C1DD9: 22 64 01 64 00              PUSH .64bit <%FER0>
+00000000000C1DDE: 20 64 01 64 04 01 64 00     MOV .64bit <%FER4>, <%FER0>
+00000000000C1DE6: 20 64 01 64 00 01 64 03     MOV .64bit <%FER0>, <%FER3>
+00000000000C1DEE: 06 64 02 64 00 02 00 00     MUL .64bit <$64(0x200)>
                   00 00 00 00 
-00000000000C1ECE: 0A 64 01 64 00 01 64 04     CMP .64bit <%FER0>, <%FER4>
-00000000000C1ED6: 37 01 64 A2 02 64 65 1F     JBE <%CB>, <$(0xC1F65)>
+00000000000C1DFA: 0A 64 01 64 00 01 64 04     CMP .64bit <%FER0>, <%FER4>
+00000000000C1E02: 37 01 64 A2 02 64 91 1E     JBE <%CB>, <$64(0xC1E91)>
                   0C 00 00 00 00 00 
-00000000000C1EE4: 01 64 01 64 A1 02 64 08     ADD .64bit <%SP>, <$(0x8)>
+00000000000C1E10: 01 64 01 64 A1 02 64 08     ADD .64bit <%SP>, <$64(0x8)>
                   00 00 00 00 00 00 00 
-00000000000C1EF3: 22 64 01 64 00              PUSH .64bit <%FER0>
-00000000000C1EF8: 20 64 01 64 A4 02 64 89     MOV .64bit <%DP>, <$(0xC2089)>
-                  20 0C 00 00 00 00 00 
-00000000000C1F07: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1F0F: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1E1F: 22 64 01 64 00              PUSH .64bit <%FER0>
+00000000000C1E24: 20 64 01 64 A4 02 64 B5     MOV .64bit <%DP>, <$64(0xC1FB5)>
+                  1F 0C 00 00 00 00 00 
+00000000000C1E33: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1E3B: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C1F1D: 20 64 01 64 A4 02 64 9F     MOV .64bit <%DP>, <$(0xC209F)>
-                  20 0C 00 00 00 00 00 
-00000000000C1F2C: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1E49: 20 64 01 64 A4 02 64 CB     MOV .64bit <%DP>, <$64(0xC1FCB)>
+                  1F 0C 00 00 00 00 00 
+00000000000C1E58: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C1F3A: 31 01 64 A2 02 64 EB 1A     CALL <%CB>, <$(0xC1AEB)>
+00000000000C1E66: 31 01 64 A2 02 64 48 1A     CALL <%CB>, <$64(0xC1A48)>
                   0C 00 00 00 00 00 
-00000000000C1F48: 20 64 01 64 A4 02 64 B8     MOV .64bit <%DP>, <$(0xC20B8)>
-                  20 0C 00 00 00 00 00 
-00000000000C1F57: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1E74: 20 64 01 64 A4 02 64 E4     MOV .64bit <%DP>, <$64(0xC1FE4)>
+                  1F 0C 00 00 00 00 00 
+00000000000C1E83: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
 
 
 <_writes_skip_trunc> :
-00000000000C1F65: 20 64 01 64 A4 02 64 48     MOV .64bit <%DP>, <$(0xC2048)>
-                  20 0C 00 00 00 00 00 
-00000000000C1F74: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1F7C: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1E91: 20 64 01 64 A4 02 64 74     MOV .64bit <%DP>, <$64(0xC1F74)>
+                  1F 0C 00 00 00 00 00 
+00000000000C1EA0: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1EA8: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C1F8A: 20 64 01 64 00 01 64 03     MOV .64bit <%FER0>, <%FER3>
-00000000000C1F92: 31 01 64 A2 02 64 EB 1A     CALL <%CB>, <$(0xC1AEB)>
+00000000000C1EB6: 20 64 01 64 00 01 64 03     MOV .64bit <%FER0>, <%FER3>
+00000000000C1EBE: 31 01 64 A2 02 64 48 1A     CALL <%CB>, <$64(0xC1A48)>
                   0C 00 00 00 00 00 
-00000000000C1FA0: 20 64 01 64 A4 02 64 5F     MOV .64bit <%DP>, <$(0xC205F)>
-                  20 0C 00 00 00 00 00 
-00000000000C1FAF: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1FB7: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1ECC: 20 64 01 64 A4 02 64 8B     MOV .64bit <%DP>, <$64(0xC1F8B)>
+                  1F 0C 00 00 00 00 00 
+00000000000C1EDB: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1EE3: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C1FC5: 20 64 01 64 A4 02 64 6A     MOV .64bit <%DP>, <$(0xC206A)>
-                  20 0C 00 00 00 00 00 
-00000000000C1FD4: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1FDC: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1EF1: 20 64 01 64 A4 02 64 96     MOV .64bit <%DP>, <$64(0xC1F96)>
+                  1F 0C 00 00 00 00 00 
+00000000000C1F00: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1F08: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C1FEA: 23 64 01 64 00              POP .64bit <%FER0>
-00000000000C1FEF: 22 64 01 64 00              PUSH .64bit <%FER0>
-00000000000C1FF4: 08 64 02 64 00 02 00 00     DIV .64bit <$(0x200)>
+00000000000C1F16: 23 64 01 64 00              POP .64bit <%FER0>
+00000000000C1F1B: 22 64 01 64 00              PUSH .64bit <%FER0>
+00000000000C1F20: 08 64 02 64 00 02 00 00     DIV .64bit <$64(0x200)>
                   00 00 00 00 
-00000000000C2000: 51 64 02 64 17 01 00 00     OUT .64bit <$(0x117)>, <$(0x0)>
+00000000000C1F2C: 51 64 02 64 17 01 00 00     OUT .64bit <$64(0x117)>, <$64(0x0)>
                   00 00 00 00 02 64 00 00 
                   00 00 00 00 00 00 
-00000000000C2016: 51 64 02 64 18 01 00 00     OUT .64bit <$(0x118)>, <%FER0>
+00000000000C1F42: 51 64 02 64 18 01 00 00     OUT .64bit <$64(0x118)>, <%FER0>
                   00 00 00 00 01 64 00 
-00000000000C2025: 23 64 01 64 03              POP .64bit <%FER3>
-00000000000C202A: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
-00000000000C2032: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C203A: 53 64 02 64 1A 01 00 00     OUTS .64bit <$(0x11A)>
+00000000000C1F51: 23 64 01 64 03              POP .64bit <%FER3>
+00000000000C1F56: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
+00000000000C1F5E: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1F66: 53 64 02 64 1A 01 00 00     OUTS .64bit <$64(0x11A)>
                   00 00 00 00 
-00000000000C2046: 25                          POPALL
-00000000000C2047: 32                          RET
+00000000000C1F72: 25                          POPALL
+00000000000C1F73: 32                          RET
 
 
 <_writes_message_disk_size> :
-00000000000C2048: 4465 7465 6374 6564 2066 6C6F 7070 7920    Detected floppy 
-00000000000C2058: 4120 6861 7320 0020 7365 6374 6F72 732E    A has . sectors.
-00000000000C2068: 0A00 5772 6974 696E 6720 666C 6F70 7079    ..Writing floppy
-00000000000C2078: 2064 6973 6B2E 2E2E 0A00 646F 6E65 2E0A     disk.....done..
-00000000000C2088: 0053 697A 6520 6F66 2041                   .Size of A
+00000000000C1F74: 4465 7465 6374 6564 2066 6C6F 7070 7920    Detected floppy 
+00000000000C1F84: 4120 6861 7320 0020 7365 6374 6F72 732E    A has . sectors.
+00000000000C1F94: 0A00 5772 6974 696E 6720 666C 6F70 7079    ..Writing floppy
+00000000000C1FA4: 2064 6973 6B2E 2E2E 0A00 646F 6E65 2E0A     disk.....done..
+00000000000C1FB4: 0053 697A 6520 6F66 2041                   .Size of A
 
-00000000000C2092: 3A                          INT3
-00000000000C2093: 2074 6F6F 2073 6D61 6C6C 0A00 5265 7369     too small..Resi
-00000000000C20A3: 7A65 6420 7772 6974 6520 6C65 6E67 7468    zed write length
-00000000000C20B3: 2074 6F20 0020 6279 7465 732E 0A00          to . bytes...
+00000000000C1FBE: 3A                          INT3
+00000000000C1FBF: 2074 6F6F 2073 6D61 6C6C 0A00 5265 7369     too small..Resi
+00000000000C1FCF: 7A65 6420 7772 6974 6520 6C65 6E67 7468    zed write length
+00000000000C1FDF: 2074 6F20 0020 6279 7465 732E 0A00          to . bytes...
 
 
 
 <_int_0x02_io_error> :
-00000000000C20C1: 0A 16 01 16 00 02 64 F0     CMP .16bit <%EXR0>, <$(0xF0)>
-                  00 00 00 00 00 00 00 
-00000000000C20D0: 33 01 64 A2 02 64 36 21     JE <%CB>, <$(0xC2136)>
+00000000000C1FED: 0A 16 01 16 00 02 16 F0     CMP .16bit <%EXR0>, <$16(0xF0)>
+                  00 
+00000000000C1FF6: 33 01 64 A2 02 64 4E 20     JE <%CB>, <$64(0xC204E)>
                   0C 00 00 00 00 00 
-00000000000C20DE: 20 64 01 64 A4 02 64 A8     MOV .64bit <%DP>, <$(0xC21A8)>
-                  21 0C 00 00 00 00 00 
-00000000000C20ED: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C20F5: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C2004: 20 64 01 64 A4 02 64 B2     MOV .64bit <%DP>, <$64(0xC20B2)>
+                  20 0C 00 00 00 00 00 
+00000000000C2013: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C201B: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C2103: 39 02 64 19 00 00 00 00     INT <$(0x19)>
-                  00 00 00 
-00000000000C210E: 39 02 64 14 00 00 00 00     INT <$(0x14)>
-                  00 00 00 
-00000000000C2119: 20 64 01 64 00 02 64 06     MOV .64bit <%FER0>, <$(0x6)>
+00000000000C2029: 39 02 08 19                 INT <$8(0x19)>
+00000000000C202D: 39 02 08 14                 INT <$8(0x14)>
+00000000000C2031: 20 64 01 64 00 02 64 06     MOV .64bit <%FER0>, <$64(0x6)>
                   00 00 00 00 00 00 00 
-00000000000C2128: 30 01 64 A2 02 64 80 21     JMP <%CB>, <$(0xC2180)>
+00000000000C2040: 30 01 64 A2 02 64 8A 20     JMP <%CB>, <$64(0xC208A)>
                   0C 00 00 00 00 00 
 
 
 <_int_0x02_io_error_io_error> :
-00000000000C2136: 20 64 01 64 A4 02 64 81     MOV .64bit <%DP>, <$(0xC2181)>
-                  21 0C 00 00 00 00 00 
-00000000000C2145: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C214D: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C204E: 20 64 01 64 A4 02 64 8B     MOV .64bit <%DP>, <$64(0xC208B)>
+                  20 0C 00 00 00 00 00 
+00000000000C205D: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C2065: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C215B: 39 02 64 19 00 00 00 00     INT <$(0x19)>
-                  00 00 00 
-00000000000C2166: 39 02 64 14 00 00 00 00     INT <$(0x14)>
-                  00 00 00 
-00000000000C2171: 20 64 01 64 00 02 64 05     MOV .64bit <%FER0>, <$(0x5)>
+00000000000C2073: 39 02 08 19                 INT <$8(0x19)>
+00000000000C2077: 39 02 08 14                 INT <$8(0x14)>
+00000000000C207B: 20 64 01 64 00 02 64 05     MOV .64bit <%FER0>, <$64(0x5)>
                   00 00 00 00 00 00 00 
 
 
 <_int_0x02_io_error_error_type_end> :
-00000000000C2180: 40                          HLT
+00000000000C208A: 40                          HLT
 
 
 <_int_0x02_io_error_message_io_error> :
-00000000000C2181: 494F 2045 5252 4F52 210A 5072 6573 7320    IO ERROR!.Press 
-00000000000C2191: 616E 7920 6B65 7920 746F 2073 6875 7464    any key to shutd
-00000000000C21A1: 6F77 6E2E 2E2E                             own...
+00000000000C208B: 494F 2045 5252 4F52 210A 5072 6573 7320    IO ERROR!.Press 
+00000000000C209B: 616E 7920 6B65 7920 746F 2073 6875 7464    any key to shutd
+00000000000C20AB: 6F77 6E2E 2E2E                             own...
 
-00000000000C21A7: 00                          NOP
+00000000000C20B1: 00                          NOP
 
 
 <_int_0x02_io_error_message_no_such_dev> :
-00000000000C21A8: 4469 736B 204E 4F54 2070 7265 7365 6E74    Disk NOT present
-00000000000C21B8: 210A 5072 6573 7320 616E 7920 6B65 7920    !.Press any key 
-00000000000C21C8: 746F 2073 6875 7464 6F77 6E2E 2E2E         to shutdown...
+00000000000C20B2: 4469 736B 204E 4F54 2070 7265 7365 6E74    Disk NOT present
+00000000000C20C2: 210A 5072 6573 7320 616E 7920 6B65 7920    !.Press any key 
+00000000000C20D2: 746F 2073 6875 7464 6F77 6E2E 2E2E         to shutdown...
 
-00000000000C21D6: 00                          NOP
+00000000000C20E0: 00                          NOP
 
 
 <_start> :
-00000000000C21D7: 20 64 01 64 A0 02 64 47     MOV .64bit <%SB>, <$(0xC2547)>
-                  25 0C 00 00 00 00 00 
-00000000000C21E6: 20 64 01 64 A1 02 64 FF     MOV .64bit <%SP>, <$(0xFFF)>
+00000000000C20E1: 20 64 01 64 A0 02 64 16     MOV .64bit <%SB>, <$64(0xC2416)>
+                  24 0C 00 00 00 00 00 
+00000000000C20F0: 20 64 01 64 A1 02 64 FF     MOV .64bit <%SP>, <$64(0xFFF)>
                   0F 00 00 00 00 00 00 
-00000000000C21F5: 20 64 03 64 02 64 00 00     MOV .64bit <*1&64($(0xA0000), $(0x20), $(0x8))>, <$(0xC20C1)>
-                  0A 00 00 00 00 00 02 64 
-                  20 00 00 00 00 00 00 00 
-                  02 64 08 00 00 00 00 00 
-                  00 00 01 02 64 C1 20 0C 
-                  00 00 00 00 00 
-00000000000C2222: 20 64 01 64 A4 02 64 34     MOV .64bit <%DP>, <$(0xC2334)>
+00000000000C20FF: 20 64 03 64 02 32 00 00     MOV .64bit <*1&64($32(0xA0000), $16(0x20), $8(0x8))>, <$64(0xC1FED)>
+                  0A 00 02 16 20 00 02 08 
+                  08 01 02 64 ED 1F 0C 00 
+                  00 00 00 00 
+00000000000C211B: 20 64 01 64 A4 02 64 03     MOV .64bit <%DP>, <$64(0xC2203)>
+                  22 0C 00 00 00 00 00 
+00000000000C212A: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C2132: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
+                  0C 00 00 00 00 00 
+00000000000C2140: 39 02 08 19                 INT <$8(0x19)>
+00000000000C2144: 39 02 08 14                 INT <$8(0x14)>
+00000000000C2148: 20 64 01 64 A4 02 64 9C     MOV .64bit <%DP>, <$64(0xC239C)>
                   23 0C 00 00 00 00 00 
-00000000000C2231: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C2239: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C2157: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C2247: 39 02 64 19 00 00 00 00     INT <$(0x19)>
-                  00 00 00 
-00000000000C2252: 39 02 64 14 00 00 00 00     INT <$(0x14)>
-                  00 00 00 
-00000000000C225D: 20 64 01 64 A4 02 64 CD     MOV .64bit <%DP>, <$(0xC24CD)>
-                  24 0C 00 00 00 00 00 
-00000000000C226C: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C2165: 31 01 64 A2 02 64 23 1B     CALL <%CB>, <$64(0xC1B23)>
                   0C 00 00 00 00 00 
-00000000000C227A: 31 01 64 A2 02 64 DB 1B     CALL <%CB>, <$(0xC1BDB)>
+00000000000C2173: 22 64 01 64 00              PUSH .64bit <%FER0>
+00000000000C2178: 20 64 01 64 A4 02 64 B2     MOV .64bit <%DP>, <$64(0xC23B2)>
+                  23 0C 00 00 00 00 00 
+00000000000C2187: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C2288: 22 64 01 64 00              PUSH .64bit <%FER0>
-00000000000C228D: 20 64 01 64 A4 02 64 E3     MOV .64bit <%DP>, <$(0xC24E3)>
-                  24 0C 00 00 00 00 00 
-00000000000C229C: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C2195: 39 02 08 19                 INT <$8(0x19)>
+00000000000C2199: 39 02 08 14                 INT <$8(0x14)>
+00000000000C219D: 20 64 01 64 A4 02 64 DB     MOV .64bit <%DP>, <$64(0xC23DB)>
+                  23 0C 00 00 00 00 00 
+00000000000C21AC: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C22AA: 39 02 64 19 00 00 00 00     INT <$(0x19)>
-                  00 00 00 
-00000000000C22B5: 39 02 64 14 00 00 00 00     INT <$(0x14)>
-                  00 00 00 
-00000000000C22C0: 20 64 01 64 A4 02 64 0C     MOV .64bit <%DP>, <$(0xC250C)>
-                  25 0C 00 00 00 00 00 
-00000000000C22CF: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C21BA: 23 64 01 64 00              POP .64bit <%FER0>
+00000000000C21BF: 31 01 64 A2 02 64 C9 1D     CALL <%CB>, <$64(0xC1DC9)>
                   0C 00 00 00 00 00 
-00000000000C22DD: 23 64 01 64 00              POP .64bit <%FER0>
-00000000000C22E2: 31 01 64 A2 02 64 9D 1E     CALL <%CB>, <$(0xC1E9D)>
+00000000000C21CD: 20 64 01 64 A4 02 64 F8     MOV .64bit <%DP>, <$64(0xC23F8)>
+                  23 0C 00 00 00 00 00 
+00000000000C21DC: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C21E4: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C22F0: 20 64 01 64 A4 02 64 29     MOV .64bit <%DP>, <$(0xC2529)>
-                  25 0C 00 00 00 00 00 
-00000000000C22FF: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C2307: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
-                  0C 00 00 00 00 00 
-00000000000C2315: 39 02 64 19 00 00 00 00     INT <$(0x19)>
-                  00 00 00 
-00000000000C2320: 39 02 64 14 00 00 00 00     INT <$(0x14)>
-                  00 00 00 
-00000000000C232B: 12 64 01 64 00 01 64 00     XOR .64bit <%FER0>, <%FER0>
-00000000000C2333: 40                          HLT
+00000000000C21F2: 39 02 08 19                 INT <$8(0x19)>
+00000000000C21F6: 39 02 08 14                 INT <$8(0x14)>
+00000000000C21FA: 12 64 01 64 00 01 64 00     XOR .64bit <%FER0>, <%FER0>
+00000000000C2202: 40                          HLT
 
 
 <_start_welcome> :
-00000000000C2334: 4865 6C6C 6F21 0A0A 5468 6973 2069 7320    Hello!..This is 
-00000000000C2344: 5379 7364 6172 6674 2045 7861 6D70 6C65    Sysdarft Example
-00000000000C2354: 2041 210A 0A0A 5379 7364 6172 6674 2069     A!...Sysdarft i
-00000000000C2364: 7320 6120 6879 706F 7468 6574 6963 616C    s a hypothetical
-00000000000C2374: 2061 7263 6869 7465 6374 7572 6520 7468     architecture th
-00000000000C2384: 6174 206F 6666 6572 7320 7369 6D70 6C69    at offers simpli
-00000000000C2394: 6669 6564 2069 6E73 7472 7563 7469 6F6E    fied instruction
-00000000000C23A4: 730A 7769 7468 2070 6F74 656E 6379 2066    s.with potency f
-00000000000C23B4: 6F72 2063 7265 6174 696E 6720 6675 6E63    or creating func
-00000000000C23C4: 7469 6F6E 616C 2070 726F 6772 616D 7320    tional programs 
-00000000000C23D4: 616E 6420 6576 656E 206F 7065 7261 7469    and even operati
-00000000000C23E4: 6E67 2073 7973 7465 6D73 2E0A 4279 2065    ng systems..By e
-00000000000C23F4: 6C69 6D69 6E61 7469 6E67 2074 6865 206E    liminating the n
-00000000000C2404: 6565 6420 746F 206D 6169 6E74 6169 6E20    eed to maintain 
-00000000000C2414: 636F 6D70 6174 6962 696C 6974 7920 7769    compatibility wi
-00000000000C2424: 7468 2068 6973 746F 7269 6361 6C20 6465    th historical de
-00000000000C2434: 7369 676E 732C 0A53 7973 6461 7266 7420    signs,.Sysdarft 
-00000000000C2444: 6169 6D73 2074 6F20 6265 2073 7472 6169    aims to be strai
-00000000000C2454: 6768 7466 6F72 7761 7264 2C20 6176 6F69    ghtforward, avoi
-00000000000C2464: 6469 6E67 2063 6F6D 706C 6578 2064 6574    ding complex det
-00000000000C2474: 6169 6C73 2077 6869 6C65 206D 6169 6E74    ails while maint
-00000000000C2484: 6169 6E69 6E67 0A63 6F6E 7369 7374 656E    aining.consisten
-00000000000C2494: 6379 2061 6E64 2066 756E 6374 696F 6E61    cy and functiona
-00000000000C24A4: 6C69 7479 2E0A 0A0A 5072 6573 7320 616E    lity....Press an
-00000000000C24B4: 7920 6B65 7920 746F 2072 6561 6420 6672    y key to read fr
-00000000000C24C4: 6F6D 2064 6973 6B0A 0052 6561 6469 6E67    om disk..Reading
-00000000000C24D4: 2066 726F 6D20 6469 736B 2E2E 2E0A 0050     from disk.....P
-00000000000C24E4: 7265 7373 2061 6E79 206B 6579 2074 6F20    ress any key to 
-00000000000C24F4: 7772 6974 6520 746F 2066 6C6F 7070 7920    write to floppy 
-00000000000C2504: 6469 736B 2041 0A00 5772 6974 696E 6720    disk A..Writing 
-00000000000C2514: 746F 2066 6C6F 7070 7920 6469 736B 2041    to floppy disk A
-00000000000C2524: 2E2E 2E0A 0050 7265 7373 2061 6E79 206B    .....Press any k
-00000000000C2534: 6579 2074 6F20 7368 7574 646F 776E 2E2E    ey to shutdown..
-00000000000C2544: 2E0A 00                                    ...
+00000000000C2203: 4865 6C6C 6F21 0A0A 5468 6973 2069 7320    Hello!..This is 
+00000000000C2213: 5379 7364 6172 6674 2045 7861 6D70 6C65    Sysdarft Example
+00000000000C2223: 2041 210A 0A0A 5379 7364 6172 6674 2069     A!...Sysdarft i
+00000000000C2233: 7320 6120 6879 706F 7468 6574 6963 616C    s a hypothetical
+00000000000C2243: 2061 7263 6869 7465 6374 7572 6520 7468     architecture th
+00000000000C2253: 6174 206F 6666 6572 7320 7369 6D70 6C69    at offers simpli
+00000000000C2263: 6669 6564 2069 6E73 7472 7563 7469 6F6E    fied instruction
+00000000000C2273: 730A 7769 7468 2070 6F74 656E 6379 2066    s.with potency f
+00000000000C2283: 6F72 2063 7265 6174 696E 6720 6675 6E63    or creating func
+00000000000C2293: 7469 6F6E 616C 2070 726F 6772 616D 7320    tional programs 
+00000000000C22A3: 616E 6420 6576 656E 206F 7065 7261 7469    and even operati
+00000000000C22B3: 6E67 2073 7973 7465 6D73 2E0A 4279 2065    ng systems..By e
+00000000000C22C3: 6C69 6D69 6E61 7469 6E67 2074 6865 206E    liminating the n
+00000000000C22D3: 6565 6420 746F 206D 6169 6E74 6169 6E20    eed to maintain 
+00000000000C22E3: 636F 6D70 6174 6962 696C 6974 7920 7769    compatibility wi
+00000000000C22F3: 7468 2068 6973 746F 7269 6361 6C20 6465    th historical de
+00000000000C2303: 7369 676E 732C 0A53 7973 6461 7266 7420    signs,.Sysdarft 
+00000000000C2313: 6169 6D73 2074 6F20 6265 2073 7472 6169    aims to be strai
+00000000000C2323: 6768 7466 6F72 7761 7264 2C20 6176 6F69    ghtforward, avoi
+00000000000C2333: 6469 6E67 2063 6F6D 706C 6578 2064 6574    ding complex det
+00000000000C2343: 6169 6C73 2077 6869 6C65 206D 6169 6E74    ails while maint
+00000000000C2353: 6169 6E69 6E67 0A63 6F6E 7369 7374 656E    aining.consisten
+00000000000C2363: 6379 2061 6E64 2066 756E 6374 696F 6E61    cy and functiona
+00000000000C2373: 6C69 7479 2E0A 0A0A 5072 6573 7320 616E    lity....Press an
+00000000000C2383: 7920 6B65 7920 746F 2072 6561 6420 6672    y key to read fr
+00000000000C2393: 6F6D 2064 6973 6B0A 0052 6561 6469 6E67    om disk..Reading
+00000000000C23A3: 2066 726F 6D20 6469 736B 2E2E 2E0A 0050     from disk.....P
+00000000000C23B3: 7265 7373 2061 6E79 206B 6579 2074 6F20    ress any key to 
+00000000000C23C3: 7772 6974 6520 746F 2066 6C6F 7070 7920    write to floppy 
+00000000000C23D3: 6469 736B 2041 0A00 5772 6974 696E 6720    disk A..Writing 
+00000000000C23E3: 746F 2066 6C6F 7070 7920 6469 736B 2041    to floppy disk A
+00000000000C23F3: 2E2E 2E0A 0050 7265 7373 2061 6E79 206B    .....Press any k
+00000000000C2403: 6579 2074 6F20 7368 7574 646F 776E 2E2E    ey to shutdown..
+00000000000C2413: 2E0A 00                                    ...
 
 
 
 <_stack_frame> :
-00000000000C2547: 00                          NOP
-00000000000C2548: 00                          NOP
-00000000000C2549: 00                          NOP
+00000000000C2416: 00                          NOP
+00000000000C2417: 00                          NOP
+00000000000C2418: 00                          NOP
 
- ... PADDLING 0x00 APPEARED 4095 TIMES SINCE 00000000000C2547...
+ ... PADDLING 0x00 APPEARED 4095 TIMES SINCE 00000000000C2416...
 
 ```
 
@@ -3174,9 +3144,9 @@ SYMBOL TABLE - SIZE 47:
 .equ 'RTC_TIME',    '0x70'
 .equ 'RTC_INT',     '0x71'
 
-%define SECONDS_IN_MINUTE   < $(60) >
-%define SECONDS_IN_HOUR     < $(3600) >
-%define SECONDS_IN_DAY      < $(86400) >
+%define SECONDS_IN_MINUTE   < $64(60) >
+%define SECONDS_IN_HOUR     < $64(3600) >
+%define SECONDS_IN_DAY      < $64(86400) >
 
 .org 0xC1800
 
@@ -3187,14 +3157,14 @@ jmp                     <%cb>,                                      <_start>
 ; _putc(%EXR0, linear position, %EXR1, ASCII Code)
 _putc:
     pushall
-    mov     .64bit      <%db>,                                      <$(0xB8000)>
+    mov     .64bit      <%db>,                                      <$64(0xB8000)>
     push    .16bit      <%exr1>
     xor     .16bit      <%exr1>,                                    <%exr1>
     xor     .32bit      <%her1>,                                    <%her1>
     mov     .64bit      <%dp>,                                      <%fer0>
 
     pop     .16bit      <%exr0>
-    mov     .8bit       <*1&8(%db, %dp, $(0))>,                     <%r0>
+    mov     .8bit       <*1&8(%db, %dp, $8(0))>,                     <%r0>
 
     REFRESH
 
@@ -3204,76 +3174,76 @@ _putc:
 ; _newline(%EXR0, linear address)
 _newline:
     pushall
-    int                 <$(0x15)>
-    div     .16bit      <$(80)>
+    int                 <$8(0x15)>
+    div     .16bit      <$16(80)>
     ; EXR0 quotient(row), EXR1 reminder(col)
-    cmp     .16bit      <%exr0>,                                    <$(24)>
+    cmp     .16bit      <%exr0>,                                    <$16(24)>
     jbe                 <%cb>,                                      <.scroll>
 
     xor     .16bit      <%exr1>,                                    <%exr1>
     inc     .16bit      <%exr0>
-    mul     .16bit      <$(80)>
+    mul     .16bit      <$16(80)>
     SETCUSP
     REFRESH
     jmp                 <%cb>,                                      < .exit>
 
     .scroll:
         ; move content (scroll up)
-        mov .64bit      <%db>,                                      <$(0xB8000)>
+        mov .64bit      <%db>,                                      <$64(0xB8000)>
         xor .64bit      <%dp>,                                      <%dp>
-        mov .64bit      <%eb>,                                      <$(0xB8000 + 80)>
+        mov .64bit      <%eb>,                                      <$64(0xB8000 + 80)>
         xor .64bit      <%ep>,                                      <%ep>
-        mov .64bit      <%fer3>,                                    <$(2000 - 80)>
+        mov .64bit      <%fer3>,                                    <$64(2000 - 80)>
         movs
 
         ; clear last line
-        mov .64bit      <%fer3>,                                    <$(80)>
-        mov .64bit      <%eb>,                                      <$(0xB8000)>
-        mov .64bit      <%ep>,                                      <$(2000 - 80)>
+        mov .64bit      <%fer3>,                                    <$64(80)>
+        mov .64bit      <%eb>,                                      <$64(0xB8000)>
+        mov .64bit      <%ep>,                                      <$64(2000 - 80)>
         xor .64bit      <%dp>,                                      <%dp>
         .scroll.loop:
-            mov .8bit   <*1&8(%eb, %ep, %dp)>,                      <$(' ')>
+            mov .8bit   <*1&8(%eb, %ep, %dp)>,                      <$8(' ')>
             inc .64bit  <%dp>
             loop        <%cb>,                                      <.scroll.loop>
 
-        mov .16bit      <%exr0>,                                    <$(2000 - 80)>
+        mov .16bit      <%exr0>,                                    <$16(2000 - 80)>
         SETCUSP
         REFRESH
     .exit:
 
     popall
-    int                 <$(0x15)>
+    int                 <$8(0x15)>
     ret
 
 ; _puts(%DB:%DP), null terminated string
 _puts:
     pushall
     .loop:
-        mov .8bit       <%r2>,                                      <*1&8(%db, %dp, $(0))>
+        mov .8bit       <%r2>,                                      <*1&8(%db, %dp, $8(0))>
 
-        cmp .8bit       <%r2>,                                      <$(0)>
+        cmp .8bit       <%r2>,                                      <$8(0)>
         je              <%cb>,                                      <.exit>
 
-        cmp .8bit       <%r2>,                                      <$(0x0A)>
+        cmp .8bit       <%r2>,                                      <$8(0x0A)>
         jne             <%cb>,                                      <.skip_newline>
 
         .newline:
         call            <%cb>,                                      <_newline>
         mov .64bit      <%fer3>,                                    <.last_offset>
-        mov .16bit      <*1&16($(0), %fer3, $(0))>,                 <%exr0>
+        mov .16bit      <*1&16($8(0), %fer3, $8(0))>,               <%exr0>
         jmp             <%cb>,      <.end>
 
         .skip_newline:
         xor .8bit       <%r3>,                                      <%r3>
         mov .64bit      <%fer3>,                                    <.last_offset>
-        mov .16bit      <%exr0>,                                    <*1&16($(0), %fer3, $(0))>
+        mov .16bit      <%exr0>,                                    <*1&16($8(0), %fer3, $8(0))>
         call            <%cb>,                                      <_putc>
 
         inc .16bit      <%exr0>
-        cmp .16bit      <%exr0>,                                    <$(2000)>
+        cmp .16bit      <%exr0>,                                    <$16(2000)>
         je              <%cb>,                                      <.newline>
 
-        mov .16bit      <*1&16($(0), %fer3, $(0))>,                 <%exr0>
+        mov .16bit      <*1&16($8(0), %fer3, $8(0))>,               <%exr0>
         SETCUSP
 
         .end:
@@ -3293,16 +3263,16 @@ _print_num:
     ; record occurrences of digits
     xor .64bit          <%fer2>,                                    <%fer2>
     .loop:
-        div .64bit      <$(10)>
+        div .64bit      <$64(10)>
         ; %fer0 ==> ori
         ; %fer1 ==> reminder
         mov  .64bit     <%fer3>,                                    <%fer1>
-        add  .64bit     <%fer3>,                                    <$('0')>
+        add  .64bit     <%fer3>,                                    <$64('0')>
         push .64bit     <%fer3>
 
         inc .64bit      <%fer2>
 
-        cmp .64bit      <%fer0>,                                    <$(0x00)>
+        cmp .64bit      <%fer0>,                                    <$64(0x00)>
         jne             <%cb>,                                      <.loop>
 
     xor .64bit          <%db>,                                      <%db>
@@ -3311,11 +3281,11 @@ _print_num:
     mov .64bit          <%fer3>,                                    <%fer2>
     .loop_pop:
         pop .64bit      <%fer0>
-        mov .8bit       <*1&8(%db, %dp, $(0))>,                     <%r0>
+        mov .8bit       <*1&8(%db, %dp, $8(0))>,                    <%r0>
         inc .64bit      <%dp>
         loop            <%cb>,                                      <.loop_pop>
 
-    mov .8bit           <*1&8(%db, %dp, $(0))>,                     <$(0)>
+    mov .8bit           <*1&8(%db, %dp, $8(0))>,                    <$8(0)>
     mov .64bit          <%dp>,                                      <.cache>
     call                <%cb>,                                      <_puts>
 
@@ -3326,27 +3296,28 @@ _print_num:
         .resvb < 16 >
 
 _start:
-    mov .64bit          <%sp>,                                      <$(0xFFF)>
-    mov .64bit          <%sb>,                                      <_stack_frame>
-    mov .64bit          <*1&64($(0xA0000), $(16 * 128),  $(8))>,    <_int_rtc>
-    mov .64bit          <*1&64($(0xA0000), $(16 * 5), $(8))>,       <_int_kb_abort>
+    mov .64bit          <%sp>,                                              <$64(0xFFF)>
+    mov .64bit          <%sb>,                                              <_stack_frame>
+    mov .64bit          <*1&64($64(0xA0000), $32(16 * 128),  $8(8))>,       <_int_rtc>
+    mov .64bit          <*1&64($64(0xA0000), $32(16 * 5),   $8(8))>,        <_int_kb_abort>
+    mov .64bit          <*1&64($64(0xA0000), $32(16 * 9),   $8(8))>,        <_int_kb_abort>
     ; out .64bit          <$(RTC_TIME)>,                              <$(1560600000)>
-    out .64bit          <$(RTC_INT)>,                               <$(0x4E2080)>   ; 1s, 0x80
+    out .64bit          <$64(RTC_INT)>,                                     <$64(0x4E2080)>   ; 1s, 0x80
 
     .inf_loop:
-        int             <$(0x14)>
-        cmp .8bit       <%r0>,                                      <$('q')>
+        int             <$8(0x14)>
+        cmp .8bit       <%r0>,                                      <$8('q')>
         jne             <%cb>,                                      <.inf_loop>
 
     xor .64bit          <%fer0>,                                    <%fer0>
     hlt
 
 _int_kb_abort:
-    int                 <$(0x17)>
+    int                 <$8(0x17)>
     xor .64bit          <%db>,                                      <%db>
     mov .64bit          <%dp>,                                      <.message>
     call                <%cb>,                                      <_puts>
-    mov .64bit          <%fer3>,                                    <$(0x1FFFFF)>
+    mov .64bit          <%fer3>,                                    <$64(0x1FFFFF)>
     .wait:
     loop                <%cb>,                                      <.wait>
     xor .64bit          <%fer0>,                                    <%fer0>
@@ -3364,30 +3335,30 @@ is_leap_year:
     mov .64bit          <%fer2>,                                    <%fer0>
 
     ; %fer0 % 400 == 0 ==> 1
-    div .64bit          <$(400)>
-    cmp .64bit          <%fer1>,                                    <$(0)>
+    div .64bit          <$64(400)>
+    cmp .64bit          <%fer1>,                                    <$64(0)>
     je                  <%cb>,                                      <.return1>
 
     ; %fer0 % 100 == 0 ==> 0
     mov .64bit          <%fer0>,                                    <%fer2>
-    div .64bit          <$(100)>
-    cmp .64bit          <%fer1>,                                    <$(0)>
+    div .64bit          <$64(100)>
+    cmp .64bit          <%fer1>,                                    <$64(0)>
     je                  <%cb>,                                      <.return0>
 
     ; %fer0 % 4 == 0 ==> 1
     mov .64bit          <%fer0>,                                    <%fer2>
-    div .64bit          <$(4)>
-    cmp .64bit          <%fer1>,                                    <$(0)>
+    div .64bit          <$64(4)>
+    cmp .64bit          <%fer1>,                                    <$64(0)>
     je                  <%cb>,                                      <.return1>
 
     jmp                 <%cb>,                                      <.return0>
 
     .return1:
-    mov .64bit          <%fer0>,                                    <$(1)>
+    mov .64bit          <%fer0>,                                    <$64(1)>
     jmp                 <%cb>,                                      <.return>
 
     .return0:
-    mov .64bit          <%fer0>,                                    <$(0)>
+    mov .64bit          <%fer0>,                                    <$64(0)>
 
     .return:
     pop .64bit          <%fer2>
@@ -3397,87 +3368,87 @@ is_leap_year:
 ; Function to get the number of days in a month for a given year
 ; get_days_in_month(month ==> %fer0, year ==> %fer1)-> days ==> %fer0
 get_days_in_month:
-    cmp .64bit          <%fer0>,                                    <$(1)>
+    cmp .64bit          <%fer0>,                                    <$64(1)>
     je                  <%cb>,                                      <.month1>
-    cmp .64bit          <%fer0>,                                    <$(2)>
+    cmp .64bit          <%fer0>,                                    <$64(2)>
     je                  <%cb>,                                      <.month2>
-    cmp .64bit          <%fer0>,                                    <$(3)>
+    cmp .64bit          <%fer0>,                                    <$64(3)>
     je                  <%cb>,                                      <.month3>
-    cmp .64bit          <%fer0>,                                    <$(4)>
+    cmp .64bit          <%fer0>,                                    <$64(4)>
     je                  <%cb>,                                      <.month4>
-    cmp .64bit          <%fer0>,                                    <$(5)>
+    cmp .64bit          <%fer0>,                                    <$64(5)>
     je                  <%cb>,                                      <.month5>
-    cmp .64bit          <%fer0>,                                    <$(6)>
+    cmp .64bit          <%fer0>,                                    <$64(6)>
     je                  <%cb>,                                      <.month6>
-    cmp .64bit          <%fer0>,                                    <$(7)>
+    cmp .64bit          <%fer0>,                                    <$64(7)>
     je                  <%cb>,                                      <.month7>
-    cmp .64bit          <%fer0>,                                    <$(8)>
+    cmp .64bit          <%fer0>,                                    <$64(8)>
     je                  <%cb>,                                      <.month8>
-    cmp .64bit          <%fer0>,                                    <$(9)>
+    cmp .64bit          <%fer0>,                                    <$64(9)>
     je                  <%cb>,                                      <.month9>
-    cmp .64bit          <%fer0>,                                    <$(10)>
+    cmp .64bit          <%fer0>,                                    <$64(10)>
     je                  <%cb>,                                      <.month10>
-    cmp .64bit          <%fer0>,                                    <$(11)>
+    cmp .64bit          <%fer0>,                                    <$64(11)>
     je                  <%cb>,                                      <.month11>
-    cmp .64bit          <%fer0>,                                    <$(12)>
+    cmp .64bit          <%fer0>,                                    <$64(12)>
     je                  <%cb>,                                      <.month12>
 
     .month1:
-    mov .64bit          <%fer0>,                                    <$(31)>
+    mov .64bit          <%fer0>,                                    <$64(31)>
     jmp                 <%cb>,                                      <.end>
 
     .month2:
     mov .64bit          <%fer0>,                                    <%fer1>
     call                <%cb>,                                      <is_leap_year>
-    cmp .64bit          <%fer0>,                                    <$(1)>
+    cmp .64bit          <%fer0>,                                    <$64(1)>
     je                  <%cb>,                                      <.leap>
 
     .not_leap:
-        mov .64bit      <%fer0>,                                    <$(28)>
+        mov .64bit      <%fer0>,                                    <$64(28)>
         jmp             <%cb>,                                      <.end>
 
     .leap:
-        mov .64bit      <%fer0>,                                    <$(29)>
+        mov .64bit      <%fer0>,                                    <$64(29)>
         jmp             <%cb>,                                      <.end>
 
     .month3:
-    mov .64bit          <%fer0>,                                    <$(31)>
+    mov .64bit          <%fer0>,                                    <$64(31)>
     jmp                 <%cb>,                                      <.end>
 
     .month4:
-    mov .64bit          <%fer0>,                                    <$(30)>
+    mov .64bit          <%fer0>,                                    <$64(30)>
     jmp                 <%cb>,                                      <.end>
 
     .month5:
-    mov .64bit          <%fer0>,                                    <$(31)>
+    mov .64bit          <%fer0>,                                    <$64(31)>
     jmp                 <%cb>,                                      <.end>
 
     .month6:
-    mov .64bit          <%fer0>,                                    <$(30)>
+    mov .64bit          <%fer0>,                                    <$64(30)>
     jmp                 <%cb>,                                      <.end>
 
     .month7:
-    mov .64bit          <%fer0>,                                    <$(31)>
+    mov .64bit          <%fer0>,                                    <$64(31)>
     jmp                 <%cb>,                                      <.end>
 
     .month8:
-    mov .64bit          <%fer0>,                                    <$(31)>
+    mov .64bit          <%fer0>,                                    <$64(31)>
     jmp                 <%cb>,                                      <.end>
 
     .month9:
-    mov .64bit          <%fer0>,                                    <$(30)>
+    mov .64bit          <%fer0>,                                    <$64(30)>
     jmp                 <%cb>,                                      <.end>
 
     .month10:
-    mov .64bit          <%fer0>,                                    <$(31)>
+    mov .64bit          <%fer0>,                                    <$64(31)>
     jmp                 <%cb>,                                      <.end>
 
     .month11:
-    mov .64bit          <%fer0>,                                    <$(30)>
+    mov .64bit          <%fer0>,                                    <$64(30)>
     jmp                 <%cb>,                                      <.end>
 
     .month12:
-    mov .64bit          <%fer0>,                                    <$(31)>
+    mov .64bit          <%fer0>,                                    <$64(31)>
 
     .end:
     ret
@@ -3488,22 +3459,22 @@ determine_the_year:
     push .64bit         <%fer3>
 
     mov .64bit          <%fer1>,                                    <%fer0>
-    mov .64bit          <%fer2>,                                    <$(1970)>
+    mov .64bit          <%fer2>,                                    <$64(1970)>
 
     ; %fer1 => total_days, %fer2 => year
 
     .loop:
         mov .64bit      <%fer0>,                                    <%fer2>
         call            <%cb>,                                      <is_leap_year>
-        cmp .64bit      <%fer0>,                                    <$(1)>
+        cmp .64bit      <%fer0>,                                    <$64(1)>
         je              <%cb>,                                      <.is_leap>
 
         .is_not_leap:
-        mov .64bit      <%fer3>,                                    <$(365)>
+        mov .64bit      <%fer3>,                                    <$64(365)>
         jmp             <%cb>,                                      <.end_is_leap_cmp>
 
         .is_leap:
-        mov .64bit      <%fer3>,                                    <$(366)>
+        mov .64bit      <%fer3>,                                    <$64(366)>
 
         .end_is_leap_cmp:
         cmp .64bit      <%fer1>,                                    <%fer3>
@@ -3526,7 +3497,7 @@ determine_the_month:
     push .64bit         <%fer3>
 
     ; %fer2 => month counter
-    mov .64bit          <%fer2>,                                    <$(1)>
+    mov .64bit          <%fer2>,                                    <$64(1)>
     ; total_days => %fer3
     mov .64bit          <%fer3>,                                    <%fer0>
 
@@ -3610,8 +3581,8 @@ _print_time:
     mov .64bit          <%db>,                                      <.months>
     mov .64bit          <%dp>,                                      <%fer10>
     dec .64bit          <%dp>
-    lea                 <%dp>,                                      <*4&8(%dp, $(0), $(0))>
-    lea                 <%fer0>,                                    <*1&8(%db, %dp, $(0))>
+    lea                 <%dp>,                                      <*4&8(%dp, $8(0), $8(0))>
+    lea                 <%fer0>,                                    <*1&8(%db, %dp, $8(0))>
     call                <%cb>,                                      <_puts>
 
     xor .64bit          <%db>,                                      <%db>
@@ -3682,7 +3653,7 @@ _int_rtc:
     xor .64bit          <%db>,                                      <%db>
     mov .64bit          <%dp>,                                      <.message>
     call                <%cb>,                                      <_puts>
-    in .64bit           <$(RTC_TIME)>,                              <%fer0>
+    in .64bit           <$64(RTC_TIME)>,                            <%fer0>
 
     ; output current time
     call                <%cb>,                                      <_print_time>
@@ -3709,755 +3680,736 @@ rtc.sys        FORMAT    SYS
 
 SYMBOL TABLE - SIZE 56:
 00000000000C180E                             _putc
-00000000000C1865                             _newline
-00000000000C18D7                             _newline_scroll
-00000000000C194A                             _newline_scroll_loop
-00000000000C199A                             _newline_exit
-00000000000C19A7                             _puts
-00000000000C19A8                             _puts_loop
-00000000000C19FA                             _puts_newline
-00000000000C1A44                             _puts_skip_newline
-00000000000C1AD4                             _puts_end
-00000000000C1AE7                             _puts_exit
-00000000000C1AE9                             _puts_last_offset
-00000000000C1AEB                             _print_num
-00000000000C1AF4                             _print_num_loop
-00000000000C1B5D                             _print_num_loop_pop
-00000000000C1BCB                             _print_num_cache
-00000000000C1BDB                             _start
-00000000000C1C69                             _start_inf_loop
-00000000000C1C9A                             _int_kb_abort
-00000000000C1CD9                             _int_kb_abort_wait
-00000000000C1CF0                             _int_kb_abort_message
-00000000000C1D03                             is_leap_year
-00000000000C1DAE                             is_leap_year_return1
-00000000000C1DCB                             is_leap_year_return0
-00000000000C1DDA                             is_leap_year_return
-00000000000C1DE5                             get_days_in_month
-00000000000C1F41                             get_days_in_month_month1
-00000000000C1F5E                             get_days_in_month_month2
-00000000000C1FAE                             get_days_in_month_leap
-00000000000C1FCB                             get_days_in_month_month3
-00000000000C1FE8                             get_days_in_month_month4
-00000000000C2005                             get_days_in_month_month5
-00000000000C2022                             get_days_in_month_month6
-00000000000C203F                             get_days_in_month_month7
-00000000000C205C                             get_days_in_month_month8
-00000000000C2079                             get_days_in_month_month9
-00000000000C2096                             get_days_in_month_month10
-00000000000C20B3                             get_days_in_month_month11
-00000000000C20D0                             get_days_in_month_month12
-00000000000C20DF                             get_days_in_month_end
-00000000000C20E0                             determine_the_year
-00000000000C2101                             determine_the_year_loop
-00000000000C2151                             determine_the_year_is_leap
-00000000000C2160                             determine_the_year_end_is_leap_cmp
-00000000000C2191                             determine_the_year_break
-00000000000C21A4                             determine_the_month
-00000000000C21C5                             determine_the_month_loop
-00000000000C220C                             determine_the_month_break
-00000000000C2227                             _print_time
-00000000000C243D                             _print_time_col
-00000000000C243F                             _print_time_space
-00000000000C2441                             _print_time_months
-00000000000C2471                             _int_rtc
-00000000000C24D1                             _int_rtc_message
-00000000000C24E0                             _int_rtc_message_tail
-00000000000C24E6                             _stack_frame
+00000000000C1857                             _newline
+00000000000C18A2                             _newline_scroll
+00000000000C1915                             _newline_scroll_loop
+00000000000C194A                             _newline_exit
+00000000000C1950                             _puts
+00000000000C1951                             _puts_loop
+00000000000C198E                             _puts_newline
+00000000000C19CA                             _puts_skip_newline
+00000000000C1A31                             _puts_end
+00000000000C1A44                             _puts_exit
+00000000000C1A46                             _puts_last_offset
+00000000000C1A48                             _print_num
+00000000000C1A51                             _print_num_loop
+00000000000C1ABA                             _print_num_loop_pop
+00000000000C1B13                             _print_num_cache
+00000000000C1B23                             _start
+00000000000C1BBD                             _start_inf_loop
+00000000000C1BE0                             _int_kb_abort
+00000000000C1C18                             _int_kb_abort_wait
+00000000000C1C2F                             _int_kb_abort_message
+00000000000C1C42                             is_leap_year
+00000000000C1CED                             is_leap_year_return1
+00000000000C1D0A                             is_leap_year_return0
+00000000000C1D19                             is_leap_year_return
+00000000000C1D24                             get_days_in_month
+00000000000C1E80                             get_days_in_month_month1
+00000000000C1E9D                             get_days_in_month_month2
+00000000000C1EED                             get_days_in_month_leap
+00000000000C1F0A                             get_days_in_month_month3
+00000000000C1F27                             get_days_in_month_month4
+00000000000C1F44                             get_days_in_month_month5
+00000000000C1F61                             get_days_in_month_month6
+00000000000C1F7E                             get_days_in_month_month7
+00000000000C1F9B                             get_days_in_month_month8
+00000000000C1FB8                             get_days_in_month_month9
+00000000000C1FD5                             get_days_in_month_month10
+00000000000C1FF2                             get_days_in_month_month11
+00000000000C200F                             get_days_in_month_month12
+00000000000C201E                             get_days_in_month_end
+00000000000C201F                             determine_the_year
+00000000000C2040                             determine_the_year_loop
+00000000000C2090                             determine_the_year_is_leap
+00000000000C209F                             determine_the_year_end_is_leap_cmp
+00000000000C20D0                             determine_the_year_break
+00000000000C20E3                             determine_the_month
+00000000000C2104                             determine_the_month_loop
+00000000000C214B                             determine_the_month_break
+00000000000C2166                             _print_time
+00000000000C2367                             _print_time_col
+00000000000C2369                             _print_time_space
+00000000000C236B                             _print_time_months
+00000000000C239B                             _int_rtc
+00000000000C23FB                             _int_rtc_message
+00000000000C240A                             _int_rtc_message_tail
+00000000000C2410                             _stack_frame
 
 
-00000000000C1800: 30 01 64 A2 02 64 DB 1B     JMP <%CB>, <$(0xC1BDB)>
+00000000000C1800: 30 01 64 A2 02 64 23 1B     JMP <%CB>, <$64(0xC1B23)>
                   0C 00 00 00 00 00 
 
 
 <_putc> :
 00000000000C180E: 24                          PUSHALL
-00000000000C180F: 20 64 01 64 A3 02 64 00     MOV .64bit <%DB>, <$(0xB8000)>
+00000000000C180F: 20 64 01 64 A3 02 64 00     MOV .64bit <%DB>, <$64(0xB8000)>
                   80 0B 00 00 00 00 00 
 00000000000C181E: 22 16 01 16 01              PUSH .16bit <%EXR1>
 00000000000C1823: 12 16 01 16 01 01 16 01     XOR .16bit <%EXR1>, <%EXR1>
 00000000000C182B: 12 32 01 32 01 01 32 01     XOR .32bit <%HER1>, <%HER1>
 00000000000C1833: 20 64 01 64 A4 01 64 00     MOV .64bit <%DP>, <%FER0>
 00000000000C183B: 23 16 01 16 00              POP .16bit <%EXR0>
-00000000000C1840: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $(0x0))>, <%R0>
-                  64 A4 02 64 00 00 00 00 
-                  00 00 00 00 01 01 08 00 
-00000000000C1858: 39 02 64 18 00 00 00 00     INT <$(0x18)>
-                  00 00 00 
-00000000000C1863: 25                          POPALL
-00000000000C1864: 32                          RET
+00000000000C1840: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $8(0x0))>, <%R0>
+                  64 A4 02 08 00 01 01 08 
+                  00 
+00000000000C1851: 39 02 08 18                 INT <$8(0x18)>
+00000000000C1855: 25                          POPALL
+00000000000C1856: 32                          RET
 
 
 <_newline> :
-00000000000C1865: 24                          PUSHALL
-00000000000C1866: 39 02 64 15 00 00 00 00     INT <$(0x15)>
-                  00 00 00 
-00000000000C1871: 08 16 02 64 50 00 00 00     DIV .16bit <$(0x50)>
-                  00 00 00 00 
-00000000000C187D: 0A 16 01 16 00 02 64 18     CMP .16bit <%EXR0>, <$(0x18)>
-                  00 00 00 00 00 00 00 
-00000000000C188C: 37 01 64 A2 02 64 D7 18     JBE <%CB>, <$(0xC18D7)>
+00000000000C1857: 24                          PUSHALL
+00000000000C1858: 39 02 08 15                 INT <$8(0x15)>
+00000000000C185C: 08 16 02 16 50 00           DIV .16bit <$16(0x50)>
+00000000000C1862: 0A 16 01 16 00 02 16 18     CMP .16bit <%EXR0>, <$16(0x18)>
+                  00 
+00000000000C186B: 37 01 64 A2 02 64 A2 18     JBE <%CB>, <$64(0xC18A2)>
                   0C 00 00 00 00 00 
-00000000000C189A: 12 16 01 16 01 01 16 01     XOR .16bit <%EXR1>, <%EXR1>
-00000000000C18A2: 0B 16 01 16 00              INC .16bit <%EXR0>
-00000000000C18A7: 06 16 02 64 50 00 00 00     MUL .16bit <$(0x50)>
-                  00 00 00 00 
-00000000000C18B3: 39 02 64 11 00 00 00 00     INT <$(0x11)>
-                  00 00 00 
-00000000000C18BE: 39 02 64 18 00 00 00 00     INT <$(0x18)>
-                  00 00 00 
-00000000000C18C9: 30 01 64 A2 02 64 9A 19     JMP <%CB>, <$(0xC199A)>
+00000000000C1879: 12 16 01 16 01 01 16 01     XOR .16bit <%EXR1>, <%EXR1>
+00000000000C1881: 0B 16 01 16 00              INC .16bit <%EXR0>
+00000000000C1886: 06 16 02 16 50 00           MUL .16bit <$16(0x50)>
+00000000000C188C: 39 02 08 11                 INT <$8(0x11)>
+00000000000C1890: 39 02 08 18                 INT <$8(0x18)>
+00000000000C1894: 30 01 64 A2 02 64 4A 19     JMP <%CB>, <$64(0xC194A)>
                   0C 00 00 00 00 00 
 
 
 <_newline_scroll> :
-00000000000C18D7: 20 64 01 64 A3 02 64 00     MOV .64bit <%DB>, <$(0xB8000)>
+00000000000C18A2: 20 64 01 64 A3 02 64 00     MOV .64bit <%DB>, <$64(0xB8000)>
                   80 0B 00 00 00 00 00 
-00000000000C18E6: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
-00000000000C18EE: 20 64 01 64 A5 02 64 50     MOV .64bit <%EB>, <$(0xB8050)>
+00000000000C18B1: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
+00000000000C18B9: 20 64 01 64 A5 02 64 50     MOV .64bit <%EB>, <$64(0xB8050)>
                   80 0B 00 00 00 00 00 
-00000000000C18FD: 12 64 01 64 A6 01 64 A6     XOR .64bit <%EP>, <%EP>
-00000000000C1905: 20 64 01 64 03 02 64 80     MOV .64bit <%FER3>, <$(0x780)>
+00000000000C18C8: 12 64 01 64 A6 01 64 A6     XOR .64bit <%EP>, <%EP>
+00000000000C18D0: 20 64 01 64 03 02 64 80     MOV .64bit <%FER3>, <$64(0x780)>
                   07 00 00 00 00 00 00 
-00000000000C1914: 28                          MOVS
-00000000000C1915: 20 64 01 64 03 02 64 50     MOV .64bit <%FER3>, <$(0x50)>
+00000000000C18DF: 28                          MOVS
+00000000000C18E0: 20 64 01 64 03 02 64 50     MOV .64bit <%FER3>, <$64(0x50)>
                   00 00 00 00 00 00 00 
-00000000000C1924: 20 64 01 64 A5 02 64 00     MOV .64bit <%EB>, <$(0xB8000)>
+00000000000C18EF: 20 64 01 64 A5 02 64 00     MOV .64bit <%EB>, <$64(0xB8000)>
                   80 0B 00 00 00 00 00 
-00000000000C1933: 20 64 01 64 A6 02 64 80     MOV .64bit <%EP>, <$(0x780)>
+00000000000C18FE: 20 64 01 64 A6 02 64 80     MOV .64bit <%EP>, <$64(0x780)>
                   07 00 00 00 00 00 00 
-00000000000C1942: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
+00000000000C190D: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
 
 
 <_newline_scroll_loop> :
-00000000000C194A: 20 08 03 08 01 64 A5 01     MOV .8bit  <*1&8(%EB, %EP, %DP)>, <$(0x20)>
-                  64 A6 01 64 A4 01 02 64 
-                  20 00 00 00 00 00 00 00 
-00000000000C1962: 0B 64 01 64 A4              INC .64bit <%DP>
-00000000000C1967: 60 01 64 A2 02 64 4A 19     LOOP <%CB>, <$(0xC194A)>
+00000000000C1915: 20 08 03 08 01 64 A5 01     MOV .8bit  <*1&8(%EB, %EP, %DP)>, <$8(0x20)>
+                  64 A6 01 64 A4 01 02 08 
+                  20 
+00000000000C1926: 0B 64 01 64 A4              INC .64bit <%DP>
+00000000000C192B: 60 01 64 A2 02 64 15 19     LOOP <%CB>, <$64(0xC1915)>
                   0C 00 00 00 00 00 
-00000000000C1975: 20 16 01 16 00 02 64 80     MOV .16bit <%EXR0>, <$(0x780)>
-                  07 00 00 00 00 00 00 
-00000000000C1984: 39 02 64 11 00 00 00 00     INT <$(0x11)>
-                  00 00 00 
-00000000000C198F: 39 02 64 18 00 00 00 00     INT <$(0x18)>
-                  00 00 00 
+00000000000C1939: 20 16 01 16 00 02 16 80     MOV .16bit <%EXR0>, <$16(0x780)>
+                  07 
+00000000000C1942: 39 02 08 11                 INT <$8(0x11)>
+00000000000C1946: 39 02 08 18                 INT <$8(0x18)>
 
 
 <_newline_exit> :
-00000000000C199A: 25                          POPALL
-00000000000C199B: 39 02 64 15 00 00 00 00     INT <$(0x15)>
-                  00 00 00 
-00000000000C19A6: 32                          RET
+00000000000C194A: 25                          POPALL
+00000000000C194B: 39 02 08 15                 INT <$8(0x15)>
+00000000000C194F: 32                          RET
 
 
 <_puts> :
-00000000000C19A7: 24                          PUSHALL
+00000000000C1950: 24                          PUSHALL
 
 
 <_puts_loop> :
-00000000000C19A8: 20 08 01 08 02 03 08 01     MOV .8bit  <%R2>, <*1&8(%DB, %DP, $(0x0))>
-                  64 A3 01 64 A4 02 64 00 
-                  00 00 00 00 00 00 00 01 
-00000000000C19C0: 0A 08 01 08 02 02 64 00     CMP .8bit  <%R2>, <$(0x0)>
-                  00 00 00 00 00 00 00 
-00000000000C19CF: 33 01 64 A2 02 64 E7 1A     JE <%CB>, <$(0xC1AE7)>
+00000000000C1951: 20 08 01 08 02 03 08 01     MOV .8bit  <%R2>, <*1&8(%DB, %DP, $8(0x0))>
+                  64 A3 01 64 A4 02 08 00 
+                  01 
+00000000000C1962: 0A 08 01 08 02 02 08 00     CMP .8bit  <%R2>, <$8(0x0)>
+00000000000C196A: 33 01 64 A2 02 64 44 1A     JE <%CB>, <$64(0xC1A44)>
                   0C 00 00 00 00 00 
-00000000000C19DD: 0A 08 01 08 02 02 64 0A     CMP .8bit  <%R2>, <$(0xA)>
-                  00 00 00 00 00 00 00 
-00000000000C19EC: 34 01 64 A2 02 64 44 1A     JNE <%CB>, <$(0xC1A44)>
+00000000000C1978: 0A 08 01 08 02 02 08 0A     CMP .8bit  <%R2>, <$8(0xA)>
+00000000000C1980: 34 01 64 A2 02 64 CA 19     JNE <%CB>, <$64(0xC19CA)>
                   0C 00 00 00 00 00 
 
 
 <_puts_newline> :
-00000000000C19FA: 31 01 64 A2 02 64 65 18     CALL <%CB>, <$(0xC1865)>
+00000000000C198E: 31 01 64 A2 02 64 57 18     CALL <%CB>, <$64(0xC1857)>
                   0C 00 00 00 00 00 
-00000000000C1A08: 20 64 01 64 03 02 64 E9     MOV .64bit <%FER3>, <$(0xC1AE9)>
+00000000000C199C: 20 64 01 64 03 02 64 46     MOV .64bit <%FER3>, <$64(0xC1A46)>
                   1A 0C 00 00 00 00 00 
-00000000000C1A17: 20 16 03 16 02 64 00 00     MOV .16bit <*1&16($(0x0), %FER3, $(0x0))>, <%EXR0>
-                  00 00 00 00 00 00 01 64 
-                  03 02 64 00 00 00 00 00 
-                  00 00 00 01 01 16 00 
-00000000000C1A36: 30 01 64 A2 02 64 D4 1A     JMP <%CB>, <$(0xC1AD4)>
+00000000000C19AB: 20 16 03 16 02 08 00 01     MOV .16bit <*1&16($8(0x0), %FER3, $8(0x0))>, <%EXR0>
+                  64 03 02 08 00 01 01 16 
+                  00 
+00000000000C19BC: 30 01 64 A2 02 64 31 1A     JMP <%CB>, <$64(0xC1A31)>
                   0C 00 00 00 00 00 
 
 
 <_puts_skip_newline> :
-00000000000C1A44: 12 08 01 08 03 01 08 03     XOR .8bit  <%R3>, <%R3>
-00000000000C1A4C: 20 64 01 64 03 02 64 E9     MOV .64bit <%FER3>, <$(0xC1AE9)>
+00000000000C19CA: 12 08 01 08 03 01 08 03     XOR .8bit  <%R3>, <%R3>
+00000000000C19D2: 20 64 01 64 03 02 64 46     MOV .64bit <%FER3>, <$64(0xC1A46)>
                   1A 0C 00 00 00 00 00 
-00000000000C1A5B: 20 16 01 16 00 03 16 02     MOV .16bit <%EXR0>, <*1&16($(0x0), %FER3, $(0x0))>
-                  64 00 00 00 00 00 00 00 
-                  00 01 64 03 02 64 00 00 
-                  00 00 00 00 00 00 01 
-00000000000C1A7A: 31 01 64 A2 02 64 0E 18     CALL <%CB>, <$(0xC180E)>
+00000000000C19E1: 20 16 01 16 00 03 16 02     MOV .16bit <%EXR0>, <*1&16($8(0x0), %FER3, $8(0x0))>
+                  08 00 01 64 03 02 08 00 
+                  01 
+00000000000C19F2: 31 01 64 A2 02 64 0E 18     CALL <%CB>, <$64(0xC180E)>
                   0C 00 00 00 00 00 
-00000000000C1A88: 0B 16 01 16 00              INC .16bit <%EXR0>
-00000000000C1A8D: 0A 16 01 16 00 02 64 D0     CMP .16bit <%EXR0>, <$(0x7D0)>
-                  07 00 00 00 00 00 00 
-00000000000C1A9C: 33 01 64 A2 02 64 FA 19     JE <%CB>, <$(0xC19FA)>
+00000000000C1A00: 0B 16 01 16 00              INC .16bit <%EXR0>
+00000000000C1A05: 0A 16 01 16 00 02 16 D0     CMP .16bit <%EXR0>, <$16(0x7D0)>
+                  07 
+00000000000C1A0E: 33 01 64 A2 02 64 8E 19     JE <%CB>, <$64(0xC198E)>
                   0C 00 00 00 00 00 
-00000000000C1AAA: 20 16 03 16 02 64 00 00     MOV .16bit <*1&16($(0x0), %FER3, $(0x0))>, <%EXR0>
-                  00 00 00 00 00 00 01 64 
-                  03 02 64 00 00 00 00 00 
-                  00 00 00 01 01 16 00 
-00000000000C1AC9: 39 02 64 11 00 00 00 00     INT <$(0x11)>
-                  00 00 00 
+00000000000C1A1C: 20 16 03 16 02 08 00 01     MOV .16bit <*1&16($8(0x0), %FER3, $8(0x0))>, <%EXR0>
+                  64 03 02 08 00 01 01 16 
+                  00 
+00000000000C1A2D: 39 02 08 11                 INT <$8(0x11)>
 
 
 <_puts_end> :
-00000000000C1AD4: 0B 64 01 64 A4              INC .64bit <%DP>
-00000000000C1AD9: 30 01 64 A2 02 64 A8 19     JMP <%CB>, <$(0xC19A8)>
+00000000000C1A31: 0B 64 01 64 A4              INC .64bit <%DP>
+00000000000C1A36: 30 01 64 A2 02 64 51 19     JMP <%CB>, <$64(0xC1951)>
                   0C 00 00 00 00 00 
 
 
 <_puts_exit> :
-00000000000C1AE7: 25                          POPALL
-00000000000C1AE8: 32                          RET
+00000000000C1A44: 25                          POPALL
+00000000000C1A45: 32                          RET
 
 
 <_puts_last_offset> :
-00000000000C1AE9: 00                          NOP
-00000000000C1AEA: 00                          NOP
+00000000000C1A46: 00                          NOP
+00000000000C1A47: 00                          NOP
 
 
 <_print_num> :
-00000000000C1AEB: 24                          PUSHALL
-00000000000C1AEC: 12 64 01 64 02 01 64 02     XOR .64bit <%FER2>, <%FER2>
+00000000000C1A48: 24                          PUSHALL
+00000000000C1A49: 12 64 01 64 02 01 64 02     XOR .64bit <%FER2>, <%FER2>
 
 
 <_print_num_loop> :
-00000000000C1AF4: 08 64 02 64 0A 00 00 00     DIV .64bit <$(0xA)>
+00000000000C1A51: 08 64 02 64 0A 00 00 00     DIV .64bit <$64(0xA)>
                   00 00 00 00 
-00000000000C1B00: 20 64 01 64 03 01 64 01     MOV .64bit <%FER3>, <%FER1>
-00000000000C1B08: 01 64 01 64 03 02 64 30     ADD .64bit <%FER3>, <$(0x30)>
+00000000000C1A5D: 20 64 01 64 03 01 64 01     MOV .64bit <%FER3>, <%FER1>
+00000000000C1A65: 01 64 01 64 03 02 64 30     ADD .64bit <%FER3>, <$64(0x30)>
                   00 00 00 00 00 00 00 
-00000000000C1B17: 22 64 01 64 03              PUSH .64bit <%FER3>
-00000000000C1B1C: 0B 64 01 64 02              INC .64bit <%FER2>
-00000000000C1B21: 0A 64 01 64 00 02 64 00     CMP .64bit <%FER0>, <$(0x0)>
+00000000000C1A74: 22 64 01 64 03              PUSH .64bit <%FER3>
+00000000000C1A79: 0B 64 01 64 02              INC .64bit <%FER2>
+00000000000C1A7E: 0A 64 01 64 00 02 64 00     CMP .64bit <%FER0>, <$64(0x0)>
                   00 00 00 00 00 00 00 
-00000000000C1B30: 34 01 64 A2 02 64 F4 1A     JNE <%CB>, <$(0xC1AF4)>
+00000000000C1A8D: 34 01 64 A2 02 64 51 1A     JNE <%CB>, <$64(0xC1A51)>
                   0C 00 00 00 00 00 
-00000000000C1B3E: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1B46: 20 64 01 64 A4 02 64 CB     MOV .64bit <%DP>, <$(0xC1BCB)>
+00000000000C1A9B: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1AA3: 20 64 01 64 A4 02 64 13     MOV .64bit <%DP>, <$64(0xC1B13)>
                   1B 0C 00 00 00 00 00 
-00000000000C1B55: 20 64 01 64 03 01 64 02     MOV .64bit <%FER3>, <%FER2>
+00000000000C1AB2: 20 64 01 64 03 01 64 02     MOV .64bit <%FER3>, <%FER2>
 
 
 <_print_num_loop_pop> :
-00000000000C1B5D: 23 64 01 64 00              POP .64bit <%FER0>
-00000000000C1B62: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $(0x0))>, <%R0>
-                  64 A4 02 64 00 00 00 00 
-                  00 00 00 00 01 01 08 00 
-00000000000C1B7A: 0B 64 01 64 A4              INC .64bit <%DP>
-00000000000C1B7F: 60 01 64 A2 02 64 5D 1B     LOOP <%CB>, <$(0xC1B5D)>
+00000000000C1ABA: 23 64 01 64 00              POP .64bit <%FER0>
+00000000000C1ABF: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $8(0x0))>, <%R0>
+                  64 A4 02 08 00 01 01 08 
+                  00 
+00000000000C1AD0: 0B 64 01 64 A4              INC .64bit <%DP>
+00000000000C1AD5: 60 01 64 A2 02 64 BA 1A     LOOP <%CB>, <$64(0xC1ABA)>
                   0C 00 00 00 00 00 
-00000000000C1B8D: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $(0x0))>, <$(0x0)>
-                  64 A4 02 64 00 00 00 00 
-                  00 00 00 00 01 02 64 00 
-                  00 00 00 00 00 00 00 
-00000000000C1BAC: 20 64 01 64 A4 02 64 CB     MOV .64bit <%DP>, <$(0xC1BCB)>
+00000000000C1AE3: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $8(0x0))>, <$8(0x0)>
+                  64 A4 02 08 00 01 02 08 
+                  00 
+00000000000C1AF4: 20 64 01 64 A4 02 64 13     MOV .64bit <%DP>, <$64(0xC1B13)>
                   1B 0C 00 00 00 00 00 
-00000000000C1BBB: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1B03: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C1BC9: 25                          POPALL
-00000000000C1BCA: 32                          RET
+00000000000C1B11: 25                          POPALL
+00000000000C1B12: 32                          RET
 
 
 <_print_num_cache> :
-00000000000C1BCB: 00                          NOP
-00000000000C1BCC: 00                          NOP
-00000000000C1BCD: 00                          NOP
+00000000000C1B13: 00                          NOP
+00000000000C1B14: 00                          NOP
+00000000000C1B15: 00                          NOP
 
- ... PADDLING 0x00 APPEARED 16 TIMES SINCE 00000000000C1BCB...
+ ... PADDLING 0x00 APPEARED 16 TIMES SINCE 00000000000C1B13...
 
 
 
 <_start> :
-00000000000C1BDB: 20 64 01 64 A1 02 64 FF     MOV .64bit <%SP>, <$(0xFFF)>
+00000000000C1B23: 20 64 01 64 A1 02 64 FF     MOV .64bit <%SP>, <$64(0xFFF)>
                   0F 00 00 00 00 00 00 
-00000000000C1BEA: 20 64 01 64 A0 02 64 E6     MOV .64bit <%SB>, <$(0xC24E6)>
+00000000000C1B32: 20 64 01 64 A0 02 64 10     MOV .64bit <%SB>, <$64(0xC2410)>
                   24 0C 00 00 00 00 00 
-00000000000C1BF9: 20 64 03 64 02 64 00 00     MOV .64bit <*1&64($(0xA0000), $(0x800), $(0x8))>, <$(0xC2471)>
-                  0A 00 00 00 00 00 02 64 
-                  00 08 00 00 00 00 00 00 
-                  02 64 08 00 00 00 00 00 
-                  00 00 01 02 64 71 24 0C 
-                  00 00 00 00 00 
-00000000000C1C26: 20 64 03 64 02 64 00 00     MOV .64bit <*1&64($(0xA0000), $(0x50), $(0x8))>, <$(0xC1C9A)>
-                  0A 00 00 00 00 00 02 64 
-                  50 00 00 00 00 00 00 00 
-                  02 64 08 00 00 00 00 00 
-                  00 00 01 02 64 9A 1C 0C 
-                  00 00 00 00 00 
-00000000000C1C53: 51 64 02 64 71 00 00 00     OUT .64bit <$(0x71)>, <$(0x4E2080)>
+00000000000C1B41: 20 64 03 64 02 64 00 00     MOV .64bit <*1&64($64(0xA0000), $32(0x800), $8(0x8))>, <$64(0xC239B)>
+                  0A 00 00 00 00 00 02 32 
+                  00 08 00 00 02 08 08 01 
+                  02 64 9B 23 0C 00 00 00 
+                  00 00 
+00000000000C1B63: 20 64 03 64 02 64 00 00     MOV .64bit <*1&64($64(0xA0000), $32(0x50), $8(0x8))>, <$64(0xC1BE0)>
+                  0A 00 00 00 00 00 02 32 
+                  50 00 00 00 02 08 08 01 
+                  02 64 E0 1B 0C 00 00 00 
+                  00 00 
+00000000000C1B85: 20 64 03 64 02 64 00 00     MOV .64bit <*1&64($64(0xA0000), $32(0x90), $8(0x8))>, <$64(0xC1BE0)>
+                  0A 00 00 00 00 00 02 32 
+                  90 00 00 00 02 08 08 01 
+                  02 64 E0 1B 0C 00 00 00 
+                  00 00 
+00000000000C1BA7: 51 64 02 64 71 00 00 00     OUT .64bit <$64(0x71)>, <$64(0x4E2080)>
                   00 00 00 00 02 64 80 20 
                   4E 00 00 00 00 00 
 
 
 <_start_inf_loop> :
-00000000000C1C69: 39 02 64 14 00 00 00 00     INT <$(0x14)>
-                  00 00 00 
-00000000000C1C74: 0A 08 01 08 00 02 64 71     CMP .8bit  <%R0>, <$(0x71)>
-                  00 00 00 00 00 00 00 
-00000000000C1C83: 34 01 64 A2 02 64 69 1C     JNE <%CB>, <$(0xC1C69)>
+00000000000C1BBD: 39 02 08 14                 INT <$8(0x14)>
+00000000000C1BC1: 0A 08 01 08 00 02 08 71     CMP .8bit  <%R0>, <$8(0x71)>
+00000000000C1BC9: 34 01 64 A2 02 64 BD 1B     JNE <%CB>, <$64(0xC1BBD)>
                   0C 00 00 00 00 00 
-00000000000C1C91: 12 64 01 64 00 01 64 00     XOR .64bit <%FER0>, <%FER0>
-00000000000C1C99: 40                          HLT
+00000000000C1BD7: 12 64 01 64 00 01 64 00     XOR .64bit <%FER0>, <%FER0>
+00000000000C1BDF: 40                          HLT
 
 
 <_int_kb_abort> :
-00000000000C1C9A: 39 02 64 17 00 00 00 00     INT <$(0x17)>
-                  00 00 00 
-00000000000C1CA5: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1CAD: 20 64 01 64 A4 02 64 F0     MOV .64bit <%DP>, <$(0xC1CF0)>
+00000000000C1BE0: 39 02 08 17                 INT <$8(0x17)>
+00000000000C1BE4: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1BEC: 20 64 01 64 A4 02 64 2F     MOV .64bit <%DP>, <$64(0xC1C2F)>
                   1C 0C 00 00 00 00 00 
-00000000000C1CBC: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1BFB: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C1CCA: 20 64 01 64 03 02 64 FF     MOV .64bit <%FER3>, <$(0x1FFFFF)>
+00000000000C1C09: 20 64 01 64 03 02 64 FF     MOV .64bit <%FER3>, <$64(0x1FFFFF)>
                   FF 1F 00 00 00 00 00 
 
 
 <_int_kb_abort_wait> :
-00000000000C1CD9: 60 01 64 A2 02 64 D9 1C     LOOP <%CB>, <$(0xC1CD9)>
+00000000000C1C18: 60 01 64 A2 02 64 18 1C     LOOP <%CB>, <$64(0xC1C18)>
                   0C 00 00 00 00 00 
-00000000000C1CE7: 12 64 01 64 00 01 64 00     XOR .64bit <%FER0>, <%FER0>
-00000000000C1CEF: 40                          HLT
+00000000000C1C26: 12 64 01 64 00 01 64 00     XOR .64bit <%FER0>, <%FER0>
+00000000000C1C2E: 40                          HLT
 
 
 <_int_kb_abort_message> :
-00000000000C1CF0: 0A53 7973 7465 6D20 7368 7574 646F 776E    .System shutdown
-00000000000C1D00: 210A                                       !.
+00000000000C1C2F: 0A53 7973 7465 6D20 7368 7574 646F 776E    .System shutdown
+00000000000C1C3F: 210A                                       !.
 
-00000000000C1D02: 00                          NOP
+00000000000C1C41: 00                          NOP
 
 
 <is_leap_year> :
-00000000000C1D03: 22 64 01 64 01              PUSH .64bit <%FER1>
-00000000000C1D08: 22 64 01 64 02              PUSH .64bit <%FER2>
-00000000000C1D0D: 20 64 01 64 02 01 64 00     MOV .64bit <%FER2>, <%FER0>
-00000000000C1D15: 08 64 02 64 90 01 00 00     DIV .64bit <$(0x190)>
+00000000000C1C42: 22 64 01 64 01              PUSH .64bit <%FER1>
+00000000000C1C47: 22 64 01 64 02              PUSH .64bit <%FER2>
+00000000000C1C4C: 20 64 01 64 02 01 64 00     MOV .64bit <%FER2>, <%FER0>
+00000000000C1C54: 08 64 02 64 90 01 00 00     DIV .64bit <$64(0x190)>
                   00 00 00 00 
-00000000000C1D21: 0A 64 01 64 01 02 64 00     CMP .64bit <%FER1>, <$(0x0)>
+00000000000C1C60: 0A 64 01 64 01 02 64 00     CMP .64bit <%FER1>, <$64(0x0)>
                   00 00 00 00 00 00 00 
-00000000000C1D30: 33 01 64 A2 02 64 AE 1D     JE <%CB>, <$(0xC1DAE)>
+00000000000C1C6F: 33 01 64 A2 02 64 ED 1C     JE <%CB>, <$64(0xC1CED)>
                   0C 00 00 00 00 00 
-00000000000C1D3E: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
-00000000000C1D46: 08 64 02 64 64 00 00 00     DIV .64bit <$(0x64)>
+00000000000C1C7D: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
+00000000000C1C85: 08 64 02 64 64 00 00 00     DIV .64bit <$64(0x64)>
                   00 00 00 00 
-00000000000C1D52: 0A 64 01 64 01 02 64 00     CMP .64bit <%FER1>, <$(0x0)>
+00000000000C1C91: 0A 64 01 64 01 02 64 00     CMP .64bit <%FER1>, <$64(0x0)>
                   00 00 00 00 00 00 00 
-00000000000C1D61: 33 01 64 A2 02 64 CB 1D     JE <%CB>, <$(0xC1DCB)>
+00000000000C1CA0: 33 01 64 A2 02 64 0A 1D     JE <%CB>, <$64(0xC1D0A)>
                   0C 00 00 00 00 00 
-00000000000C1D6F: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
-00000000000C1D77: 08 64 02 64 04 00 00 00     DIV .64bit <$(0x4)>
+00000000000C1CAE: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
+00000000000C1CB6: 08 64 02 64 04 00 00 00     DIV .64bit <$64(0x4)>
                   00 00 00 00 
-00000000000C1D83: 0A 64 01 64 01 02 64 00     CMP .64bit <%FER1>, <$(0x0)>
+00000000000C1CC2: 0A 64 01 64 01 02 64 00     CMP .64bit <%FER1>, <$64(0x0)>
                   00 00 00 00 00 00 00 
-00000000000C1D92: 33 01 64 A2 02 64 AE 1D     JE <%CB>, <$(0xC1DAE)>
+00000000000C1CD1: 33 01 64 A2 02 64 ED 1C     JE <%CB>, <$64(0xC1CED)>
                   0C 00 00 00 00 00 
-00000000000C1DA0: 30 01 64 A2 02 64 CB 1D     JMP <%CB>, <$(0xC1DCB)>
+00000000000C1CDF: 30 01 64 A2 02 64 0A 1D     JMP <%CB>, <$64(0xC1D0A)>
                   0C 00 00 00 00 00 
 
 
 <is_leap_year_return1> :
-00000000000C1DAE: 20 64 01 64 00 02 64 01     MOV .64bit <%FER0>, <$(0x1)>
+00000000000C1CED: 20 64 01 64 00 02 64 01     MOV .64bit <%FER0>, <$64(0x1)>
                   00 00 00 00 00 00 00 
-00000000000C1DBD: 30 01 64 A2 02 64 DA 1D     JMP <%CB>, <$(0xC1DDA)>
+00000000000C1CFC: 30 01 64 A2 02 64 19 1D     JMP <%CB>, <$64(0xC1D19)>
                   0C 00 00 00 00 00 
 
 
 <is_leap_year_return0> :
-00000000000C1DCB: 20 64 01 64 00 02 64 00     MOV .64bit <%FER0>, <$(0x0)>
+00000000000C1D0A: 20 64 01 64 00 02 64 00     MOV .64bit <%FER0>, <$64(0x0)>
                   00 00 00 00 00 00 00 
 
 
 <is_leap_year_return> :
-00000000000C1DDA: 23 64 01 64 02              POP .64bit <%FER2>
-00000000000C1DDF: 23 64 01 64 01              POP .64bit <%FER1>
-00000000000C1DE4: 32                          RET
+00000000000C1D19: 23 64 01 64 02              POP .64bit <%FER2>
+00000000000C1D1E: 23 64 01 64 01              POP .64bit <%FER1>
+00000000000C1D23: 32                          RET
 
 
 <get_days_in_month> :
-00000000000C1DE5: 0A 64 01 64 00 02 64 01     CMP .64bit <%FER0>, <$(0x1)>
+00000000000C1D24: 0A 64 01 64 00 02 64 01     CMP .64bit <%FER0>, <$64(0x1)>
                   00 00 00 00 00 00 00 
-00000000000C1DF4: 33 01 64 A2 02 64 41 1F     JE <%CB>, <$(0xC1F41)>
+00000000000C1D33: 33 01 64 A2 02 64 80 1E     JE <%CB>, <$64(0xC1E80)>
                   0C 00 00 00 00 00 
-00000000000C1E02: 0A 64 01 64 00 02 64 02     CMP .64bit <%FER0>, <$(0x2)>
+00000000000C1D41: 0A 64 01 64 00 02 64 02     CMP .64bit <%FER0>, <$64(0x2)>
                   00 00 00 00 00 00 00 
-00000000000C1E11: 33 01 64 A2 02 64 5E 1F     JE <%CB>, <$(0xC1F5E)>
+00000000000C1D50: 33 01 64 A2 02 64 9D 1E     JE <%CB>, <$64(0xC1E9D)>
                   0C 00 00 00 00 00 
-00000000000C1E1F: 0A 64 01 64 00 02 64 03     CMP .64bit <%FER0>, <$(0x3)>
+00000000000C1D5E: 0A 64 01 64 00 02 64 03     CMP .64bit <%FER0>, <$64(0x3)>
                   00 00 00 00 00 00 00 
-00000000000C1E2E: 33 01 64 A2 02 64 CB 1F     JE <%CB>, <$(0xC1FCB)>
+00000000000C1D6D: 33 01 64 A2 02 64 0A 1F     JE <%CB>, <$64(0xC1F0A)>
                   0C 00 00 00 00 00 
-00000000000C1E3C: 0A 64 01 64 00 02 64 04     CMP .64bit <%FER0>, <$(0x4)>
+00000000000C1D7B: 0A 64 01 64 00 02 64 04     CMP .64bit <%FER0>, <$64(0x4)>
                   00 00 00 00 00 00 00 
-00000000000C1E4B: 33 01 64 A2 02 64 E8 1F     JE <%CB>, <$(0xC1FE8)>
+00000000000C1D8A: 33 01 64 A2 02 64 27 1F     JE <%CB>, <$64(0xC1F27)>
                   0C 00 00 00 00 00 
-00000000000C1E59: 0A 64 01 64 00 02 64 05     CMP .64bit <%FER0>, <$(0x5)>
+00000000000C1D98: 0A 64 01 64 00 02 64 05     CMP .64bit <%FER0>, <$64(0x5)>
                   00 00 00 00 00 00 00 
-00000000000C1E68: 33 01 64 A2 02 64 05 20     JE <%CB>, <$(0xC2005)>
+00000000000C1DA7: 33 01 64 A2 02 64 44 1F     JE <%CB>, <$64(0xC1F44)>
                   0C 00 00 00 00 00 
-00000000000C1E76: 0A 64 01 64 00 02 64 06     CMP .64bit <%FER0>, <$(0x6)>
+00000000000C1DB5: 0A 64 01 64 00 02 64 06     CMP .64bit <%FER0>, <$64(0x6)>
                   00 00 00 00 00 00 00 
-00000000000C1E85: 33 01 64 A2 02 64 22 20     JE <%CB>, <$(0xC2022)>
+00000000000C1DC4: 33 01 64 A2 02 64 61 1F     JE <%CB>, <$64(0xC1F61)>
                   0C 00 00 00 00 00 
-00000000000C1E93: 0A 64 01 64 00 02 64 07     CMP .64bit <%FER0>, <$(0x7)>
+00000000000C1DD2: 0A 64 01 64 00 02 64 07     CMP .64bit <%FER0>, <$64(0x7)>
                   00 00 00 00 00 00 00 
-00000000000C1EA2: 33 01 64 A2 02 64 3F 20     JE <%CB>, <$(0xC203F)>
+00000000000C1DE1: 33 01 64 A2 02 64 7E 1F     JE <%CB>, <$64(0xC1F7E)>
                   0C 00 00 00 00 00 
-00000000000C1EB0: 0A 64 01 64 00 02 64 08     CMP .64bit <%FER0>, <$(0x8)>
+00000000000C1DEF: 0A 64 01 64 00 02 64 08     CMP .64bit <%FER0>, <$64(0x8)>
                   00 00 00 00 00 00 00 
-00000000000C1EBF: 33 01 64 A2 02 64 5C 20     JE <%CB>, <$(0xC205C)>
+00000000000C1DFE: 33 01 64 A2 02 64 9B 1F     JE <%CB>, <$64(0xC1F9B)>
                   0C 00 00 00 00 00 
-00000000000C1ECD: 0A 64 01 64 00 02 64 09     CMP .64bit <%FER0>, <$(0x9)>
+00000000000C1E0C: 0A 64 01 64 00 02 64 09     CMP .64bit <%FER0>, <$64(0x9)>
                   00 00 00 00 00 00 00 
-00000000000C1EDC: 33 01 64 A2 02 64 79 20     JE <%CB>, <$(0xC2079)>
+00000000000C1E1B: 33 01 64 A2 02 64 B8 1F     JE <%CB>, <$64(0xC1FB8)>
                   0C 00 00 00 00 00 
-00000000000C1EEA: 0A 64 01 64 00 02 64 0A     CMP .64bit <%FER0>, <$(0xA)>
+00000000000C1E29: 0A 64 01 64 00 02 64 0A     CMP .64bit <%FER0>, <$64(0xA)>
                   00 00 00 00 00 00 00 
-00000000000C1EF9: 33 01 64 A2 02 64 96 20     JE <%CB>, <$(0xC2096)>
+00000000000C1E38: 33 01 64 A2 02 64 D5 1F     JE <%CB>, <$64(0xC1FD5)>
                   0C 00 00 00 00 00 
-00000000000C1F07: 0A 64 01 64 00 02 64 0B     CMP .64bit <%FER0>, <$(0xB)>
+00000000000C1E46: 0A 64 01 64 00 02 64 0B     CMP .64bit <%FER0>, <$64(0xB)>
                   00 00 00 00 00 00 00 
-00000000000C1F16: 33 01 64 A2 02 64 B3 20     JE <%CB>, <$(0xC20B3)>
+00000000000C1E55: 33 01 64 A2 02 64 F2 1F     JE <%CB>, <$64(0xC1FF2)>
                   0C 00 00 00 00 00 
-00000000000C1F24: 0A 64 01 64 00 02 64 0C     CMP .64bit <%FER0>, <$(0xC)>
+00000000000C1E63: 0A 64 01 64 00 02 64 0C     CMP .64bit <%FER0>, <$64(0xC)>
                   00 00 00 00 00 00 00 
-00000000000C1F33: 33 01 64 A2 02 64 D0 20     JE <%CB>, <$(0xC20D0)>
+00000000000C1E72: 33 01 64 A2 02 64 0F 20     JE <%CB>, <$64(0xC200F)>
                   0C 00 00 00 00 00 
 
 
 <get_days_in_month_month1> :
-00000000000C1F41: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$(0x1F)>
+00000000000C1E80: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$64(0x1F)>
                   00 00 00 00 00 00 00 
-00000000000C1F50: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF)>
+00000000000C1E8F: 30 01 64 A2 02 64 1E 20     JMP <%CB>, <$64(0xC201E)>
                   0C 00 00 00 00 00 
 
 
 <get_days_in_month_month2> :
-00000000000C1F5E: 20 64 01 64 00 01 64 01     MOV .64bit <%FER0>, <%FER1>
-00000000000C1F66: 31 01 64 A2 02 64 03 1D     CALL <%CB>, <$(0xC1D03)>
+00000000000C1E9D: 20 64 01 64 00 01 64 01     MOV .64bit <%FER0>, <%FER1>
+00000000000C1EA5: 31 01 64 A2 02 64 42 1C     CALL <%CB>, <$64(0xC1C42)>
                   0C 00 00 00 00 00 
-00000000000C1F74: 0A 64 01 64 00 02 64 01     CMP .64bit <%FER0>, <$(0x1)>
+00000000000C1EB3: 0A 64 01 64 00 02 64 01     CMP .64bit <%FER0>, <$64(0x1)>
                   00 00 00 00 00 00 00 
-00000000000C1F83: 33 01 64 A2 02 64 AE 1F     JE <%CB>, <$(0xC1FAE)>
+00000000000C1EC2: 33 01 64 A2 02 64 ED 1E     JE <%CB>, <$64(0xC1EED)>
                   0C 00 00 00 00 00 
-00000000000C1F91: 20 64 01 64 00 02 64 1C     MOV .64bit <%FER0>, <$(0x1C)>
+00000000000C1ED0: 20 64 01 64 00 02 64 1C     MOV .64bit <%FER0>, <$64(0x1C)>
                   00 00 00 00 00 00 00 
-00000000000C1FA0: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF)>
+00000000000C1EDF: 30 01 64 A2 02 64 1E 20     JMP <%CB>, <$64(0xC201E)>
                   0C 00 00 00 00 00 
 
 
 <get_days_in_month_leap> :
-00000000000C1FAE: 20 64 01 64 00 02 64 1D     MOV .64bit <%FER0>, <$(0x1D)>
+00000000000C1EED: 20 64 01 64 00 02 64 1D     MOV .64bit <%FER0>, <$64(0x1D)>
                   00 00 00 00 00 00 00 
-00000000000C1FBD: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF)>
+00000000000C1EFC: 30 01 64 A2 02 64 1E 20     JMP <%CB>, <$64(0xC201E)>
                   0C 00 00 00 00 00 
 
 
 <get_days_in_month_month3> :
-00000000000C1FCB: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$(0x1F)>
+00000000000C1F0A: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$64(0x1F)>
                   00 00 00 00 00 00 00 
-00000000000C1FDA: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF)>
+00000000000C1F19: 30 01 64 A2 02 64 1E 20     JMP <%CB>, <$64(0xC201E)>
                   0C 00 00 00 00 00 
 
 
 <get_days_in_month_month4> :
-00000000000C1FE8: 20 64 01 64 00 02 64 1E     MOV .64bit <%FER0>, <$(0x1E)>
+00000000000C1F27: 20 64 01 64 00 02 64 1E     MOV .64bit <%FER0>, <$64(0x1E)>
                   00 00 00 00 00 00 00 
-00000000000C1FF7: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF)>
+00000000000C1F36: 30 01 64 A2 02 64 1E 20     JMP <%CB>, <$64(0xC201E)>
                   0C 00 00 00 00 00 
 
 
 <get_days_in_month_month5> :
-00000000000C2005: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$(0x1F)>
+00000000000C1F44: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$64(0x1F)>
                   00 00 00 00 00 00 00 
-00000000000C2014: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF)>
+00000000000C1F53: 30 01 64 A2 02 64 1E 20     JMP <%CB>, <$64(0xC201E)>
                   0C 00 00 00 00 00 
 
 
 <get_days_in_month_month6> :
-00000000000C2022: 20 64 01 64 00 02 64 1E     MOV .64bit <%FER0>, <$(0x1E)>
+00000000000C1F61: 20 64 01 64 00 02 64 1E     MOV .64bit <%FER0>, <$64(0x1E)>
                   00 00 00 00 00 00 00 
-00000000000C2031: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF)>
+00000000000C1F70: 30 01 64 A2 02 64 1E 20     JMP <%CB>, <$64(0xC201E)>
                   0C 00 00 00 00 00 
 
 
 <get_days_in_month_month7> :
-00000000000C203F: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$(0x1F)>
+00000000000C1F7E: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$64(0x1F)>
                   00 00 00 00 00 00 00 
-00000000000C204E: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF)>
+00000000000C1F8D: 30 01 64 A2 02 64 1E 20     JMP <%CB>, <$64(0xC201E)>
                   0C 00 00 00 00 00 
 
 
 <get_days_in_month_month8> :
-00000000000C205C: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$(0x1F)>
+00000000000C1F9B: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$64(0x1F)>
                   00 00 00 00 00 00 00 
-00000000000C206B: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF)>
+00000000000C1FAA: 30 01 64 A2 02 64 1E 20     JMP <%CB>, <$64(0xC201E)>
                   0C 00 00 00 00 00 
 
 
 <get_days_in_month_month9> :
-00000000000C2079: 20 64 01 64 00 02 64 1E     MOV .64bit <%FER0>, <$(0x1E)>
+00000000000C1FB8: 20 64 01 64 00 02 64 1E     MOV .64bit <%FER0>, <$64(0x1E)>
                   00 00 00 00 00 00 00 
-00000000000C2088: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF)>
+00000000000C1FC7: 30 01 64 A2 02 64 1E 20     JMP <%CB>, <$64(0xC201E)>
                   0C 00 00 00 00 00 
 
 
 <get_days_in_month_month10> :
-00000000000C2096: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$(0x1F)>
+00000000000C1FD5: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$64(0x1F)>
                   00 00 00 00 00 00 00 
-00000000000C20A5: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF)>
+00000000000C1FE4: 30 01 64 A2 02 64 1E 20     JMP <%CB>, <$64(0xC201E)>
                   0C 00 00 00 00 00 
 
 
 <get_days_in_month_month11> :
-00000000000C20B3: 20 64 01 64 00 02 64 1E     MOV .64bit <%FER0>, <$(0x1E)>
+00000000000C1FF2: 20 64 01 64 00 02 64 1E     MOV .64bit <%FER0>, <$64(0x1E)>
                   00 00 00 00 00 00 00 
-00000000000C20C2: 30 01 64 A2 02 64 DF 20     JMP <%CB>, <$(0xC20DF)>
+00000000000C2001: 30 01 64 A2 02 64 1E 20     JMP <%CB>, <$64(0xC201E)>
                   0C 00 00 00 00 00 
 
 
 <get_days_in_month_month12> :
-00000000000C20D0: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$(0x1F)>
+00000000000C200F: 20 64 01 64 00 02 64 1F     MOV .64bit <%FER0>, <$64(0x1F)>
                   00 00 00 00 00 00 00 
 
 
 <get_days_in_month_end> :
-00000000000C20DF: 32                          RET
+00000000000C201E: 32                          RET
 
 
 <determine_the_year> :
-00000000000C20E0: 22 64 01 64 02              PUSH .64bit <%FER2>
-00000000000C20E5: 22 64 01 64 03              PUSH .64bit <%FER3>
-00000000000C20EA: 20 64 01 64 01 01 64 00     MOV .64bit <%FER1>, <%FER0>
-00000000000C20F2: 20 64 01 64 02 02 64 B2     MOV .64bit <%FER2>, <$(0x7B2)>
+00000000000C201F: 22 64 01 64 02              PUSH .64bit <%FER2>
+00000000000C2024: 22 64 01 64 03              PUSH .64bit <%FER3>
+00000000000C2029: 20 64 01 64 01 01 64 00     MOV .64bit <%FER1>, <%FER0>
+00000000000C2031: 20 64 01 64 02 02 64 B2     MOV .64bit <%FER2>, <$64(0x7B2)>
                   07 00 00 00 00 00 00 
 
 
 <determine_the_year_loop> :
-00000000000C2101: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
-00000000000C2109: 31 01 64 A2 02 64 03 1D     CALL <%CB>, <$(0xC1D03)>
+00000000000C2040: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
+00000000000C2048: 31 01 64 A2 02 64 42 1C     CALL <%CB>, <$64(0xC1C42)>
                   0C 00 00 00 00 00 
-00000000000C2117: 0A 64 01 64 00 02 64 01     CMP .64bit <%FER0>, <$(0x1)>
+00000000000C2056: 0A 64 01 64 00 02 64 01     CMP .64bit <%FER0>, <$64(0x1)>
                   00 00 00 00 00 00 00 
-00000000000C2126: 33 01 64 A2 02 64 51 21     JE <%CB>, <$(0xC2151)>
+00000000000C2065: 33 01 64 A2 02 64 90 20     JE <%CB>, <$64(0xC2090)>
                   0C 00 00 00 00 00 
-00000000000C2134: 20 64 01 64 03 02 64 6D     MOV .64bit <%FER3>, <$(0x16D)>
+00000000000C2073: 20 64 01 64 03 02 64 6D     MOV .64bit <%FER3>, <$64(0x16D)>
                   01 00 00 00 00 00 00 
-00000000000C2143: 30 01 64 A2 02 64 60 21     JMP <%CB>, <$(0xC2160)>
+00000000000C2082: 30 01 64 A2 02 64 9F 20     JMP <%CB>, <$64(0xC209F)>
                   0C 00 00 00 00 00 
 
 
 <determine_the_year_is_leap> :
-00000000000C2151: 20 64 01 64 03 02 64 6E     MOV .64bit <%FER3>, <$(0x16E)>
+00000000000C2090: 20 64 01 64 03 02 64 6E     MOV .64bit <%FER3>, <$64(0x16E)>
                   01 00 00 00 00 00 00 
 
 
 <determine_the_year_end_is_leap_cmp> :
-00000000000C2160: 0A 64 01 64 01 01 64 03     CMP .64bit <%FER1>, <%FER3>
-00000000000C2168: 36 01 64 A2 02 64 91 21     JL <%CB>, <$(0xC2191)>
+00000000000C209F: 0A 64 01 64 01 01 64 03     CMP .64bit <%FER1>, <%FER3>
+00000000000C20A7: 36 01 64 A2 02 64 D0 20     JL <%CB>, <$64(0xC20D0)>
                   0C 00 00 00 00 00 
-00000000000C2176: 03 64 01 64 01 01 64 03     SUB .64bit <%FER1>, <%FER3>
-00000000000C217E: 0B 64 01 64 02              INC .64bit <%FER2>
-00000000000C2183: 30 01 64 A2 02 64 01 21     JMP <%CB>, <$(0xC2101)>
+00000000000C20B5: 03 64 01 64 01 01 64 03     SUB .64bit <%FER1>, <%FER3>
+00000000000C20BD: 0B 64 01 64 02              INC .64bit <%FER2>
+00000000000C20C2: 30 01 64 A2 02 64 40 20     JMP <%CB>, <$64(0xC2040)>
                   0C 00 00 00 00 00 
 
 
 <determine_the_year_break> :
-00000000000C2191: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
-00000000000C2199: 23 64 01 64 03              POP .64bit <%FER3>
-00000000000C219E: 23 64 01 64 02              POP .64bit <%FER2>
-00000000000C21A3: 32                          RET
+00000000000C20D0: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
+00000000000C20D8: 23 64 01 64 03              POP .64bit <%FER3>
+00000000000C20DD: 23 64 01 64 02              POP .64bit <%FER2>
+00000000000C20E2: 32                          RET
 
 
 <determine_the_month> :
-00000000000C21A4: 22 64 01 64 02              PUSH .64bit <%FER2>
-00000000000C21A9: 22 64 01 64 03              PUSH .64bit <%FER3>
-00000000000C21AE: 20 64 01 64 02 02 64 01     MOV .64bit <%FER2>, <$(0x1)>
+00000000000C20E3: 22 64 01 64 02              PUSH .64bit <%FER2>
+00000000000C20E8: 22 64 01 64 03              PUSH .64bit <%FER3>
+00000000000C20ED: 20 64 01 64 02 02 64 01     MOV .64bit <%FER2>, <$64(0x1)>
                   00 00 00 00 00 00 00 
-00000000000C21BD: 20 64 01 64 03 01 64 00     MOV .64bit <%FER3>, <%FER0>
+00000000000C20FC: 20 64 01 64 03 01 64 00     MOV .64bit <%FER3>, <%FER0>
 
 
 <determine_the_month_loop> :
-00000000000C21C5: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
-00000000000C21CD: 31 01 64 A2 02 64 E5 1D     CALL <%CB>, <$(0xC1DE5)>
+00000000000C2104: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
+00000000000C210C: 31 01 64 A2 02 64 24 1D     CALL <%CB>, <$64(0xC1D24)>
                   0C 00 00 00 00 00 
-00000000000C21DB: 0A 64 01 64 03 01 64 00     CMP .64bit <%FER3>, <%FER0>
-00000000000C21E3: 36 01 64 A2 02 64 0C 22     JL <%CB>, <$(0xC220C)>
+00000000000C211A: 0A 64 01 64 03 01 64 00     CMP .64bit <%FER3>, <%FER0>
+00000000000C2122: 36 01 64 A2 02 64 4B 21     JL <%CB>, <$64(0xC214B)>
                   0C 00 00 00 00 00 
-00000000000C21F1: 03 64 01 64 03 01 64 00     SUB .64bit <%FER3>, <%FER0>
-00000000000C21F9: 0B 64 01 64 02              INC .64bit <%FER2>
-00000000000C21FE: 30 01 64 A2 02 64 C5 21     JMP <%CB>, <$(0xC21C5)>
+00000000000C2130: 03 64 01 64 03 01 64 00     SUB .64bit <%FER3>, <%FER0>
+00000000000C2138: 0B 64 01 64 02              INC .64bit <%FER2>
+00000000000C213D: 30 01 64 A2 02 64 04 21     JMP <%CB>, <$64(0xC2104)>
                   0C 00 00 00 00 00 
 
 
 <determine_the_month_break> :
-00000000000C220C: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
-00000000000C2214: 20 64 01 64 01 01 64 03     MOV .64bit <%FER1>, <%FER3>
-00000000000C221C: 23 64 01 64 03              POP .64bit <%FER3>
-00000000000C2221: 23 64 01 64 02              POP .64bit <%FER2>
-00000000000C2226: 32                          RET
+00000000000C214B: 20 64 01 64 00 01 64 02     MOV .64bit <%FER0>, <%FER2>
+00000000000C2153: 20 64 01 64 01 01 64 03     MOV .64bit <%FER1>, <%FER3>
+00000000000C215B: 23 64 01 64 03              POP .64bit <%FER3>
+00000000000C2160: 23 64 01 64 02              POP .64bit <%FER2>
+00000000000C2165: 32                          RET
 
 
 <_print_time> :
-00000000000C2227: 24                          PUSHALL
-00000000000C2228: 08 64 02 64 80 51 01 00     DIV .64bit <$(0x15180)>
+00000000000C2166: 24                          PUSHALL
+00000000000C2167: 08 64 02 64 80 51 01 00     DIV .64bit <$64(0x15180)>
                   00 00 00 00 
-00000000000C2234: 20 64 01 64 0F 01 64 00     MOV .64bit <%FER15>, <%FER0>
-00000000000C223C: 20 64 01 64 00 01 64 01     MOV .64bit <%FER0>, <%FER1>
-00000000000C2244: 08 64 02 64 10 0E 00 00     DIV .64bit <$(0xE10)>
+00000000000C2173: 20 64 01 64 0F 01 64 00     MOV .64bit <%FER15>, <%FER0>
+00000000000C217B: 20 64 01 64 00 01 64 01     MOV .64bit <%FER0>, <%FER1>
+00000000000C2183: 08 64 02 64 10 0E 00 00     DIV .64bit <$64(0xE10)>
                   00 00 00 00 
-00000000000C2250: 20 64 01 64 0E 01 64 00     MOV .64bit <%FER14>, <%FER0>
-00000000000C2258: 20 64 01 64 00 01 64 01     MOV .64bit <%FER0>, <%FER1>
-00000000000C2260: 08 64 02 64 3C 00 00 00     DIV .64bit <$(0x3C)>
+00000000000C218F: 20 64 01 64 0E 01 64 00     MOV .64bit <%FER14>, <%FER0>
+00000000000C2197: 20 64 01 64 00 01 64 01     MOV .64bit <%FER0>, <%FER1>
+00000000000C219F: 08 64 02 64 3C 00 00 00     DIV .64bit <$64(0x3C)>
                   00 00 00 00 
-00000000000C226C: 20 64 01 64 0D 01 64 00     MOV .64bit <%FER13>, <%FER0>
-00000000000C2274: 20 64 01 64 0C 01 64 01     MOV .64bit <%FER12>, <%FER1>
-00000000000C227C: 20 64 01 64 00 01 64 0F     MOV .64bit <%FER0>, <%FER15>
-00000000000C2284: 31 01 64 A2 02 64 E0 20     CALL <%CB>, <$(0xC20E0)>
+00000000000C21AB: 20 64 01 64 0D 01 64 00     MOV .64bit <%FER13>, <%FER0>
+00000000000C21B3: 20 64 01 64 0C 01 64 01     MOV .64bit <%FER12>, <%FER1>
+00000000000C21BB: 20 64 01 64 00 01 64 0F     MOV .64bit <%FER0>, <%FER15>
+00000000000C21C3: 31 01 64 A2 02 64 1F 20     CALL <%CB>, <$64(0xC201F)>
                   0C 00 00 00 00 00 
-00000000000C2292: 20 64 01 64 0B 01 64 00     MOV .64bit <%FER11>, <%FER0>
-00000000000C229A: 20 64 01 64 00 01 64 01     MOV .64bit <%FER0>, <%FER1>
-00000000000C22A2: 20 64 01 64 01 01 64 0B     MOV .64bit <%FER1>, <%FER11>
-00000000000C22AA: 31 01 64 A2 02 64 A4 21     CALL <%CB>, <$(0xC21A4)>
+00000000000C21D1: 20 64 01 64 0B 01 64 00     MOV .64bit <%FER11>, <%FER0>
+00000000000C21D9: 20 64 01 64 00 01 64 01     MOV .64bit <%FER0>, <%FER1>
+00000000000C21E1: 20 64 01 64 01 01 64 0B     MOV .64bit <%FER1>, <%FER11>
+00000000000C21E9: 31 01 64 A2 02 64 E3 20     CALL <%CB>, <$64(0xC20E3)>
                   0C 00 00 00 00 00 
-00000000000C22B8: 20 64 01 64 0A 01 64 00     MOV .64bit <%FER10>, <%FER0>
-00000000000C22C0: 20 64 01 64 09 01 64 01     MOV .64bit <%FER9>, <%FER1>
-00000000000C22C8: 0B 64 01 64 09              INC .64bit <%FER9>
-00000000000C22CD: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C22D5: 20 64 01 64 00 01 64 09     MOV .64bit <%FER0>, <%FER9>
-00000000000C22DD: 31 01 64 A2 02 64 EB 1A     CALL <%CB>, <$(0xC1AEB)>
+00000000000C21F7: 20 64 01 64 0A 01 64 00     MOV .64bit <%FER10>, <%FER0>
+00000000000C21FF: 20 64 01 64 09 01 64 01     MOV .64bit <%FER9>, <%FER1>
+00000000000C2207: 0B 64 01 64 09              INC .64bit <%FER9>
+00000000000C220C: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C2214: 20 64 01 64 00 01 64 09     MOV .64bit <%FER0>, <%FER9>
+00000000000C221C: 31 01 64 A2 02 64 48 1A     CALL <%CB>, <$64(0xC1A48)>
                   0C 00 00 00 00 00 
-00000000000C22EB: 20 64 01 64 A4 02 64 3F     MOV .64bit <%DP>, <$(0xC243F)>
-                  24 0C 00 00 00 00 00 
-00000000000C22FA: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C222A: 20 64 01 64 A4 02 64 69     MOV .64bit <%DP>, <$64(0xC2369)>
+                  23 0C 00 00 00 00 00 
+00000000000C2239: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C2308: 20 64 01 64 A3 02 64 41     MOV .64bit <%DB>, <$(0xC2441)>
-                  24 0C 00 00 00 00 00 
-00000000000C2317: 20 64 01 64 A4 01 64 0A     MOV .64bit <%DP>, <%FER10>
-00000000000C231F: 0C 64 01 64 A4              DEC .64bit <%DP>
-00000000000C2324: 29 01 64 A4 03 08 01 64     LEA <%DP>, <*4&8(%DP, $(0x0), $(0x0))>
-                  A4 02 64 00 00 00 00 00 
-                  00 00 00 02 64 00 00 00 
-                  00 00 00 00 00 04 
-00000000000C2342: 29 01 64 00 03 08 01 64     LEA <%FER0>, <*1&8(%DB, %DP, $(0x0))>
-                  A3 01 64 A4 02 64 00 00 
-                  00 00 00 00 00 00 01 
-00000000000C2359: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C2247: 20 64 01 64 A3 02 64 6B     MOV .64bit <%DB>, <$64(0xC236B)>
+                  23 0C 00 00 00 00 00 
+00000000000C2256: 20 64 01 64 A4 01 64 0A     MOV .64bit <%DP>, <%FER10>
+00000000000C225E: 0C 64 01 64 A4              DEC .64bit <%DP>
+00000000000C2263: 29 01 64 A4 03 08 01 64     LEA <%DP>, <*4&8(%DP, $8(0x0), $8(0x0))>
+                  A4 02 08 00 02 08 00 04 
+00000000000C2273: 29 01 64 00 03 08 01 64     LEA <%FER0>, <*1&8(%DB, %DP, $8(0x0))>
+                  A3 01 64 A4 02 08 00 01 
+00000000000C2283: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C2367: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C236F: 20 64 01 64 A4 02 64 3F     MOV .64bit <%DP>, <$(0xC243F)>
-                  24 0C 00 00 00 00 00 
-00000000000C237E: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C2291: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C2299: 20 64 01 64 A4 02 64 69     MOV .64bit <%DP>, <$64(0xC2369)>
+                  23 0C 00 00 00 00 00 
+00000000000C22A8: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C238C: 20 64 01 64 00 01 64 0B     MOV .64bit <%FER0>, <%FER11>
-00000000000C2394: 31 01 64 A2 02 64 EB 1A     CALL <%CB>, <$(0xC1AEB)>
+00000000000C22B6: 20 64 01 64 00 01 64 0B     MOV .64bit <%FER0>, <%FER11>
+00000000000C22BE: 31 01 64 A2 02 64 48 1A     CALL <%CB>, <$64(0xC1A48)>
                   0C 00 00 00 00 00 
-00000000000C23A2: 20 64 01 64 A4 02 64 3F     MOV .64bit <%DP>, <$(0xC243F)>
-                  24 0C 00 00 00 00 00 
-00000000000C23B1: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C22CC: 20 64 01 64 A4 02 64 69     MOV .64bit <%DP>, <$64(0xC2369)>
+                  23 0C 00 00 00 00 00 
+00000000000C22DB: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C23BF: 20 64 01 64 00 01 64 0E     MOV .64bit <%FER0>, <%FER14>
-00000000000C23C7: 31 01 64 A2 02 64 EB 1A     CALL <%CB>, <$(0xC1AEB)>
+00000000000C22E9: 20 64 01 64 00 01 64 0E     MOV .64bit <%FER0>, <%FER14>
+00000000000C22F1: 31 01 64 A2 02 64 48 1A     CALL <%CB>, <$64(0xC1A48)>
                   0C 00 00 00 00 00 
-00000000000C23D5: 20 64 01 64 A4 02 64 3D     MOV .64bit <%DP>, <$(0xC243D)>
-                  24 0C 00 00 00 00 00 
-00000000000C23E4: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C22FF: 20 64 01 64 A4 02 64 67     MOV .64bit <%DP>, <$64(0xC2367)>
+                  23 0C 00 00 00 00 00 
+00000000000C230E: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C23F2: 20 64 01 64 00 01 64 0D     MOV .64bit <%FER0>, <%FER13>
-00000000000C23FA: 31 01 64 A2 02 64 EB 1A     CALL <%CB>, <$(0xC1AEB)>
+00000000000C231C: 20 64 01 64 00 01 64 0D     MOV .64bit <%FER0>, <%FER13>
+00000000000C2324: 31 01 64 A2 02 64 48 1A     CALL <%CB>, <$64(0xC1A48)>
                   0C 00 00 00 00 00 
-00000000000C2408: 20 64 01 64 A4 02 64 3D     MOV .64bit <%DP>, <$(0xC243D)>
-                  24 0C 00 00 00 00 00 
-00000000000C2417: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C2332: 20 64 01 64 A4 02 64 67     MOV .64bit <%DP>, <$64(0xC2367)>
+                  23 0C 00 00 00 00 00 
+00000000000C2341: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C2425: 20 64 01 64 00 01 64 0C     MOV .64bit <%FER0>, <%FER12>
-00000000000C242D: 31 01 64 A2 02 64 EB 1A     CALL <%CB>, <$(0xC1AEB)>
+00000000000C234F: 20 64 01 64 00 01 64 0C     MOV .64bit <%FER0>, <%FER12>
+00000000000C2357: 31 01 64 A2 02 64 48 1A     CALL <%CB>, <$64(0xC1A48)>
                   0C 00 00 00 00 00 
-00000000000C243B: 25                          POPALL
-00000000000C243C: 32                          RET
+00000000000C2365: 25                          POPALL
+00000000000C2366: 32                          RET
 
 
 <_print_time_col> :
-00000000000C243D: 3A                          INT3
-00000000000C243E: 00                          NOP
+00000000000C2367: 3A                          INT3
+00000000000C2368: 00                          NOP
 
 
 <_print_time_space> :
-00000000000C243F: 2000 4A61 6E                                .Jan
+00000000000C2369: 2000 4A61 6E                                .Jan
 
-00000000000C2444: 00                          NOP
-00000000000C2445: 4665 62                                    Feb
+00000000000C236E: 00                          NOP
+00000000000C236F: 4665 62                                    Feb
 
-00000000000C2448: 00                          NOP
-00000000000C2449: 4D61 72                                    Mar
+00000000000C2372: 00                          NOP
+00000000000C2373: 4D61 72                                    Mar
 
-00000000000C244C: 00                          NOP
-00000000000C244D: 41                          IGNI
-00000000000C244E: 7072                                       pr
+00000000000C2376: 00                          NOP
+00000000000C2377: 41                          IGNI
+00000000000C2378: 7072                                       pr
 
-00000000000C2450: 00                          NOP
-00000000000C2451: 4D61 79                                    May
+00000000000C237A: 00                          NOP
+00000000000C237B: 4D61 79                                    May
 
-00000000000C2454: 00                          NOP
-00000000000C2455: 4A75 6E                                    Jun
+00000000000C237E: 00                          NOP
+00000000000C237F: 4A75 6E                                    Jun
 
-00000000000C2458: 00                          NOP
-00000000000C2459: 4A75 6C                                    Jul
+00000000000C2382: 00                          NOP
+00000000000C2383: 4A75 6C                                    Jul
 
-00000000000C245C: 00                          NOP
-00000000000C245D: 41                          IGNI
-00000000000C245E: 7567                                       ug
+00000000000C2386: 00                          NOP
+00000000000C2387: 41                          IGNI
+00000000000C2388: 7567                                       ug
 
-00000000000C2460: 00                          NOP
-00000000000C2461: 5365 70                                    Sep
+00000000000C238A: 00                          NOP
+00000000000C238B: 5365 70                                    Sep
 
-00000000000C2464: 00                          NOP
-00000000000C2465: 4F63 74                                    Oct
+00000000000C238E: 00                          NOP
+00000000000C238F: 4F63 74                                    Oct
 
-00000000000C2468: 00                          NOP
-00000000000C2469: 4E6F 76                                    Nov
+00000000000C2392: 00                          NOP
+00000000000C2393: 4E6F 76                                    Nov
 
-00000000000C246C: 00                          NOP
-00000000000C246D: 4465 63                                    Dec
+00000000000C2396: 00                          NOP
+00000000000C2397: 4465 63                                    Dec
 
-00000000000C2470: 00                          NOP
+00000000000C239A: 00                          NOP
 
 
 <_int_rtc> :
-00000000000C2471: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C2479: 20 64 01 64 A4 02 64 D1     MOV .64bit <%DP>, <$(0xC24D1)>
-                  24 0C 00 00 00 00 00 
-00000000000C2488: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C239B: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C23A3: 20 64 01 64 A4 02 64 FB     MOV .64bit <%DP>, <$64(0xC23FB)>
+                  23 0C 00 00 00 00 00 
+00000000000C23B2: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C2496: 50 64 02 64 70 00 00 00     IN .64bit <$(0x70)>, <%FER0>
+00000000000C23C0: 50 64 02 64 70 00 00 00     IN .64bit <$64(0x70)>, <%FER0>
                   00 00 00 00 01 64 00 
-00000000000C24A5: 31 01 64 A2 02 64 27 22     CALL <%CB>, <$(0xC2227)>
+00000000000C23CF: 31 01 64 A2 02 64 66 21     CALL <%CB>, <$64(0xC2166)>
                   0C 00 00 00 00 00 
-00000000000C24B3: 20 64 01 64 A4 02 64 E0     MOV .64bit <%DP>, <$(0xC24E0)>
+00000000000C23DD: 20 64 01 64 A4 02 64 0A     MOV .64bit <%DP>, <$64(0xC240A)>
                   24 0C 00 00 00 00 00 
-00000000000C24C2: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C23EC: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C24D0: 3B                          IRET
+00000000000C23FA: 3B                          IRET
 
 
 <_int_rtc_message> :
-00000000000C24D1: 4375 7272 656E 7420 7469 6D65              Current time
+00000000000C23FB: 4375 7272 656E 7420 7469 6D65              Current time
 
-00000000000C24DD: 3A                          INT3
-00000000000C24DE: 2000 2055 5443 0A00                         . UTC..
+00000000000C2407: 3A                          INT3
+00000000000C2408: 2000 2055 5443 0A00                         . UTC..
 
 
 
 <_stack_frame> :
-00000000000C24E6: 00                          NOP
-00000000000C24E7: 00                          NOP
-00000000000C24E8: 00                          NOP
+00000000000C2410: 00                          NOP
+00000000000C2411: 00                          NOP
+00000000000C2412: 00                          NOP
 
- ... PADDLING 0x00 APPEARED 10 TIMES SINCE 00000000000C24E6...
+ ... PADDLING 0x00 APPEARED 16 TIMES SINCE 00000000000C2410...
 
 ```
 
@@ -4505,7 +4457,7 @@ jmp                     <%cb>,                                      <_start>
 ; _putc(%EXR0, linear position, %EXR1, ASCII Code)
 _putc:
     pushall
-    mov     .64bit      <%db>,                                      <$(0xB8000)>
+    mov     .64bit      <%db>,                                      <$64(0xB8000)>
     push    .16bit      <%exr1>
     xor     .16bit      <%exr1>,                                    <%exr1>
     xor     .32bit      <%her1>,                                    <%her1>
@@ -4513,7 +4465,7 @@ _putc:
 
 
     pop     .16bit      <%exr0>
-    mov     .8bit       <*1&8(%db, %dp, $(0))>,                     <%r0>
+    mov     .8bit       <*1&8(%db, %dp, $8(0))>,                    <%r0>
 
     REFRESH
 
@@ -4523,76 +4475,76 @@ _putc:
 ; _newline(%EXR0, linear address)
 _newline:
     pushall
-    int                 <$(0x15)>
-    div     .16bit      <$(80)>
+    int                 <$8(0x15)>
+    div     .16bit      <$16(80)>
     ; EXR0 quotient(row), EXR1 reminder(col)
-    cmp     .16bit      <%exr0>,                                    <$(24)>
+    cmp     .16bit      <%exr0>,                                    <$16(24)>
     jbe                 <%cb>,                                      <.scroll>
 
     xor     .16bit      <%exr1>,                                    <%exr1>
     inc     .16bit      <%exr0>
-    mul     .16bit      <$(80)>
+    mul     .16bit      <$16(80)>
     SETCUSP
     REFRESH
     jmp                 <%cb>,                                      <.exit>
 
     .scroll:
         ; move content (scroll up)
-        mov .64bit      <%db>,                                      <$(0xB8000)>
+        mov .64bit      <%db>,                                      <$64(0xB8000)>
         xor .64bit      <%dp>,                                      <%dp>
-        mov .64bit      <%eb>,                                      <$(0xB8000 + 80)>
+        mov .64bit      <%eb>,                                      <$64(0xB8000 + 80)>
         xor .64bit      <%ep>,                                      <%ep>
-        mov .64bit      <%fer3>,                                    <$(2000 - 80)>
+        mov .64bit      <%fer3>,                                    <$64(2000 - 80)>
         movs
 
         ; clear last line
-        mov .64bit      <%fer3>,                                    <$(80)>
-        mov .64bit      <%eb>,                                      <$(0xB8000)>
-        mov .64bit      <%ep>,                                      <$(2000 - 80)>
+        mov .64bit      <%fer3>,                                    <$64(80)>
+        mov .64bit      <%eb>,                                      <$64(0xB8000)>
+        mov .64bit      <%ep>,                                      <$64(2000 - 80)>
         xor .64bit      <%dp>,                                      <%dp>
         .scroll.loop:
-            mov .8bit   <*1&8(%eb, %ep, %dp)>,                      <$(' ')>
+            mov .8bit   <*1&8(%eb, %ep, %dp)>,                      <$8(' ')>
             inc .64bit  <%dp>
             loop        <%cb>,                                      <.scroll.loop>
 
-        mov .16bit      <%exr0>,                                    <$(2000 - 80)>
+        mov .16bit      <%exr0>,                                    <$16(2000 - 80)>
         SETCUSP
         REFRESH
     .exit:
 
     popall
-    int                 <$(0x15)>
+    int                 <$8(0x15)>
     ret
 
 ; _puts(%DB:%DP), null terminated string
 _puts:
     pushall
     .loop:
-        mov .8bit       <%r2>,                                      <*1&8(%db, %dp, $(0))>
+        mov .8bit       <%r2>,                                      <*1&8(%db, %dp, $8(0))>
 
-        cmp .8bit       <%r2>,                                      <$(0)>
+        cmp .8bit       <%r2>,                                      <$8(0)>
         je              <%cb>,                                      <.exit>
 
-        cmp .8bit       <%r2>,                                      <$(0x0A)>
+        cmp .8bit       <%r2>,                                      <$8(0x0A)>
         jne             <%cb>,                                      <.skip_newline>
 
         .newline:
         call            <%cb>,                                      <_newline>
         mov .64bit      <%fer3>,                                    <.last_offset>
-        mov .16bit      <*1&16($(0), %fer3, $(0))>,                 <%exr0>
+        mov .16bit      <*1&16($8(0), %fer3, $8(0))>,               <%exr0>
         jmp             <%cb>,                                      <.end>
 
         .skip_newline:
         xor .8bit       <%r3>,                                      <%r3>
         mov .64bit      <%fer3>,                                    <.last_offset>
-        mov .16bit      <%exr0>,                                    <*1&16($(0), %fer3, $(0))>
+        mov .16bit      <%exr0>,                                    <*1&16($8(0), %fer3, $8(0))>
         call            <%cb>,                                      <_putc>
 
         inc .16bit      <%exr0>
-        cmp .16bit      <%exr0>,                                    <$(2000)>
+        cmp .16bit      <%exr0>,                                    <$16(2000)>
         je              <%cb>,                                      <.newline>
 
-        mov .16bit      <*1&16($(0), %fer3, $(0))>,                 <%exr0>
+        mov .16bit      <*1&16($8(0), %fer3, $8(0))>,               <%exr0>
         SETCUSP
 
         .end:
@@ -4615,11 +4567,11 @@ threadA:
     mov .64bit          <%dp>,                                      <.message>
 
     .loop:
-        int             <$(0x80)>
+        int             <$8(0x80)>
         jmp             <%cb>,                                      <.loop>
 
     .message:
-        .string < "Thread A" >
+        .string < "A" >
         .8bit_data < 0 >
 
 threadB:
@@ -4627,18 +4579,18 @@ threadB:
     mov .64bit          <%dp>,                                      <.message>
 
     .loop:
-        int             <$(0x80)>
+        int             <$8(0x80)>
         jmp             <%cb>,                                      <.loop>
 
     .message:
-        .string < "Thread B" >
+        .string < "B" >
         .8bit_data < 0 >
 
 _rtc:
     mov .64bit          <%fer1>,                                    <.current_thread>
     xor .64bit          <%fer2>,                                    <%fer2>
-    mov .8bit           <%r0>,                                      <*1&8(%fer1, %fer2, $(0))>
-    cmp .8bit           <%r0>,                                      <$(0)>
+    mov .8bit           <%r0>,                                      <*1&8(%fer1, %fer2, $8(0))>
+    cmp .8bit           <%r0>,                                      <$8(0)>
     je                  <%cb>,                                      <.is_a>
 
     .is_b:
@@ -4647,7 +4599,7 @@ _rtc:
         mov .64bit      <%dp>,                                      <_reg_threadb>
         mov .64bit      <%eb>,                                      <%sb>
         mov .64bit      <%ep>,                                      <%sp>
-        mov .64bit      <%fer3>,                                    <$(256)>
+        mov .64bit      <%fer3>,                                    <$64(256)>
         movs
 
         ; Restore A
@@ -4655,7 +4607,7 @@ _rtc:
         mov .64bit      <%dp>,                                      <%sp>
         mov .64bit      <%ep>,                                      <_reg_threada>
         xor .64bit      <%eb>,                                      <%eb>
-        mov .64bit      <%fer3>,                                    <$(256)>
+        mov .64bit      <%fer3>,                                    <$64(256)>
         movs
 
         xor .8bit       <%r0>,                                      <%r0>
@@ -4664,11 +4616,11 @@ _rtc:
     .is_a:
         ; we need to determine if A is being executed before save
         mov .64bit      <%fer4>,                                    <.a_started>
-        mov .8bit       <%r1>,                                      <*1&8(%fer4, $(0), $(0))>
-        cmp .8bit       <%r1>,                                      <$(0)>
+        mov .8bit       <%r1>,                                      <*1&8(%fer4, $8(0), $8(0))>
+        cmp .8bit       <%r1>,                                      <$8(0)>
         jne             <%cb>,                                      <.save_a>
 
-        mov .8bit       <*1&8(%fer4, $(0), $(0))>,                  <$(1)>
+        mov .8bit       <*1&8(%fer4, $8(0), $8(0))>,                <$8(1)>
         jmp             <%cb>,                                      <.restore_b>
 
         ; Save A
@@ -4677,7 +4629,7 @@ _rtc:
         mov .64bit      <%dp>,                                      <_reg_threada>
         mov .64bit      <%eb>,                                      <%sb>
         mov .64bit      <%ep>,                                      <%sp>
-        mov .64bit      <%fer3>,                                    <$(256)>
+        mov .64bit      <%fer3>,                                    <$64(256)>
         movs
 
         ; Restore B
@@ -4686,13 +4638,13 @@ _rtc:
         mov .64bit      <%dp>,                                      <%sp>
         mov .64bit      <%eb>,                                      <_reg_threadb>
         xor .64bit      <%ep>,                                      <%ep>
-        mov .64bit      <%fer3>,                                    <$(256)>
+        mov .64bit      <%fer3>,                                    <$64(256)>
         movs
 
-        mov .8bit       <%r0>,                                      <$(1)>
+        mov .8bit       <%r0>,                                      <$8(1)>
 
     .end_switch:
-    mov .8bit           <*1&8(%fer1, %fer2, $(0))>,                 <%r0>
+    mov .8bit           <*1&8(%fer1, %fer2, $8(0))>,                <%r0>
     iret
 
     .current_thread:
@@ -4700,26 +4652,48 @@ _rtc:
     .a_started:
         .8bit_data < 0 >
 
+_shutdown:
+    xor .64bit          <%db>,                                      <%db>
+    mov .64bit          <%dp>,                                      <.message>
+    int                 <$8(0x13)>
+    int                 <$8(0x13)>
+    .loop:
+        xor .16bit      <%exr0>,                                    <%exr0>
+        mov .8bit       <%r0>,                                      <*1&8(%db, %dp, $8(0))>
+        cmp .8bit       <%r0>,                                      <$8(0)>
+        je              <%cb>,                                      <.end>
+        int             <$8(0x10)>
+        inc .64bit      <%dp>
+        jmp             <%cb>,                                      <.loop>
+
+    .end:
+    hlt
+    .message:
+        .string < "System shutdown requested received!\n" >
+        .8bit_data < 0 >
+
 _start:
     mov .64bit          <%sb>,                                      <_stack_frame>
-    mov .64bit          <%sp>,                                      <$(0xFFF)>
+    mov .64bit          <%sp>,                                      <$64(0xFFF)>
 
-    mov .64bit          <*1&64($(0xA0000), $(16 * 0x80), $(8))>,    <int_puts>
-    mov .64bit          <*1&64($(0xA0000), $(16 * 0x81), $(8))>,    <_rtc>
+    mov .64bit          <*1&64($32(0xA0000), $16(16 * 0x80), $8(8))>,   <int_puts>
+    mov .64bit          <*1&64($32(0xA0000), $16(16 * 0x81), $8(8))>,   <_rtc>
+    mov .64bit          <*1&64($32(0xA0000), $16(16 * 0x09), $8(8))>,   <_shutdown>
+    mov .64bit          <*1&64($32(0xA0000), $16(16 * 0x05), $8(8))>,   <_shutdown>
 
-    mov .64bit          <%dp>,                                      <_reg_threada>
-    mov .64bit          <*1&64(%dp, $(160), $(0))>,                 <threadA>           ; IP
-    mov .64bit          <*1&64(%dp, $(136), $(0))>,                 <_stack_threada>    ; SB
-    mov .64bit          <*1&64(%dp, $(144), $(0))>,                 <$(0xFFF)>          ; SP
+    mov .64bit          <%dp>,                                          <_reg_threada>
+    mov .64bit          <*1&64(%dp, $8(160), $8(0))>,                   <threadA>           ; IP
+    mov .64bit          <*1&64(%dp, $8(136), $8(0))>,                   <_stack_threada>    ; SB
+    mov .64bit          <*1&64(%dp, $8(144), $8(0))>,                   <$64(0xFFF)>        ; SP
 
-    mov .64bit          <%dp>,                                      <_reg_threadb>
-    mov .64bit          <*1&64(%dp, $(160), $(0))>,                 <threadB>           ; IP
-    mov .64bit          <*1&64(%dp, $(136), $(0))>,                 <_stack_threadb>    ; SB
-    mov .64bit          <*1&64(%dp, $(144), $(0))>,                 <$(0xFFF)>          ; SP
+    mov .64bit          <%dp>,                                          <_reg_threadb>
+    mov .64bit          <*1&64(%dp, $8(160), $8(0))>,                   <threadB>           ; IP
+    mov .64bit          <*1&64(%dp, $8(136), $8(0))>,                   <_stack_threadb>    ; SB
+    mov .64bit          <*1&64(%dp, $8(144), $8(0))>,                   <$64(0xFFF)>        ; SP
 
-    out .64bit          <$(RTC_INT)>,                               <$(0x181)>          ; 0x81
+    out .64bit          <$64(RTC_INT)>,                                 <$64(0x181)>        ; 0x81
 
-    jmp <%cb>, <$(@)>
+    jmp                 <%cb>,                                          <$64(@)>
 
 _reg_threada:
     .resvb < 256 >
@@ -4743,393 +4717,398 @@ _stack_frame:
 
 thread.sys        FORMAT    SYS
 
-SYMBOL TABLE - SIZE 32:
+SYMBOL TABLE - SIZE 36:
 00000000000C180E                             _putc
-00000000000C1865                             _newline
-00000000000C18D7                             _newline_scroll
-00000000000C194A                             _newline_scroll_loop
-00000000000C199A                             _newline_exit
-00000000000C19A7                             _puts
-00000000000C19A8                             _puts_loop
-00000000000C19FA                             _puts_newline
-00000000000C1A44                             _puts_skip_newline
-00000000000C1AD4                             _puts_end
-00000000000C1AE7                             _puts_exit
-00000000000C1AE9                             _puts_last_offset
-00000000000C1AEB                             int_puts
-00000000000C1AFA                             threadA
-00000000000C1B11                             threadA_loop
-00000000000C1B2A                             threadA_message
-00000000000C1B33                             threadB
-00000000000C1B4A                             threadB_loop
-00000000000C1B63                             threadB_message
-00000000000C1B6C                             _rtc
-00000000000C1C3C                             _rtc_is_a
-00000000000C1CBB                             _rtc_save_a
-00000000000C1CF2                             _rtc_restore_b
-00000000000C1D38                             _rtc_end_switch
-00000000000C1D51                             _rtc_current_thread
-00000000000C1D52                             _rtc_a_started
-00000000000C1D53                             _start
-00000000000C1EF1                             _reg_threada
-00000000000C1FF1                             _stack_threada
-00000000000C2FF0                             _reg_threadb
-00000000000C30F0                             _stack_threadb
-00000000000C40EF                             _stack_frame
+00000000000C1857                             _newline
+00000000000C18A2                             _newline_scroll
+00000000000C1915                             _newline_scroll_loop
+00000000000C194A                             _newline_exit
+00000000000C1950                             _puts
+00000000000C1951                             _puts_loop
+00000000000C198E                             _puts_newline
+00000000000C19CA                             _puts_skip_newline
+00000000000C1A31                             _puts_end
+00000000000C1A44                             _puts_exit
+00000000000C1A46                             _puts_last_offset
+00000000000C1A48                             int_puts
+00000000000C1A57                             threadA
+00000000000C1A6E                             threadA_loop
+00000000000C1A80                             threadA_message
+00000000000C1A82                             threadB
+00000000000C1A99                             threadB_loop
+00000000000C1AAB                             threadB_message
+00000000000C1AAD                             _rtc
+00000000000C1B6F                             _rtc_is_a
+00000000000C1BC4                             _rtc_save_a
+00000000000C1BFB                             _rtc_restore_b
+00000000000C1C3A                             _rtc_end_switch
+00000000000C1C4C                             _rtc_current_thread
+00000000000C1C4D                             _rtc_a_started
+00000000000C1C4E                             _shutdown
+00000000000C1C6D                             _shutdown_loop
+00000000000C1CB3                             _shutdown_end
+00000000000C1CB4                             _shutdown_message
+00000000000C1CD9                             _start
+00000000000C1E39                             _reg_threada
+00000000000C1F39                             _stack_threada
+00000000000C2F38                             _reg_threadb
+00000000000C3038                             _stack_threadb
+00000000000C4037                             _stack_frame
 
 
-00000000000C1800: 30 01 64 A2 02 64 53 1D     JMP <%CB>, <$(0xC1D53)>
+00000000000C1800: 30 01 64 A2 02 64 D9 1C     JMP <%CB>, <$64(0xC1CD9)>
                   0C 00 00 00 00 00 
 
 
 <_putc> :
 00000000000C180E: 24                          PUSHALL
-00000000000C180F: 20 64 01 64 A3 02 64 00     MOV .64bit <%DB>, <$(0xB8000)>
+00000000000C180F: 20 64 01 64 A3 02 64 00     MOV .64bit <%DB>, <$64(0xB8000)>
                   80 0B 00 00 00 00 00 
 00000000000C181E: 22 16 01 16 01              PUSH .16bit <%EXR1>
 00000000000C1823: 12 16 01 16 01 01 16 01     XOR .16bit <%EXR1>, <%EXR1>
 00000000000C182B: 12 32 01 32 01 01 32 01     XOR .32bit <%HER1>, <%HER1>
 00000000000C1833: 20 64 01 64 A4 01 64 00     MOV .64bit <%DP>, <%FER0>
 00000000000C183B: 23 16 01 16 00              POP .16bit <%EXR0>
-00000000000C1840: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $(0x0))>, <%R0>
-                  64 A4 02 64 00 00 00 00 
-                  00 00 00 00 01 01 08 00 
-00000000000C1858: 39 02 64 18 00 00 00 00     INT <$(0x18)>
-                  00 00 00 
-00000000000C1863: 25                          POPALL
-00000000000C1864: 32                          RET
+00000000000C1840: 20 08 03 08 01 64 A3 01     MOV .8bit  <*1&8(%DB, %DP, $8(0x0))>, <%R0>
+                  64 A4 02 08 00 01 01 08 
+                  00 
+00000000000C1851: 39 02 08 18                 INT <$8(0x18)>
+00000000000C1855: 25                          POPALL
+00000000000C1856: 32                          RET
 
 
 <_newline> :
-00000000000C1865: 24                          PUSHALL
-00000000000C1866: 39 02 64 15 00 00 00 00     INT <$(0x15)>
-                  00 00 00 
-00000000000C1871: 08 16 02 64 50 00 00 00     DIV .16bit <$(0x50)>
-                  00 00 00 00 
-00000000000C187D: 0A 16 01 16 00 02 64 18     CMP .16bit <%EXR0>, <$(0x18)>
-                  00 00 00 00 00 00 00 
-00000000000C188C: 37 01 64 A2 02 64 D7 18     JBE <%CB>, <$(0xC18D7)>
+00000000000C1857: 24                          PUSHALL
+00000000000C1858: 39 02 08 15                 INT <$8(0x15)>
+00000000000C185C: 08 16 02 16 50 00           DIV .16bit <$16(0x50)>
+00000000000C1862: 0A 16 01 16 00 02 16 18     CMP .16bit <%EXR0>, <$16(0x18)>
+                  00 
+00000000000C186B: 37 01 64 A2 02 64 A2 18     JBE <%CB>, <$64(0xC18A2)>
                   0C 00 00 00 00 00 
-00000000000C189A: 12 16 01 16 01 01 16 01     XOR .16bit <%EXR1>, <%EXR1>
-00000000000C18A2: 0B 16 01 16 00              INC .16bit <%EXR0>
-00000000000C18A7: 06 16 02 64 50 00 00 00     MUL .16bit <$(0x50)>
-                  00 00 00 00 
-00000000000C18B3: 39 02 64 11 00 00 00 00     INT <$(0x11)>
-                  00 00 00 
-00000000000C18BE: 39 02 64 18 00 00 00 00     INT <$(0x18)>
-                  00 00 00 
-00000000000C18C9: 30 01 64 A2 02 64 9A 19     JMP <%CB>, <$(0xC199A)>
+00000000000C1879: 12 16 01 16 01 01 16 01     XOR .16bit <%EXR1>, <%EXR1>
+00000000000C1881: 0B 16 01 16 00              INC .16bit <%EXR0>
+00000000000C1886: 06 16 02 16 50 00           MUL .16bit <$16(0x50)>
+00000000000C188C: 39 02 08 11                 INT <$8(0x11)>
+00000000000C1890: 39 02 08 18                 INT <$8(0x18)>
+00000000000C1894: 30 01 64 A2 02 64 4A 19     JMP <%CB>, <$64(0xC194A)>
                   0C 00 00 00 00 00 
 
 
 <_newline_scroll> :
-00000000000C18D7: 20 64 01 64 A3 02 64 00     MOV .64bit <%DB>, <$(0xB8000)>
+00000000000C18A2: 20 64 01 64 A3 02 64 00     MOV .64bit <%DB>, <$64(0xB8000)>
                   80 0B 00 00 00 00 00 
-00000000000C18E6: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
-00000000000C18EE: 20 64 01 64 A5 02 64 50     MOV .64bit <%EB>, <$(0xB8050)>
+00000000000C18B1: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
+00000000000C18B9: 20 64 01 64 A5 02 64 50     MOV .64bit <%EB>, <$64(0xB8050)>
                   80 0B 00 00 00 00 00 
-00000000000C18FD: 12 64 01 64 A6 01 64 A6     XOR .64bit <%EP>, <%EP>
-00000000000C1905: 20 64 01 64 03 02 64 80     MOV .64bit <%FER3>, <$(0x780)>
+00000000000C18C8: 12 64 01 64 A6 01 64 A6     XOR .64bit <%EP>, <%EP>
+00000000000C18D0: 20 64 01 64 03 02 64 80     MOV .64bit <%FER3>, <$64(0x780)>
                   07 00 00 00 00 00 00 
-00000000000C1914: 28                          MOVS
-00000000000C1915: 20 64 01 64 03 02 64 50     MOV .64bit <%FER3>, <$(0x50)>
+00000000000C18DF: 28                          MOVS
+00000000000C18E0: 20 64 01 64 03 02 64 50     MOV .64bit <%FER3>, <$64(0x50)>
                   00 00 00 00 00 00 00 
-00000000000C1924: 20 64 01 64 A5 02 64 00     MOV .64bit <%EB>, <$(0xB8000)>
+00000000000C18EF: 20 64 01 64 A5 02 64 00     MOV .64bit <%EB>, <$64(0xB8000)>
                   80 0B 00 00 00 00 00 
-00000000000C1933: 20 64 01 64 A6 02 64 80     MOV .64bit <%EP>, <$(0x780)>
+00000000000C18FE: 20 64 01 64 A6 02 64 80     MOV .64bit <%EP>, <$64(0x780)>
                   07 00 00 00 00 00 00 
-00000000000C1942: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
+00000000000C190D: 12 64 01 64 A4 01 64 A4     XOR .64bit <%DP>, <%DP>
 
 
 <_newline_scroll_loop> :
-00000000000C194A: 20 08 03 08 01 64 A5 01     MOV .8bit  <*1&8(%EB, %EP, %DP)>, <$(0x20)>
-                  64 A6 01 64 A4 01 02 64 
-                  20 00 00 00 00 00 00 00 
-00000000000C1962: 0B 64 01 64 A4              INC .64bit <%DP>
-00000000000C1967: 60 01 64 A2 02 64 4A 19     LOOP <%CB>, <$(0xC194A)>
+00000000000C1915: 20 08 03 08 01 64 A5 01     MOV .8bit  <*1&8(%EB, %EP, %DP)>, <$8(0x20)>
+                  64 A6 01 64 A4 01 02 08 
+                  20 
+00000000000C1926: 0B 64 01 64 A4              INC .64bit <%DP>
+00000000000C192B: 60 01 64 A2 02 64 15 19     LOOP <%CB>, <$64(0xC1915)>
                   0C 00 00 00 00 00 
-00000000000C1975: 20 16 01 16 00 02 64 80     MOV .16bit <%EXR0>, <$(0x780)>
-                  07 00 00 00 00 00 00 
-00000000000C1984: 39 02 64 11 00 00 00 00     INT <$(0x11)>
-                  00 00 00 
-00000000000C198F: 39 02 64 18 00 00 00 00     INT <$(0x18)>
-                  00 00 00 
+00000000000C1939: 20 16 01 16 00 02 16 80     MOV .16bit <%EXR0>, <$16(0x780)>
+                  07 
+00000000000C1942: 39 02 08 11                 INT <$8(0x11)>
+00000000000C1946: 39 02 08 18                 INT <$8(0x18)>
 
 
 <_newline_exit> :
-00000000000C199A: 25                          POPALL
-00000000000C199B: 39 02 64 15 00 00 00 00     INT <$(0x15)>
-                  00 00 00 
-00000000000C19A6: 32                          RET
+00000000000C194A: 25                          POPALL
+00000000000C194B: 39 02 08 15                 INT <$8(0x15)>
+00000000000C194F: 32                          RET
 
 
 <_puts> :
-00000000000C19A7: 24                          PUSHALL
+00000000000C1950: 24                          PUSHALL
 
 
 <_puts_loop> :
-00000000000C19A8: 20 08 01 08 02 03 08 01     MOV .8bit  <%R2>, <*1&8(%DB, %DP, $(0x0))>
-                  64 A3 01 64 A4 02 64 00 
-                  00 00 00 00 00 00 00 01 
-00000000000C19C0: 0A 08 01 08 02 02 64 00     CMP .8bit  <%R2>, <$(0x0)>
-                  00 00 00 00 00 00 00 
-00000000000C19CF: 33 01 64 A2 02 64 E7 1A     JE <%CB>, <$(0xC1AE7)>
+00000000000C1951: 20 08 01 08 02 03 08 01     MOV .8bit  <%R2>, <*1&8(%DB, %DP, $8(0x0))>
+                  64 A3 01 64 A4 02 08 00 
+                  01 
+00000000000C1962: 0A 08 01 08 02 02 08 00     CMP .8bit  <%R2>, <$8(0x0)>
+00000000000C196A: 33 01 64 A2 02 64 44 1A     JE <%CB>, <$64(0xC1A44)>
                   0C 00 00 00 00 00 
-00000000000C19DD: 0A 08 01 08 02 02 64 0A     CMP .8bit  <%R2>, <$(0xA)>
-                  00 00 00 00 00 00 00 
-00000000000C19EC: 34 01 64 A2 02 64 44 1A     JNE <%CB>, <$(0xC1A44)>
+00000000000C1978: 0A 08 01 08 02 02 08 0A     CMP .8bit  <%R2>, <$8(0xA)>
+00000000000C1980: 34 01 64 A2 02 64 CA 19     JNE <%CB>, <$64(0xC19CA)>
                   0C 00 00 00 00 00 
 
 
 <_puts_newline> :
-00000000000C19FA: 31 01 64 A2 02 64 65 18     CALL <%CB>, <$(0xC1865)>
+00000000000C198E: 31 01 64 A2 02 64 57 18     CALL <%CB>, <$64(0xC1857)>
                   0C 00 00 00 00 00 
-00000000000C1A08: 20 64 01 64 03 02 64 E9     MOV .64bit <%FER3>, <$(0xC1AE9)>
+00000000000C199C: 20 64 01 64 03 02 64 46     MOV .64bit <%FER3>, <$64(0xC1A46)>
                   1A 0C 00 00 00 00 00 
-00000000000C1A17: 20 16 03 16 02 64 00 00     MOV .16bit <*1&16($(0x0), %FER3, $(0x0))>, <%EXR0>
-                  00 00 00 00 00 00 01 64 
-                  03 02 64 00 00 00 00 00 
-                  00 00 00 01 01 16 00 
-00000000000C1A36: 30 01 64 A2 02 64 D4 1A     JMP <%CB>, <$(0xC1AD4)>
+00000000000C19AB: 20 16 03 16 02 08 00 01     MOV .16bit <*1&16($8(0x0), %FER3, $8(0x0))>, <%EXR0>
+                  64 03 02 08 00 01 01 16 
+                  00 
+00000000000C19BC: 30 01 64 A2 02 64 31 1A     JMP <%CB>, <$64(0xC1A31)>
                   0C 00 00 00 00 00 
 
 
 <_puts_skip_newline> :
-00000000000C1A44: 12 08 01 08 03 01 08 03     XOR .8bit  <%R3>, <%R3>
-00000000000C1A4C: 20 64 01 64 03 02 64 E9     MOV .64bit <%FER3>, <$(0xC1AE9)>
+00000000000C19CA: 12 08 01 08 03 01 08 03     XOR .8bit  <%R3>, <%R3>
+00000000000C19D2: 20 64 01 64 03 02 64 46     MOV .64bit <%FER3>, <$64(0xC1A46)>
                   1A 0C 00 00 00 00 00 
-00000000000C1A5B: 20 16 01 16 00 03 16 02     MOV .16bit <%EXR0>, <*1&16($(0x0), %FER3, $(0x0))>
-                  64 00 00 00 00 00 00 00 
-                  00 01 64 03 02 64 00 00 
-                  00 00 00 00 00 00 01 
-00000000000C1A7A: 31 01 64 A2 02 64 0E 18     CALL <%CB>, <$(0xC180E)>
+00000000000C19E1: 20 16 01 16 00 03 16 02     MOV .16bit <%EXR0>, <*1&16($8(0x0), %FER3, $8(0x0))>
+                  08 00 01 64 03 02 08 00 
+                  01 
+00000000000C19F2: 31 01 64 A2 02 64 0E 18     CALL <%CB>, <$64(0xC180E)>
                   0C 00 00 00 00 00 
-00000000000C1A88: 0B 16 01 16 00              INC .16bit <%EXR0>
-00000000000C1A8D: 0A 16 01 16 00 02 64 D0     CMP .16bit <%EXR0>, <$(0x7D0)>
-                  07 00 00 00 00 00 00 
-00000000000C1A9C: 33 01 64 A2 02 64 FA 19     JE <%CB>, <$(0xC19FA)>
+00000000000C1A00: 0B 16 01 16 00              INC .16bit <%EXR0>
+00000000000C1A05: 0A 16 01 16 00 02 16 D0     CMP .16bit <%EXR0>, <$16(0x7D0)>
+                  07 
+00000000000C1A0E: 33 01 64 A2 02 64 8E 19     JE <%CB>, <$64(0xC198E)>
                   0C 00 00 00 00 00 
-00000000000C1AAA: 20 16 03 16 02 64 00 00     MOV .16bit <*1&16($(0x0), %FER3, $(0x0))>, <%EXR0>
-                  00 00 00 00 00 00 01 64 
-                  03 02 64 00 00 00 00 00 
-                  00 00 00 01 01 16 00 
-00000000000C1AC9: 39 02 64 11 00 00 00 00     INT <$(0x11)>
-                  00 00 00 
+00000000000C1A1C: 20 16 03 16 02 08 00 01     MOV .16bit <*1&16($8(0x0), %FER3, $8(0x0))>, <%EXR0>
+                  64 03 02 08 00 01 01 16 
+                  00 
+00000000000C1A2D: 39 02 08 11                 INT <$8(0x11)>
 
 
 <_puts_end> :
-00000000000C1AD4: 0B 64 01 64 A4              INC .64bit <%DP>
-00000000000C1AD9: 30 01 64 A2 02 64 A8 19     JMP <%CB>, <$(0xC19A8)>
+00000000000C1A31: 0B 64 01 64 A4              INC .64bit <%DP>
+00000000000C1A36: 30 01 64 A2 02 64 51 19     JMP <%CB>, <$64(0xC1951)>
                   0C 00 00 00 00 00 
 
 
 <_puts_exit> :
-00000000000C1AE7: 25                          POPALL
-00000000000C1AE8: 32                          RET
+00000000000C1A44: 25                          POPALL
+00000000000C1A45: 32                          RET
 
 
 <_puts_last_offset> :
-00000000000C1AE9: 00                          NOP
-00000000000C1AEA: 00                          NOP
+00000000000C1A46: 00                          NOP
+00000000000C1A47: 00                          NOP
 
 
 <int_puts> :
-00000000000C1AEB: 31 01 64 A2 02 64 A7 19     CALL <%CB>, <$(0xC19A7)>
+00000000000C1A48: 31 01 64 A2 02 64 50 19     CALL <%CB>, <$64(0xC1950)>
                   0C 00 00 00 00 00 
-00000000000C1AF9: 3B                          IRET
+00000000000C1A56: 3B                          IRET
 
 
 <threadA> :
-00000000000C1AFA: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1B02: 20 64 01 64 A4 02 64 2A     MOV .64bit <%DP>, <$(0xC1B2A)>
-                  1B 0C 00 00 00 00 00 
+00000000000C1A57: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1A5F: 20 64 01 64 A4 02 64 80     MOV .64bit <%DP>, <$64(0xC1A80)>
+                  1A 0C 00 00 00 00 00 
 
 
 <threadA_loop> :
-00000000000C1B11: 39 02 64 80 00 00 00 00     INT <$(0x80)>
-                  00 00 00 
-00000000000C1B1C: 30 01 64 A2 02 64 11 1B     JMP <%CB>, <$(0xC1B11)>
+00000000000C1A6E: 39 02 08 80                 INT <$8(0x80)>
+00000000000C1A72: 30 01 64 A2 02 64 6E 1A     JMP <%CB>, <$64(0xC1A6E)>
                   0C 00 00 00 00 00 
 
 
 <threadA_message> :
-00000000000C1B2A: 5468 7265 6164 2041                        Thread A
-
-00000000000C1B32: 00                          NOP
+00000000000C1A80: 41                          IGNI
+00000000000C1A81: 00                          NOP
 
 
 <threadB> :
-00000000000C1B33: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1B3B: 20 64 01 64 A4 02 64 63     MOV .64bit <%DP>, <$(0xC1B63)>
-                  1B 0C 00 00 00 00 00 
+00000000000C1A82: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1A8A: 20 64 01 64 A4 02 64 AB     MOV .64bit <%DP>, <$64(0xC1AAB)>
+                  1A 0C 00 00 00 00 00 
 
 
 <threadB_loop> :
-00000000000C1B4A: 39 02 64 80 00 00 00 00     INT <$(0x80)>
-                  00 00 00 
-00000000000C1B55: 30 01 64 A2 02 64 4A 1B     JMP <%CB>, <$(0xC1B4A)>
+00000000000C1A99: 39 02 08 80                 INT <$8(0x80)>
+00000000000C1A9D: 30 01 64 A2 02 64 99 1A     JMP <%CB>, <$64(0xC1A99)>
                   0C 00 00 00 00 00 
 
 
 <threadB_message> :
-00000000000C1B63: 5468 7265 6164 2042                        Thread B
-
-00000000000C1B6B: 00                          NOP
+00000000000C1AAB: 42                          ALWI
+00000000000C1AAC: 00                          NOP
 
 
 <_rtc> :
-00000000000C1B6C: 20 64 01 64 01 02 64 51     MOV .64bit <%FER1>, <$(0xC1D51)>
-                  1D 0C 00 00 00 00 00 
-00000000000C1B7B: 12 64 01 64 02 01 64 02     XOR .64bit <%FER2>, <%FER2>
-00000000000C1B83: 20 08 01 08 00 03 08 01     MOV .8bit  <%R0>, <*1&8(%FER1, %FER2, $(0x0))>
-                  64 01 01 64 02 02 64 00 
-                  00 00 00 00 00 00 00 01 
-00000000000C1B9B: 0A 08 01 08 00 02 64 00     CMP .8bit  <%R0>, <$(0x0)>
-                  00 00 00 00 00 00 00 
-00000000000C1BAA: 33 01 64 A2 02 64 3C 1C     JE <%CB>, <$(0xC1C3C)>
+00000000000C1AAD: 20 64 01 64 01 02 64 4C     MOV .64bit <%FER1>, <$64(0xC1C4C)>
+                  1C 0C 00 00 00 00 00 
+00000000000C1ABC: 12 64 01 64 02 01 64 02     XOR .64bit <%FER2>, <%FER2>
+00000000000C1AC4: 20 08 01 08 00 03 08 01     MOV .8bit  <%R0>, <*1&8(%FER1, %FER2, $8(0x0))>
+                  64 01 01 64 02 02 08 00 
+                  01 
+00000000000C1AD5: 0A 08 01 08 00 02 08 00     CMP .8bit  <%R0>, <$8(0x0)>
+00000000000C1ADD: 33 01 64 A2 02 64 6F 1B     JE <%CB>, <$64(0xC1B6F)>
                   0C 00 00 00 00 00 
-00000000000C1BB8: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1BC0: 20 64 01 64 A4 02 64 F0     MOV .64bit <%DP>, <$(0xC2FF0)>
+00000000000C1AEB: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1AF3: 20 64 01 64 A4 02 64 38     MOV .64bit <%DP>, <$64(0xC2F38)>
                   2F 0C 00 00 00 00 00 
-00000000000C1BCF: 20 64 01 64 A5 01 64 A0     MOV .64bit <%EB>, <%SB>
-00000000000C1BD7: 20 64 01 64 A6 01 64 A1     MOV .64bit <%EP>, <%SP>
-00000000000C1BDF: 20 64 01 64 03 02 64 00     MOV .64bit <%FER3>, <$(0x100)>
+00000000000C1B02: 20 64 01 64 A5 01 64 A0     MOV .64bit <%EB>, <%SB>
+00000000000C1B0A: 20 64 01 64 A6 01 64 A1     MOV .64bit <%EP>, <%SP>
+00000000000C1B12: 20 64 01 64 03 02 64 00     MOV .64bit <%FER3>, <$64(0x100)>
                   01 00 00 00 00 00 00 
-00000000000C1BEE: 28                          MOVS
-00000000000C1BEF: 20 64 01 64 A3 01 64 A0     MOV .64bit <%DB>, <%SB>
-00000000000C1BF7: 20 64 01 64 A4 01 64 A1     MOV .64bit <%DP>, <%SP>
-00000000000C1BFF: 20 64 01 64 A6 02 64 F1     MOV .64bit <%EP>, <$(0xC1EF1)>
+00000000000C1B21: 28                          MOVS
+00000000000C1B22: 20 64 01 64 A3 01 64 A0     MOV .64bit <%DB>, <%SB>
+00000000000C1B2A: 20 64 01 64 A4 01 64 A1     MOV .64bit <%DP>, <%SP>
+00000000000C1B32: 20 64 01 64 A6 02 64 39     MOV .64bit <%EP>, <$64(0xC1E39)>
                   1E 0C 00 00 00 00 00 
-00000000000C1C0E: 12 64 01 64 A5 01 64 A5     XOR .64bit <%EB>, <%EB>
-00000000000C1C16: 20 64 01 64 03 02 64 00     MOV .64bit <%FER3>, <$(0x100)>
+00000000000C1B41: 12 64 01 64 A5 01 64 A5     XOR .64bit <%EB>, <%EB>
+00000000000C1B49: 20 64 01 64 03 02 64 00     MOV .64bit <%FER3>, <$64(0x100)>
                   01 00 00 00 00 00 00 
-00000000000C1C25: 28                          MOVS
-00000000000C1C26: 12 08 01 08 00 01 08 00     XOR .8bit  <%R0>, <%R0>
-00000000000C1C2E: 30 01 64 A2 02 64 38 1D     JMP <%CB>, <$(0xC1D38)>
+00000000000C1B58: 28                          MOVS
+00000000000C1B59: 12 08 01 08 00 01 08 00     XOR .8bit  <%R0>, <%R0>
+00000000000C1B61: 30 01 64 A2 02 64 3A 1C     JMP <%CB>, <$64(0xC1C3A)>
                   0C 00 00 00 00 00 
 
 
 <_rtc_is_a> :
-00000000000C1C3C: 20 64 01 64 04 02 64 52     MOV .64bit <%FER4>, <$(0xC1D52)>
-                  1D 0C 00 00 00 00 00 
-00000000000C1C4B: 20 08 01 08 01 03 08 01     MOV .8bit  <%R1>, <*1&8(%FER4, $(0x0), $(0x0))>
-                  64 04 02 64 00 00 00 00 
-                  00 00 00 00 02 64 00 00 
-                  00 00 00 00 00 00 01 
-00000000000C1C6A: 0A 08 01 08 01 02 64 00     CMP .8bit  <%R1>, <$(0x0)>
-                  00 00 00 00 00 00 00 
-00000000000C1C79: 34 01 64 A2 02 64 BB 1C     JNE <%CB>, <$(0xC1CBB)>
+00000000000C1B6F: 20 64 01 64 04 02 64 4D     MOV .64bit <%FER4>, <$64(0xC1C4D)>
+                  1C 0C 00 00 00 00 00 
+00000000000C1B7E: 20 08 01 08 01 03 08 01     MOV .8bit  <%R1>, <*1&8(%FER4, $8(0x0), $8(0x0))>
+                  64 04 02 08 00 02 08 00 
+                  01 
+00000000000C1B8F: 0A 08 01 08 01 02 08 00     CMP .8bit  <%R1>, <$8(0x0)>
+00000000000C1B97: 34 01 64 A2 02 64 C4 1B     JNE <%CB>, <$64(0xC1BC4)>
                   0C 00 00 00 00 00 
-00000000000C1C87: 20 08 03 08 01 64 04 02     MOV .8bit  <*1&8(%FER4, $(0x0), $(0x0))>, <$(0x1)>
-                  64 00 00 00 00 00 00 00 
-                  00 02 64 00 00 00 00 00 
-                  00 00 00 01 02 64 01 00 
-                  00 00 00 00 00 00 
-00000000000C1CAD: 30 01 64 A2 02 64 F2 1C     JMP <%CB>, <$(0xC1CF2)>
+00000000000C1BA5: 20 08 03 08 01 64 04 02     MOV .8bit  <*1&8(%FER4, $8(0x0), $8(0x0))>, <$8(0x1)>
+                  08 00 02 08 00 01 02 08 
+                  01 
+00000000000C1BB6: 30 01 64 A2 02 64 FB 1B     JMP <%CB>, <$64(0xC1BFB)>
                   0C 00 00 00 00 00 
 
 
 <_rtc_save_a> :
-00000000000C1CBB: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
-00000000000C1CC3: 20 64 01 64 A4 02 64 F1     MOV .64bit <%DP>, <$(0xC1EF1)>
+00000000000C1BC4: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1BCC: 20 64 01 64 A4 02 64 39     MOV .64bit <%DP>, <$64(0xC1E39)>
                   1E 0C 00 00 00 00 00 
-00000000000C1CD2: 20 64 01 64 A5 01 64 A0     MOV .64bit <%EB>, <%SB>
-00000000000C1CDA: 20 64 01 64 A6 01 64 A1     MOV .64bit <%EP>, <%SP>
-00000000000C1CE2: 20 64 01 64 03 02 64 00     MOV .64bit <%FER3>, <$(0x100)>
+00000000000C1BDB: 20 64 01 64 A5 01 64 A0     MOV .64bit <%EB>, <%SB>
+00000000000C1BE3: 20 64 01 64 A6 01 64 A1     MOV .64bit <%EP>, <%SP>
+00000000000C1BEB: 20 64 01 64 03 02 64 00     MOV .64bit <%FER3>, <$64(0x100)>
                   01 00 00 00 00 00 00 
-00000000000C1CF1: 28                          MOVS
+00000000000C1BFA: 28                          MOVS
 
 
 <_rtc_restore_b> :
-00000000000C1CF2: 20 64 01 64 A3 01 64 A0     MOV .64bit <%DB>, <%SB>
-00000000000C1CFA: 20 64 01 64 A4 01 64 A1     MOV .64bit <%DP>, <%SP>
-00000000000C1D02: 20 64 01 64 A5 02 64 F0     MOV .64bit <%EB>, <$(0xC2FF0)>
+00000000000C1BFB: 20 64 01 64 A3 01 64 A0     MOV .64bit <%DB>, <%SB>
+00000000000C1C03: 20 64 01 64 A4 01 64 A1     MOV .64bit <%DP>, <%SP>
+00000000000C1C0B: 20 64 01 64 A5 02 64 38     MOV .64bit <%EB>, <$64(0xC2F38)>
                   2F 0C 00 00 00 00 00 
-00000000000C1D11: 12 64 01 64 A6 01 64 A6     XOR .64bit <%EP>, <%EP>
-00000000000C1D19: 20 64 01 64 03 02 64 00     MOV .64bit <%FER3>, <$(0x100)>
+00000000000C1C1A: 12 64 01 64 A6 01 64 A6     XOR .64bit <%EP>, <%EP>
+00000000000C1C22: 20 64 01 64 03 02 64 00     MOV .64bit <%FER3>, <$64(0x100)>
                   01 00 00 00 00 00 00 
-00000000000C1D28: 28                          MOVS
-00000000000C1D29: 20 08 01 08 00 02 64 01     MOV .8bit  <%R0>, <$(0x1)>
-                  00 00 00 00 00 00 00 
+00000000000C1C31: 28                          MOVS
+00000000000C1C32: 20 08 01 08 00 02 08 01     MOV .8bit  <%R0>, <$8(0x1)>
 
 
 <_rtc_end_switch> :
-00000000000C1D38: 20 08 03 08 01 64 01 01     MOV .8bit  <*1&8(%FER1, %FER2, $(0x0))>, <%R0>
-                  64 02 02 64 00 00 00 00 
-                  00 00 00 00 01 01 08 00 
-00000000000C1D50: 3B                          IRET
+00000000000C1C3A: 20 08 03 08 01 64 01 01     MOV .8bit  <*1&8(%FER1, %FER2, $8(0x0))>, <%R0>
+                  64 02 02 08 00 01 01 08 
+                  00 
+00000000000C1C4B: 3B                          IRET
 
 
 <_rtc_current_thread> :
-00000000000C1D51: 00                          NOP
+00000000000C1C4C: 00                          NOP
 
 
 <_rtc_a_started> :
-00000000000C1D52: 00                          NOP
+00000000000C1C4D: 00                          NOP
+
+
+<_shutdown> :
+00000000000C1C4E: 12 64 01 64 A3 01 64 A3     XOR .64bit <%DB>, <%DB>
+00000000000C1C56: 20 64 01 64 A4 02 64 B4     MOV .64bit <%DP>, <$64(0xC1CB4)>
+                  1C 0C 00 00 00 00 00 
+00000000000C1C65: 39 02 08 13                 INT <$8(0x13)>
+00000000000C1C69: 39 02 08 13                 INT <$8(0x13)>
+
+
+<_shutdown_loop> :
+00000000000C1C6D: 12 16 01 16 00 01 16 00     XOR .16bit <%EXR0>, <%EXR0>
+00000000000C1C75: 20 08 01 08 00 03 08 01     MOV .8bit  <%R0>, <*1&8(%DB, %DP, $8(0x0))>
+                  64 A3 01 64 A4 02 08 00 
+                  01 
+00000000000C1C86: 0A 08 01 08 00 02 08 00     CMP .8bit  <%R0>, <$8(0x0)>
+00000000000C1C8E: 33 01 64 A2 02 64 B3 1C     JE <%CB>, <$64(0xC1CB3)>
+                  0C 00 00 00 00 00 
+00000000000C1C9C: 39 02 08 10                 INT <$8(0x10)>
+00000000000C1CA0: 0B 64 01 64 A4              INC .64bit <%DP>
+00000000000C1CA5: 30 01 64 A2 02 64 6D 1C     JMP <%CB>, <$64(0xC1C6D)>
+                  0C 00 00 00 00 00 
+
+
+<_shutdown_end> :
+00000000000C1CB3: 40                          HLT
+
+
+<_shutdown_message> :
+00000000000C1CB4: 5379 7374 656D 2073 6875 7464 6F77 6E20    System shutdown 
+00000000000C1CC4: 7265 7175 6573 7465 6420 7265 6365 6976    requested receiv
+00000000000C1CD4: 6564 210A                                  ed!.
+
+00000000000C1CD8: 00                          NOP
 
 
 <_start> :
-00000000000C1D53: 20 64 01 64 A0 02 64 EF     MOV .64bit <%SB>, <$(0xC40EF)>
+00000000000C1CD9: 20 64 01 64 A0 02 64 37     MOV .64bit <%SB>, <$64(0xC4037)>
                   40 0C 00 00 00 00 00 
-00000000000C1D62: 20 64 01 64 A1 02 64 FF     MOV .64bit <%SP>, <$(0xFFF)>
+00000000000C1CE8: 20 64 01 64 A1 02 64 FF     MOV .64bit <%SP>, <$64(0xFFF)>
                   0F 00 00 00 00 00 00 
-00000000000C1D71: 20 64 03 64 02 64 00 00     MOV .64bit <*1&64($(0xA0000), $(0x800), $(0x8))>, <$(0xC1AEB)>
-                  0A 00 00 00 00 00 02 64 
-                  00 08 00 00 00 00 00 00 
-                  02 64 08 00 00 00 00 00 
-                  00 00 01 02 64 EB 1A 0C 
-                  00 00 00 00 00 
-00000000000C1D9E: 20 64 03 64 02 64 00 00     MOV .64bit <*1&64($(0xA0000), $(0x810), $(0x8))>, <$(0xC1B6C)>
-                  0A 00 00 00 00 00 02 64 
-                  10 08 00 00 00 00 00 00 
-                  02 64 08 00 00 00 00 00 
-                  00 00 01 02 64 6C 1B 0C 
-                  00 00 00 00 00 
-00000000000C1DCB: 20 64 01 64 A4 02 64 F1     MOV .64bit <%DP>, <$(0xC1EF1)>
+00000000000C1CF7: 20 64 03 64 02 32 00 00     MOV .64bit <*1&64($32(0xA0000), $16(0x800), $8(0x8))>, <$64(0xC1A48)>
+                  0A 00 02 16 00 08 02 08 
+                  08 01 02 64 48 1A 0C 00 
+                  00 00 00 00 
+00000000000C1D13: 20 64 03 64 02 32 00 00     MOV .64bit <*1&64($32(0xA0000), $16(0x810), $8(0x8))>, <$64(0xC1AAD)>
+                  0A 00 02 16 10 08 02 08 
+                  08 01 02 64 AD 1A 0C 00 
+                  00 00 00 00 
+00000000000C1D2F: 20 64 03 64 02 32 00 00     MOV .64bit <*1&64($32(0xA0000), $16(0x90), $8(0x8))>, <$64(0xC1C4E)>
+                  0A 00 02 16 90 00 02 08 
+                  08 01 02 64 4E 1C 0C 00 
+                  00 00 00 00 
+00000000000C1D4B: 20 64 03 64 02 32 00 00     MOV .64bit <*1&64($32(0xA0000), $16(0x50), $8(0x8))>, <$64(0xC1C4E)>
+                  0A 00 02 16 50 00 02 08 
+                  08 01 02 64 4E 1C 0C 00 
+                  00 00 00 00 
+00000000000C1D67: 20 64 01 64 A4 02 64 39     MOV .64bit <%DP>, <$64(0xC1E39)>
                   1E 0C 00 00 00 00 00 
-00000000000C1DDA: 20 64 03 64 01 64 A4 02     MOV .64bit <*1&64(%DP, $(0xA0), $(0x0))>, <$(0xC1AFA)>
-                  64 A0 00 00 00 00 00 00 
-                  00 02 64 00 00 00 00 00 
-                  00 00 00 01 02 64 FA 1A 
-                  0C 00 00 00 00 00 
-00000000000C1E00: 20 64 03 64 01 64 A4 02     MOV .64bit <*1&64(%DP, $(0x88), $(0x0))>, <$(0xC1FF1)>
-                  64 88 00 00 00 00 00 00 
-                  00 02 64 00 00 00 00 00 
-                  00 00 00 01 02 64 F1 1F 
-                  0C 00 00 00 00 00 
-00000000000C1E26: 20 64 03 64 01 64 A4 02     MOV .64bit <*1&64(%DP, $(0x90), $(0x0))>, <$(0xFFF)>
-                  64 90 00 00 00 00 00 00 
-                  00 02 64 00 00 00 00 00 
-                  00 00 00 01 02 64 FF 0F 
-                  00 00 00 00 00 00 
-00000000000C1E4C: 20 64 01 64 A4 02 64 F0     MOV .64bit <%DP>, <$(0xC2FF0)>
+00000000000C1D76: 20 64 03 64 01 64 A4 02     MOV .64bit <*1&64(%DP, $8(0xA0), $8(0x0))>, <$64(0xC1A57)>
+                  08 A0 02 08 00 01 02 64 
+                  57 1A 0C 00 00 00 00 00 
+00000000000C1D8E: 20 64 03 64 01 64 A4 02     MOV .64bit <*1&64(%DP, $8(0x88), $8(0x0))>, <$64(0xC1F39)>
+                  08 88 02 08 00 01 02 64 
+                  39 1F 0C 00 00 00 00 00 
+00000000000C1DA6: 20 64 03 64 01 64 A4 02     MOV .64bit <*1&64(%DP, $8(0x90), $8(0x0))>, <$64(0xFFF)>
+                  08 90 02 08 00 01 02 64 
+                  FF 0F 00 00 00 00 00 00 
+00000000000C1DBE: 20 64 01 64 A4 02 64 38     MOV .64bit <%DP>, <$64(0xC2F38)>
                   2F 0C 00 00 00 00 00 
-00000000000C1E5B: 20 64 03 64 01 64 A4 02     MOV .64bit <*1&64(%DP, $(0xA0), $(0x0))>, <$(0xC1B33)>
-                  64 A0 00 00 00 00 00 00 
-                  00 02 64 00 00 00 00 00 
-                  00 00 00 01 02 64 33 1B 
-                  0C 00 00 00 00 00 
-00000000000C1E81: 20 64 03 64 01 64 A4 02     MOV .64bit <*1&64(%DP, $(0x88), $(0x0))>, <$(0xC30F0)>
-                  64 88 00 00 00 00 00 00 
-                  00 02 64 00 00 00 00 00 
-                  00 00 00 01 02 64 F0 30 
-                  0C 00 00 00 00 00 
-00000000000C1EA7: 20 64 03 64 01 64 A4 02     MOV .64bit <*1&64(%DP, $(0x90), $(0x0))>, <$(0xFFF)>
-                  64 90 00 00 00 00 00 00 
-                  00 02 64 00 00 00 00 00 
-                  00 00 00 01 02 64 FF 0F 
-                  00 00 00 00 00 00 
-00000000000C1ECD: 51 64 02 64 71 00 00 00     OUT .64bit <$(0x71)>, <$(0x181)>
+00000000000C1DCD: 20 64 03 64 01 64 A4 02     MOV .64bit <*1&64(%DP, $8(0xA0), $8(0x0))>, <$64(0xC1A82)>
+                  08 A0 02 08 00 01 02 64 
+                  82 1A 0C 00 00 00 00 00 
+00000000000C1DE5: 20 64 03 64 01 64 A4 02     MOV .64bit <*1&64(%DP, $8(0x88), $8(0x0))>, <$64(0xC3038)>
+                  08 88 02 08 00 01 02 64 
+                  38 30 0C 00 00 00 00 00 
+00000000000C1DFD: 20 64 03 64 01 64 A4 02     MOV .64bit <*1&64(%DP, $8(0x90), $8(0x0))>, <$64(0xFFF)>
+                  08 90 02 08 00 01 02 64 
+                  FF 0F 00 00 00 00 00 00 
+00000000000C1E15: 51 64 02 64 71 00 00 00     OUT .64bit <$64(0x71)>, <$64(0x181)>
                   00 00 00 00 02 64 81 01 
                   00 00 00 00 00 00 
-00000000000C1EE3: 30 01 64 A2 02 64 E3 1E     JMP <%CB>, <$(0xC1EE3)>
+00000000000C1E2B: 30 01 64 A2 02 64 2B 1E     JMP <%CB>, <$64(0xC1E2B)>
                   0C 00 00 00 00 00 
 
 
 <_reg_threada> :
-00000000000C1EF1: 00                          NOP
-00000000000C1EF2: 00                          NOP
-00000000000C1EF3: 00                          NOP
+00000000000C1E39: 00                          NOP
+00000000000C1E3A: 00                          NOP
+00000000000C1E3B: 00                          NOP
 
 
 <_stack_threada> :
@@ -5143,7 +5122,8 @@ SYMBOL TABLE - SIZE 32:
 
 <_stack_frame> :
 
- ... PADDLING 0x00 APPEARED 12797 TIMES SINCE 00000000000C1EF1...
+ ... PADDLING 0x00 APPEARED 12797 TIMES SINCE 00000000000C1E39...
+ 
 ```
 
 # Result of Example C
