@@ -191,6 +191,23 @@ int64_t convert_to_64bit_signed(const Type data)
     return result;
 }
 
+template <typename Type, unsigned BitWidth = sizeof(Type) * 8>
+bool check_msb(const Type data)
+{
+    // Ensure the data is treated as unsigned to avoid sign extension issues
+    using UnsignedType = std::make_unsigned_t<Type>;
+    auto udata = static_cast<UnsignedType>(data);
+
+    // Ensure that the BitWidth is not greater than the size of the type
+    static_assert(BitWidth <= sizeof(UnsignedType) * 8, "BitWidth exceeds the size of the type.");
+
+    // Get the most significant bit (MSB) position
+    auto msb_off = BitWidth - 1;  // MSB position based on BitWidth
+    auto msb = (udata >> msb_off) & 1; // Isolate the MSB
+
+    return msb == 1; // Return true if MSB is 1, false otherwise
+}
+
 void debugger_operand_type::do_decode_memory_without_prefix()
 {
     const auto WidthBCD = pop_code8();
@@ -227,10 +244,10 @@ void debugger_operand_type::do_decode_memory_without_prefix()
         literal3 = OperandReferenceTable.literal;
         const auto val = do_access_register_based_on_table();
         switch (OperandReferenceTable.OperandInfo.RegisterValue.RegisterWidthBCD) {
-        case _8bit_prefix:  off2 = convert_to_64bit_signed(*(uint8_t*)&val);  break;
-        case _16bit_prefix: off2 = convert_to_64bit_signed(*(uint16_t*)&val); break;
-        case _32bit_prefix: off2 = convert_to_64bit_signed(*(uint32_t*)&val); break;
-        case _64bit_prefix: off2 = convert_to_64bit_signed(*(uint64_t*)&val); break;
+        case _8bit_prefix:  off2 = check_msb(*(uint8_t*)&val) ?  convert_to_64bit_signed(*(uint8_t*)&val) :  static_cast<int64_t>(val); break;
+        case _16bit_prefix: off2 = check_msb(*(uint16_t*)&val) ? convert_to_64bit_signed(*(uint16_t*)&val) : static_cast<int64_t>(val); break;
+        case _32bit_prefix: off2 = check_msb(*(uint32_t*)&val) ? convert_to_64bit_signed(*(uint32_t*)&val) : static_cast<int64_t>(val); break;
+        case _64bit_prefix: off2 = check_msb(*(uint64_t*)&val) ? convert_to_64bit_signed(*(uint64_t*)&val) : static_cast<int64_t>(val); break;
         default: throw IllegalInstruction("Unknown register width");
         }
         break;
@@ -239,10 +256,10 @@ void debugger_operand_type::do_decode_memory_without_prefix()
         do_decode_constant_without_prefix();
         const auto val = OperandReferenceTable.OperandInfo.ConstantValue;
         switch (OperandReferenceTable.OperandInfo.ConstantWidth) {
-        case _8bit_prefix:  off2 = convert_to_64bit_signed(*(uint8_t*)&val);  break;
-        case _16bit_prefix: off2 = convert_to_64bit_signed(*(uint16_t*)&val); break;
-        case _32bit_prefix: off2 = convert_to_64bit_signed(*(uint32_t*)&val); break;
-        case _64bit_prefix: off2 = convert_to_64bit_signed(*(uint64_t*)&val); break;
+        case _8bit_prefix:  off2 = check_msb(*(uint8_t*)&val) ?  convert_to_64bit_signed(*(uint8_t*)&val) :  static_cast<int64_t>(val); break;
+        case _16bit_prefix: off2 = check_msb(*(uint16_t*)&val) ? convert_to_64bit_signed(*(uint16_t*)&val) : static_cast<int64_t>(val); break;
+        case _32bit_prefix: off2 = check_msb(*(uint32_t*)&val) ? convert_to_64bit_signed(*(uint32_t*)&val) : static_cast<int64_t>(val); break;
+        case _64bit_prefix: off2 = check_msb(*(uint64_t*)&val) ? convert_to_64bit_signed(*(uint64_t*)&val) : static_cast<int64_t>(val); break;
         default: throw IllegalInstruction("Unknown register width");
         }
         literal3 = std::to_string(off2);
