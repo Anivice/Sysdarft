@@ -27,7 +27,7 @@ jmp                     <%cb>,                      <_start>
 ; _putc(%EXR0, linear position, %EXR1, ASCII Code)
 _putc:
     pushall
-    mov     .64bit      <%db>,                      <$(0xB8000)>
+    mov     .64bit      <%db>,                      <$64(0xB8000)>
     push    .16bit      <%exr1>
     xor     .16bit      <%exr1>,                    <%exr1>
     xor     .32bit      <%her1>,                    <%her1>
@@ -35,7 +35,7 @@ _putc:
 
 
     pop     .16bit      <%exr0>
-    mov     .8bit       <*1&8(%db, %dp, $(0))>,     <%r0>
+    mov     .8bit       <*1&8(%db, %dp, $8(0))>,    <%r0>
 
     REFRESH
 
@@ -45,39 +45,39 @@ _putc:
 ; _newline(%EXR0, linear address)
 _newline:
     pushall
-    int                 <$(0x15)>
-    div     .16bit      <$(80)>
+    int                 <$8(0x15)>
+    div     .16bit      <$16(80)>
     ; EXR0 quotient(row), EXR1 reminder(col)
-    cmp     .16bit      <%exr0>,                    <$(24)>
+    cmp     .16bit      <%exr0>,                    <$16(24)>
     jbe                 <%cb>,                      <.scroll>
 
     xor     .16bit      <%exr1>,                    <%exr1>
     inc     .16bit      <%exr0>
-    mul     .16bit      <$(80)>
+    mul     .16bit      <$16(80)>
     SETCUSP
     REFRESH
     jmp         <%cb>,      < .exit>
 
     .scroll:
         ; move content (scroll up)
-        mov .64bit      <%db>,                      <$(0xB8000)>
+        mov .64bit      <%db>,                      <$64(0xB8000)>
         xor .64bit      <%dp>,                      <%dp>
-        mov .64bit      <%eb>,                      <$(0xB8000 + 80)>
+        mov .64bit      <%eb>,                      <$64(0xB8000 + 80)>
         xor .64bit      <%ep>,                      <%ep>
-        mov .64bit      <%fer3>,                    <$(2000 - 80)>
+        mov .64bit      <%fer3>,                    <$64(2000 - 80)>
         movs
 
         ; clear last line
-        mov .64bit      <%fer3>,                    <$(80)>
-        mov .64bit      <%eb>,                      <$(0xB8000)>
-        mov .64bit      <%ep>,                      <$(2000 - 80)>
+        mov .64bit      <%fer3>,                    <$64(80)>
+        mov .64bit      <%eb>,                      <$64(0xB8000)>
+        mov .64bit      <%ep>,                      <$64(2000 - 80)>
         xor .64bit      <%dp>,                      <%dp>
         .scroll.loop:
-            mov .8bit   <*1&8(%eb, %ep, %dp)>,      <$(' ')>
+            mov .8bit   <*1&8(%eb, %ep, %dp)>,      <$8(' ')>
             inc .64bit  <%dp>
             loop        <%cb>,                      <.scroll.loop>
 
-        mov .16bit      <%exr0>,                    <$(2000 - 80)>
+        mov .16bit      <%exr0>,                    <$16(2000 - 80)>
         SETCUSP
         REFRESH
     .exit:
@@ -90,46 +90,46 @@ _newline:
 _puts:
     pushall
     .loop:
-        mov .8bit       <%r2>,                      <*1&8(%db, %dp, $(0))>
+        mov .8bit       <%r2>,                      <*1&8(%db, %dp, $8(0))>
 
-        cmp .8bit       <%r2>,                      <$(0)>
+        cmp .8bit       <%r2>,                      <$8(0)>
         je              <%cb>,                      <.exit>
 
-        cmp .8bit       <%r2>,                      <$(0x0A)>
+        cmp .8bit       <%r2>,                      <$8(0x0A)>
         jne             <%cb>,                      <.skip_newline>
 
         .newline:
         call            <%cb>,                      <_newline>
         mov .64bit      <%fer3>,                    <.last_offset>
-        mov .16bit      <*1&16($(0), %fer3, $(0))>, <%exr0>
+        mov .16bit      <*1&16($8(0), %fer3, $8(0))>, <%exr0>
         jmp             <%cb>,      <.end>
 
         .skip_newline:
         xor .8bit       <%r3>,                      <%r3>
         mov .64bit      <%fer3>,                    <.last_offset>
-        mov .16bit      <%exr0>,                    <*1&16($(0), %fer3, $(0))>
+        mov .16bit      <%exr0>,                    <*1&16($8(0), %fer3, $8(0))>
 
-        cmp .8bit       <%r2>,                      <$(127)>
+        cmp .8bit       <%r2>,                      <$8(127)>
         je              <%cb>,                      <.backspace>
 
         call            <%cb>,                      <_putc>
 
         inc .16bit      <%exr0>
-        cmp .16bit      <%exr0>,                    <$(2000)>
+        cmp .16bit      <%exr0>,                    <$16(2000)>
         je              <%cb>,                      <.newline>
 
-        mov .16bit      <*1&16($(0), %fer3, $(0))>, <%exr0>
+        mov .16bit      <*1&16($8(0), %fer3, $8(0))>, <%exr0>
         SETCUSP
         jmp             <%cb>,                      <.end>
 
         .backspace:
-        cmp .16bit      <%exr0>,                    <$(0)>
+        cmp .16bit      <%exr0>,                    <$16(0)>
         je              <%cb>,                      <.end>
         dec .16bit      <%exr0>
-        mov .16bit      <%exr1>,                    <$(' ')>
+        mov .16bit      <%exr1>,                    <$16(' ')>
         call            <%cb>,                      <_putc>
         mov .64bit      <%fer3>,                    <.last_offset>
-        mov .16bit      <*1&16($(0), %fer3, $(0))>, <%exr0>
+        mov .16bit      <*1&16($8(0), %fer3, $8(0))>, <%exr0>
         SETCUSP
 
         .end:
@@ -145,16 +145,16 @@ _puts:
 
 _start:
     mov .64bit          <%sb>,                                      <_stack_frame>
-    mov .64bit          <%sp>,                                      <$(0xFFF)>
+    mov .64bit          <%sp>,                                      <$64(0xFFF)>
 
-    mov .64bit          <*1&64($(0xA0000), $(16 * 0x05), $(8))>,    <_int_kb_abort>
-    mov .64bit          <*1&64($(0xA0000), $(16 * 0x09), $(8))>,    <_int_kb_abort>
+    mov .64bit          <*1&64($32(0xA0000), $16(16 * 0x05), $8(8))>,   <_int_kb_abort>
+    mov .64bit          <*1&64($32(0xA0000), $16(16 * 0x09), $8(8))>,   <_int_kb_abort>
 
     mov .64bit          <%dp>,                                      <.cache>
     xor .64bit          <%db>,                                      <%db>
     .loop:
         int             <$(0x14)>
-        mov .16bit      <*1&16(%db, %dp, $(0))>,                    <%exr0>
+        mov .16bit      <*1&16(%db, %dp, $8(0))>,                   <%exr0>
         call            <%cb>,                                      <_puts>
         jmp             <%cb>,                                      <.loop>
 
@@ -162,11 +162,11 @@ _start:
     .64bit_data < 0 >
 
 _int_kb_abort:
-    int                 <$(0x17)>
+    int                 <$8(0x17)>
     xor .64bit          <%db>,                                      <%db>
     mov .64bit          <%dp>,                                      <.message>
     call                <%cb>,                                      <_puts>
-    mov .64bit          <%fer3>,                                    <$(0xFFFF)>
+    mov .64bit          <%fer3>,                                    <$64(0xFFFF)>
     .wait:
     loop                <%cb>,                                      <.wait>
     xor .64bit          <%fer0>,                                    <%fer0>

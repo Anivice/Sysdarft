@@ -89,16 +89,16 @@ if ("${COMPILE_WITH_MEMORY_SANITIZERS}" STREQUAL "True")
             -fsanitize=address                  # Detect illegal memory access such as buffer overflows and use-after-free
             -fsanitize=undefined                # Detect undefined behavior like integer overflows and null dereferencing
             # Code coverage options
-            -fprofile-arcs                      # Enable code coverage instrumentation
-            -ftest-coverage                     # Generate coverage test data
+#            -fprofile-arcs                      # Enable code coverage instrumentation
+#            -ftest-coverage                     # Generate coverage test data
     )
 
     list(APPEND linker_options
             -fsanitize=address                  # Link the AddressSanitizer runtime for memory integrity
             -fsanitize=undefined                # Link the UndefinedBehaviorSanitizer for detecting undefined behavior
             # Code coverage options
-            -fprofile-arcs                      # Enable code coverage instrumentation
-            -ftest-coverage                     # Generate coverage test data
+#            -fprofile-arcs                      # Enable code coverage instrumentation
+#            -ftest-coverage                     # Generate coverage test data
     )
 endif ()
 
@@ -165,7 +165,7 @@ file(READ "${information_file}" SYSDARFT_INFO_CONTENT)
 string(REPLACE "\n" "\\n" SYSDARFT_INFO_CONTENT_ESCAPED "${SYSDARFT_INFO_CONTENT}")
 
 add_compile_definitions(
-        SYSDARFT_VERSION="0.0.1-alpha-rc2"
+        SYSDARFT_VERSION="0.0.2-alpha-rc0"
         SYSDARFT_INFORMATION="${SYSDARFT_INFO_CONTENT_ESCAPED}"
         __CLEAN_OUTPUT__
 )

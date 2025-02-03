@@ -22,6 +22,7 @@
 
 #define EXE_MAGIC ((uint32_t)(0x00455845))
 #define SYS_MAGIC ((uint32_t)(0x00535953))
+#define OBJ_MAGIC ((uint32_t)(0x004A424F))
 
 std::vector < uint8_t > generate_symbol_table(const object_t & obj)
 {
@@ -53,20 +54,69 @@ std::vector < uint8_t > generate_symbol_table(const object_t & obj)
     return symbol_table;
 }
 
-void compile_to_binary(const std::vector<std::string> &source_files, const std::string &binary_filename, const bool regex,
-                       const COMPILATION_MODE compile_mode, const std::vector<std::string> &include_path)
-{
-    struct file_attr_t {
-        defined_line_marker_t symbol_table;
-        std::vector < std::vector< uint8_t > > code;
-        std::vector < std::string > file;
-        object_t object;
-        std::string filename;
-        source_file_c_style_definition_t definition;
-        header_file_list_t header_files;
-    };
+struct file_attr_t {
+    defined_line_marker_t symbol_table;
+    std::vector < std::vector< uint8_t > > code;
+    std::vector < std::string > file;
+    object_t object;
+    std::string filename;
+    source_file_c_style_definition_t definition;
+    header_file_list_t header_files;
+};
 
-    uint64_t org = 0;
+void PreProcess(std::vector < file_attr_t > & files, uint64_t & org, const bool regex, const std::vector < std::string > & include_path)
+{
+    for (file_attr_t & file : files)
+    {
+        try {
+            HeadProcess(file.file, file.definition, file.header_files, include_path);
+        } catch (const std::exception & err) {
+            throw std::runtime_error("Error when processing file " + file.filename + ": " + err.what());
+        }
+    }
+
+    for (file_attr_t & file : files)
+    {
+        try {
+            std::map < std::string, std::string > equ_replacement;
+            PreProcess(file.file,
+                file.symbol_table,
+                org,
+                regex,
+                equ_replacement,
+                file.header_files,
+                file.definition,
+                include_path);
+        } catch (const std::exception & err) {
+            throw std::runtime_error("Error when processing file " + file.filename + ": " + err.what());
+        }
+    }
+}
+
+void Assemble(std::vector < file_attr_t > & files, uint64_t & org)
+{
+    for (file_attr_t & file : files)
+    {
+        try {
+            file.object = SysdarftAssemble(file.code, file.file, org, file.symbol_table);
+        } catch (const std::exception & err) {
+            throw std::runtime_error("Error when processing file " + file.filename + ": " + err.what());
+        }
+    }
+}
+
+std::vector <object_t> Archive(std::vector < file_attr_t > & files)
+{
+    std::vector <object_t> objects;
+    for (file_attr_t & file : files) {
+        objects.push_back(file.object);
+    }
+
+    return objects;
+}
+
+std::vector < file_attr_t > ReadFiles(const std::vector<std::string> &source_files)
+{
     std::vector < file_attr_t > files;
 
     // reading
@@ -96,79 +146,12 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
         }
     }
 
-    // extract % directives
-    if (debug::verbose) {
-        std::cout << "Extracting symbols ..." << std::endl;
-    }
+    return files;
+}
 
-    for (file_attr_t & file : files)
-    {
-        try {
-            HeadProcess(file.file, file.definition, file.header_files, include_path);
-        } catch (const std::exception & err) {
-            throw std::runtime_error("Error when processing file " + file.filename + ": " + err.what());
-        }
-    }
-
-    // preprocessing
-    if (debug::verbose) {
-        std::cout << "PreProcessing ..." << std::endl;
-    }
-
-    for (file_attr_t & file : files)
-    {
-        try {
-            std::map < std::string, std::string > equ_replacement;
-            PreProcess(file.file,
-                file.symbol_table,
-                org,
-                regex,
-                equ_replacement,
-                file.header_files,
-                file.definition,
-                include_path);
-        } catch (const std::exception & err) {
-            throw std::runtime_error("Error when processing file " + file.filename + ": " + err.what());
-        }
-    }
-
-    // compiling
-    if (debug::verbose) {
-        std::cout << "Compiling ..." << std::endl;
-    }
-
-    for (file_attr_t & file : files)
-    {
-        try {
-            file.object = SysdarftAssemble(file.code, file.file, org, file.symbol_table);
-        } catch (const std::exception & err) {
-            throw std::runtime_error("Error when processing file " + file.filename + ": " + err.what());
-        }
-    }
-
-    std::vector <object_t> objects;
-
-    // archiving
-    if (debug::verbose) {
-        std::cout << "Archiving ..." << std::endl;
-    }
-
-    for (file_attr_t & file : files) {
-        objects.push_back(file.object);
-    }
-
-    // Link
-    if (debug::verbose) {
-        std::cout << "Linking ..." << std::endl;
-    }
-
-    object_t linked_object = SysdarftLink(objects);
-
+void LinkedWrite(const std::string &binary_filename, const object_t & linked_object, const COMPILATION_MODE compile_mode)
+{
     try {
-        if (debug::verbose) {
-            std::cout << "Writing to file ..." << std::endl;
-        }
-
         std::ofstream file(binary_filename, std::ios::out | std::ios::binary);
         if (!file.is_open()) {
             throw SysdarftAssemblerError("Could not open file " + binary_filename);
@@ -179,10 +162,10 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
                 file.write(reinterpret_cast<const char*>(cct.data()), static_cast<ssize_t>(cct.size()));
             }
         } else if (compile_mode == EXE || compile_mode == SYS) {
-            uint32_t magic = (compile_mode == EXE ? EXE_MAGIC : SYS_MAGIC);
-            file.write((const char*)&magic, sizeof(magic));
-            auto symbol_table = generate_symbol_table(linked_object);
-            file.write((const char*)symbol_table.data(), static_cast<ssize_t>(symbol_table.size()));
+            const uint32_t magic = (compile_mode == EXE ? EXE_MAGIC : SYS_MAGIC);
+            file.write(reinterpret_cast<const char *>(&magic), sizeof(magic));
+            const auto symbol_table = generate_symbol_table(linked_object);
+            file.write(reinterpret_cast<const char *>(symbol_table.data()), static_cast<ssize_t>(symbol_table.size()));
             for (const auto & cct : linked_object.code) {
                 file.write(reinterpret_cast<const char*>(cct.data()), static_cast<ssize_t>(cct.size()));
             }
@@ -194,6 +177,132 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
     } catch (const std::exception & e) {
         throw SysdarftAssemblerError("Error when writing to output file " + binary_filename + ": " + e.what());
     }
+}
+
+template < typename Type >
+void push(std::ofstream & file, const Type & data)
+{
+    file.write(reinterpret_cast<const char *>(&data), sizeof(data));
+}
+
+template < typename Type >
+void pop(std::ifstream & file, Type & data)
+{
+    file.read(reinterpret_cast<char *>(&data), sizeof(data));
+}
+
+void ObjectWrite(const std::string &binary_filename, const std::vector < object_t > & objects)
+{
+    std::ofstream file(binary_filename, std::ios::out | std::ios::binary);
+    if (!file.is_open()) {
+        throw SysdarftAssemblerError("Could not open file " + binary_filename);
+    }
+
+    constexpr uint32_t magic = OBJ_MAGIC;
+    file.write(reinterpret_cast<const char *>(&magic), sizeof(magic));
+
+    // Object entry size
+    push(file, objects.size());
+
+    for (const auto & object : objects)
+    {
+        // std::vector < std::vector <uint8_t> > code;
+        push(file, object.code.size());
+        for (const auto & code : object.code) {
+            push(file, code.size());
+            file.write(reinterpret_cast<const char *>(code.data()), static_cast<ssize_t>(code.size()));
+        }
+
+        // struct line_marker_t {
+        //     std::string line_marker_name;
+        //     uint64_t marker_position;
+        //     bool is_defined;
+        //     bool referenced;
+        //     std::vector < uint64_t > loc_it_appeared_in_cur_blk;
+        // };
+        // typedef std::vector < line_marker_t > defined_line_marker_t;
+        // defined_line_marker_t symbol_table;
+        push(file, object.symbol_table.size());
+        for (const auto & [
+                line_marker_name,
+                marker_position,
+                is_defined,
+                referenced,
+                loc_it_appeared_in_cur_blk ] : object.symbol_table)
+        {
+            push(file, line_marker_name.size());
+            file.write(line_marker_name.c_str(), static_cast<ssize_t>(line_marker_name.size()));
+
+            push(file, marker_position);
+            push(file, is_defined);
+            push(file, referenced);
+
+            push(file, loc_it_appeared_in_cur_blk.size());
+            for (const auto appearance : loc_it_appeared_in_cur_blk) {
+                push(file, appearance);
+            }
+        }
+
+        // struct data_expression_identifier
+        // {
+            // uint64_t data_appearance;
+            // uint64_t data_byte_count;
+            // std::string data_string;
+        // };
+        // std::vector < data_expression_identifier > data_expression_identifiers;
+
+        for (const auto &[
+            data_appearance,
+            data_byte_count,
+            data_string ] : object.data_expression_identifiers)
+        {
+            push(file, data_appearance);
+            push(file, data_byte_count);
+            push(file, data_string.size());
+            push(file, data_string.data());
+        }
+    }
+}
+
+void compile_to_binary(const std::vector<std::string> &source_files, const std::string &binary_filename, const bool regex,
+                       const COMPILATION_MODE compile_mode, const std::vector<std::string> &include_path)
+{
+    uint64_t org = 0;
+    std::vector < file_attr_t > files = ReadFiles(source_files);
+
+    // preprocessing
+    if (debug::verbose) {
+        std::cout << "PreProcessing ..." << std::endl;
+    }
+
+    PreProcess(files, org, regex, include_path);
+
+    // compiling
+    if (debug::verbose) {
+        std::cout << "Assembling ..." << std::endl;
+    }
+
+    Assemble(files, org);
+
+    // archiving
+    if (debug::verbose) {
+        std::cout << "Archiving ..." << std::endl;
+    }
+
+    auto objects = Archive(files);
+
+    // Link
+    if (debug::verbose) {
+        std::cout << "Linking ..." << std::endl;
+    }
+
+    const object_t linked_object = SysdarftLink(objects);
+
+    if (debug::verbose) {
+        std::cout << "Writing to file ..." << std::endl;
+    }
+
+    LinkedWrite(binary_filename, linked_object, compile_mode);
 }
 
 template < typename Type >

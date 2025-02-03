@@ -25,9 +25,18 @@
 #include <SysdarftCursesUI.h>
 #include <zlib_wrapper.h>
 #include <resources.h> // doesn't exist, generated automatically by CMake
+#include <csignal>
 
 std::mutex bell_memory_access_mutex;
 std::vector < unsigned char > bell_sound_data_uncompressed;
+volatile std::atomic < SysdarftCursesUI * > g_cpu_instance = nullptr;
+// Signal handler for window resize
+void resize_handler(int)
+{
+    if (g_cpu_instance) {
+        g_cpu_instance.load()->handle_resize();
+    }
+}
 
 SysdarftCursesUI::SysdarftCursesUI(const uint64_t memory, const std::string & font_name)
     :   SysdarftCPUMemoryAccess(memory),
@@ -63,6 +72,7 @@ SysdarftCursesUI::SysdarftCursesUI(const uint64_t memory, const std::string & fo
 
 SysdarftCursesUI::~SysdarftCursesUI()
 {
+    g_cpu_instance = nullptr;
     log("Cleaning up UI instances...\n");
     running = false;
     for (auto & thread : sound_thread_pool)
@@ -88,16 +98,19 @@ void SysdarftCursesUI::initialize()
     }
     is_inited = true;
 
-    initscr();            // Start curses mode
-    cbreak();             // Disable line buffering
-    noecho();             // Don't echo typed characters
-    keypad(stdscr, TRUE); // Enable special keys
+    const auto window    = initscr();            // Start curses mode
+    const auto cbreak_status = cbreak();             // Disable line buffering
+    const auto noecho_status = noecho();             // Don't echo typed characters
+    const auto keypad_status = keypad(stdscr, TRUE); // Enable special keys
 
     recalc_offsets();
-    clear();
-    curs_set(1);
-    render_screen();      // Render initial screen
+    const auto clear_status = clear();
+    render_screen();
     set_cursor_visibility(true);
+    std::signal(SIGINT, SIG_IGN);
+    std::signal(SIGQUIT, SIG_IGN);
+    g_cpu_instance = this;
+    std::signal(SIGWINCH, resize_handler);
 }
 
 void SysdarftCursesUI::start_again()
@@ -115,6 +128,10 @@ void SysdarftCursesUI::start_again()
     clear();
     curs_set(1);         // Ensure cursor visibility is reset
     render_screen();
+    std::signal(SIGINT, SIG_IGN);
+    std::signal(SIGQUIT, SIG_IGN);
+    g_cpu_instance = this;
+    std::signal(SIGWINCH, resize_handler);
 }
 
 void SysdarftCursesUI::ringbell()

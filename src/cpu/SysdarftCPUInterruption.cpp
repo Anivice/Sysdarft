@@ -118,6 +118,8 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
 
     if (code <= 0x1F)
     {
+        const auto before = SysdarftCursesUI::get_is_inited();
+
 #ifdef __DEBUG__
         if (code < 0x10 && code != 0x09 && code != 0x05)
         {
@@ -128,7 +130,7 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
 
             SysdarftCursesUI::cleanup();
             log("[CPU INTERRUPT]: \033[31;6;7;1mWarning: Hardware exception thrown with code ", code, "\033[0m\n");
-            if (SysdarftCursesUI::get_is_inited())
+            if (before)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 SysdarftCursesUI::start_again();
@@ -142,7 +144,7 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
         {
             SysdarftCursesUI::cleanup();
             log("[CPU INTERRUPT]: \033[32;6;7;1mSystem shutdown request received!\033[0m\n");
-            if (SysdarftCursesUI::get_is_inited())
+            if (before)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 SysdarftCursesUI::start_again();
@@ -156,7 +158,7 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
         {
             SysdarftCursesUI::cleanup();
             log("[CPU INTERRUPT]: \033[34;6;7;1mKeyboard interruption received!\033[0m\n");
-            if (SysdarftCursesUI::get_is_inited())
+            if (before)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 SysdarftCursesUI::start_again();
@@ -174,7 +176,7 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
                 SysdarftCursesUI::cleanup();
                 std::cerr << "[CPU INTERRUPT]: \033[31;6;7;1mWarning: Hardware exception thrown with code "
                           << code << "\033[0m" << std::endl;
-                if (SysdarftCursesUI::get_is_inited())
+                if (before)
                 {
                     std::this_thread::sleep_for(std::chrono::milliseconds(100));
                     SysdarftCursesUI::start_again();
@@ -184,7 +186,7 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
             {
                 SysdarftCursesUI::cleanup();
                 std::cerr << "[CPU INTERRUPT]: \033[32;6;7;1mSystem shutdown request received!\033[0m" << std::endl;
-                if (SysdarftCursesUI::get_is_inited())
+                if (before)
                 {
                     std::this_thread::sleep_for(std::chrono::milliseconds(100));
                     SysdarftCursesUI::start_again();
@@ -194,7 +196,7 @@ void SysdarftCPUInterruption::do_interruption(const uint64_t code)
             {
                 SysdarftCursesUI::cleanup();
                 std::cerr << "[CPU INTERRUPT]: \033[34;6;7;1mKeyboard interruption received!\033[0m" << std::endl;
-                if (SysdarftCursesUI::get_is_inited())
+                if (before)
                 {
                     std::this_thread::sleep_for(std::chrono::milliseconds(100));
                     SysdarftCursesUI::start_again();

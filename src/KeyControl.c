@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 // Flags to ensure one-time initialization.
 static int nonblocking_set = 0;
@@ -44,14 +45,14 @@ static void enableRawMode()
     struct termios raw;
     if (tcgetattr(STDIN_FILENO, &orig_termios) == -1) {
         perror("tcgetattr");
-        return;
+        exit(EXIT_FAILURE);
     }
     raw = orig_termios;
     // Disable canonical mode, echo, and signals (ISIG).
     raw.c_lflag &= ~(ECHO | ICANON | ISIG);
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
         perror("tcsetattr");
-        return;
+        exit(EXIT_FAILURE);
     }
     raw_mode_set = 1;
 }

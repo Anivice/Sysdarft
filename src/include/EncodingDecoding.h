@@ -125,7 +125,7 @@ public:
      *
      */
     explicit SysdarftCodeExpressionError(const std::string & message) :
-        SysdarftBaseError("Cannot parse Target expression: " + message) { }
+        SysdarftBaseError("Cannot parse Target expression:\n >> " + message) { }
 };
 
 /*!
@@ -153,7 +153,7 @@ public:
      *
      */
     explicit SysdarftAssemblerError(const std::string & message) :
-        SysdarftBaseError("Assembler cannot parse the code expression: " + message) { }
+        SysdarftBaseError("Assembler cannot parse the code expression:\n >> " + message) { }
 };
 
 class SysdarftLinkerError final : public SysdarftBaseError
@@ -172,7 +172,7 @@ public:
      *
      */
     explicit SysdarftLinkerError(const std::string & message) :
-        SysdarftBaseError("Error encountered when linking: " + message) { }
+        SysdarftBaseError("Error encountered when linking:\n >> " + message) { }
 };
 
 /*!
@@ -200,7 +200,7 @@ public:
      *
      */
     explicit SysdarftInvalidArgument(const std::string & message) :
-        SysdarftBaseError("Invalid argument provided: " + message) { }
+        SysdarftBaseError("Invalid argument provided:\n >> " + message) { }
 };
 
 /*!
@@ -225,7 +225,7 @@ public:
      *
      */
     explicit CodeBufferEmptiedWhenPop(const std::string & message) :
-        SysdarftBaseError("Code buffer emptied before pop finished: " + message) { }
+        SysdarftBaseError("Code buffer emptied before pop finished:\n >> " + message) { }
 };
 
 /*!
@@ -249,7 +249,7 @@ public:
      *
      */
     explicit InstructionExpressionError(const std::string& message) :
-        SysdarftBaseError("Instruction Expression Error: " + message) { }
+        SysdarftBaseError("Instruction Expression Error:\n >> " + message) { }
 };
 
 /*!
@@ -273,7 +273,7 @@ public:
      *
      */
     explicit SysdarftPreProcessorError(const std::string& message) :
-        SysdarftBaseError("Error encountered in preprocessor: " + message) { }
+        SysdarftBaseError("Error encountered in preprocessor:\n >> " + message) { }
 };
 
 /*!
@@ -523,6 +523,7 @@ struct parsed_target_t
 
     /// Constant expression, Empty if not a constant
     std::string ConstantExpression { };
+    std::string ConstantWidth { };
 
     /// Memory reference expression, Empty if not a memory reference
     struct {
@@ -647,7 +648,7 @@ void decode_target(std::vector < std::string > & literal_buffer,
     std::vector < uint8_t > & code_buffer);
 
 /// Regular expression of the operand, captures '<' and '>' as well
-const std::regex target_pattern(R"(<\s*(?:\*\s*(?:1|2|4|8|16)\&(8|16|32|64)\s*\([^,]+,[^,]+,[^,]+\)|%(?:R|EXR|HER)[0-7]|%(FER)([\d]+)|%(SB|SP|CB|DB|DP|EB|EP)|\$\s*\(\s*(?:0[xX][A-Fa-f0-9]+|\s|[+\-.',*\/^%()xX0-9-])+\s*\))\s*>)");
+const std::regex target_pattern(R"(<\s*(?:\*\s*(?:1|2|4|8|16)\&(8|16|32|64)\s*\([^,]+,[^,]+,[^,]+\)|%(?:R|EXR|HER)[0-7]|%(FER)([\d]+)|%(SB|SP|CB|DB|DP|EB|EP)|\$\s*(8|16|32|64)\s*\(\s*(?:0[xX][A-Fa-f0-9]+|\s|[+\-.',*\/^%()xX0-9-])+\s*\))\s*>)");
 
 const std::regex line_mark_pattern(R"(^\s*([A-Za-z_.][A-Za-z0-9_.]*)\s*:\s*$)");
 

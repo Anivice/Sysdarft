@@ -491,7 +491,7 @@ std::string initialize_error_msg(const std::string& msg, const int _errno)
         return err_msg.str();
     }
 
-    return ">>> " + msg + " (errno=" + std::to_string(_errno) + ": " + strerror(_errno) + ") <<<";
+    return ">>> " + msg + (debug::verbose ? " (errno=" + std::to_string(_errno) + ": " + strerror(_errno) + ") <<<" : "");
 }
 #endif
 
@@ -735,7 +735,7 @@ std::string debug::get_verbose_info()
 }
 
 // Signal handler for SIGABRT
-void handle_sigabrt(int signum)
+void handle_sigabrt(int /* signum */)
 {
     const char * prefix = "[FATAL ERROR] Program is terminated using SIGABRT (Signal Abort)!\n";
     debug::verbose = true;

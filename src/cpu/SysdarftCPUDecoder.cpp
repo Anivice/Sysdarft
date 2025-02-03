@@ -130,20 +130,44 @@ void OperandType::do_decode_register_without_prefix()
 
 void OperandType::do_decode_constant_without_prefix()
 {
-    if (const auto & prefix = Access.pop_code8();
-        prefix == _64bit_prefix)
-    {
-        std::stringstream ss;
-        const auto num = Access.pop_code64();
-        OperandReferenceTable.OperandType = ConstantOperand;
-        OperandReferenceTable.OperandInfo.ConstantValue = num;
+    OperandReferenceTable.OperandType = ConstantOperand;
+    const auto & prefix = Access.pop_code8();
+    uint64_t num;
+
 #ifdef __DEBUG__
-        ss << "0x" << std::uppercase << std::hex << num;
-        OperandReferenceTable.literal = "$(" + ss.str() + ")";
+    std::stringstream ss;
+    std::string prefix_literal;
 #endif // __DEBUG__
+
+    if (prefix == _8bit_prefix) {
+#ifdef __DEBUG__
+        prefix_literal = "8";
+#endif // __DEBUG__
+        num = Access.pop_code8();
+    } else if (prefix == _16bit_prefix) {
+#ifdef __DEBUG__
+        prefix_literal = "16";
+#endif // __DEBUG__
+        num = Access.pop_code16();
+    } else if (prefix == _32bit_prefix) {
+#ifdef __DEBUG__
+        prefix_literal = "32";
+#endif // __DEBUG__
+        num = Access.pop_code32();
+    } else if (prefix == _64bit_prefix) {
+#ifdef __DEBUG__
+        prefix_literal = "64";
+#endif // __DEBUG__
+        num = Access.pop_code64();
     } else {
         throw IllegalInstruction("Unknown constant width");
     }
+
+    OperandReferenceTable.OperandInfo.ConstantValue = num;
+#ifdef __DEBUG__
+    ss << "0x" << std::uppercase << std::hex << num;
+    OperandReferenceTable.literal = "$" + prefix_literal + "(" + ss.str() + ")";
+#endif // __DEBUG__
 }
 
 void OperandType::do_decode_memory_without_prefix()
@@ -185,7 +209,7 @@ void OperandType::do_decode_memory_without_prefix()
     default: throw IllegalInstruction("Unknown ratio");
     }
 
-    const uint64_t calculated_address = (base + off1 + off2) * ratio;
+    const uint64_t calculated_address = (base + off1 + *(int64_t*)(&off2)) * ratio;
     OperandReferenceTable.OperandType = MemoryOperand;
     OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryAddress = calculated_address;
     OperandReferenceTable.OperandInfo.CalculatedMemoryAddress.MemoryWidthBCD = WidthBCD;

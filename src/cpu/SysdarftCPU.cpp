@@ -127,26 +127,36 @@ uint64_t SysdarftCPU::Boot(const bool headless, const bool with_gui)
         // shutdown request
         if (CtrlZShutdownRequested)
         {
-            if (!have_I_invoked_shutdown) {
-                invoke_shutdown();
-            }
+            try {
+                if (!have_I_invoked_shutdown) {
+                    invoke_shutdown();
+                }
 
             // else if (have_I_invoked_shutdown && SysdarftRegister::load<FlagRegisterType>().InterruptionMask) {
             //     // ignore
             // }
 
-            else if (have_I_invoked_shutdown // I have invoked before
-                && !SysdarftRegister::load<FlagRegisterType>().InterruptionMask // but not in the interrupt procedure,
-                // meaning: shutdown requested, handled, and refused, so we request again
-                )
-            {
-                cleanup_invoke_shutdown();
-                invoke_shutdown();
-            }
+                else if (have_I_invoked_shutdown // I have invoked before
+                    && !SysdarftRegister::load<FlagRegisterType>().InterruptionMask // but not in the interrupt procedure,
+                    // meaning: shutdown requested, handled, and refused, so we request again
+                    )
+                {
+                    cleanup_invoke_shutdown();
+                    invoke_shutdown();
+                }
 
             // else {
                 // logically impossible
             // }
+            } catch (SysdarftCPUSubroutineRequestToAbortTheCurrentInstructionExecutionProcedureDueToError&) {
+                try {
+                    do_interruption(0x07);
+                } catch (...) {
+                    std::cerr << "Critical error detected in Sysdarft!" << std::endl;
+                    show_context();
+                    return EXIT_FAILURE;
+                }
+            }
         }
 
         try {

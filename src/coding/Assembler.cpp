@@ -317,7 +317,7 @@ object_t SysdarftAssemble(
                         throw SysdarftAssemblerError("Error encountered while parsing line marker: " + line);
                     }
 
-                    replace_all(line, matches[2], "<$(0xFFFFFFFFFFFFFFFF)>");
+                    replace_all(line, matches[2], "<$64(0xFFFFFFFFFFFFFFFF)>");
                     add_marker_reference(line_marker.line_marker_name, instruction_buffer_set.size() - 1);
                     break;
                 }

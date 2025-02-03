@@ -26,10 +26,25 @@ void decode_constant(std::vector<std::string> & output, std::vector < uint8_t > 
 {
     std::stringstream ret;
     const auto & prefix = code_buffer_pop<uint8_t>(input);
+    uint64_t num = 0;
 
-    if (prefix == _64bit_prefix) {
-        const auto num = code_buffer_pop<uint64_t>(input);
-        ret << "$(0x" << std::hex << std::uppercase << num << ")";
+    auto output_num = [&](const std::string & width)
+    {
+        ret << "$" << width << "(0x" << std::hex << std::uppercase << num << ")";
+    };
+
+    if (prefix == _8bit_prefix) {
+        num = code_buffer_pop<uint8_t>(input);
+        output_num("8");
+    } else if (prefix == _16bit_prefix) {
+        num = code_buffer_pop<uint16_t>(input);
+        output_num("16");
+    } else if (prefix == _32bit_prefix) {
+        num = code_buffer_pop<uint32_t>(input);
+        output_num("32");
+    } else if (prefix == _64bit_prefix) {
+        num = code_buffer_pop<uint64_t>(input);
+        output_num("64");
     } else {
         ret << bad_nbit(prefix);
     }

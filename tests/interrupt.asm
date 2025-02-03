@@ -21,10 +21,10 @@
 %ifndef _INTERRUPT_ASM_
 %define _INTERRUPT_ASM_
 
-.equ 'REFRESH', 'int < $(0x18) >'
-.equ 'SETCUSP', 'int < $(0x11) >'
-.equ 'INTGETC', 'int < $(0x14) >'
+.equ 'REFRESH', 'int < $8(0x18) >'
+.equ 'SETCUSP', 'int < $8(0x11) >'
+.equ 'INTGETC', 'int < $8(0x14) >'
 
-%define KBFLUSH int < $(0x19) >
+%define KBFLUSH int < $8(0x19) >
 
 %endif ; _INTERRUPT_ASM_

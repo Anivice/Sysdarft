@@ -22,9 +22,9 @@
 .equ 'RTC_TIME',    '0x70'
 .equ 'RTC_INT',     '0x71'
 
-%define SECONDS_IN_MINUTE   < $(60) >
-%define SECONDS_IN_HOUR     < $(3600) >
-%define SECONDS_IN_DAY      < $(86400) >
+%define SECONDS_IN_MINUTE   < $64(60) >
+%define SECONDS_IN_HOUR     < $64(3600) >
+%define SECONDS_IN_DAY      < $64(86400) >
 
 .org 0xC1800
 
@@ -35,14 +35,14 @@ jmp                     <%cb>,                                      <_start>
 ; _putc(%EXR0, linear position, %EXR1, ASCII Code)
 _putc:
     pushall
-    mov     .64bit      <%db>,                                      <$(0xB8000)>
+    mov     .64bit      <%db>,                                      <$64(0xB8000)>
     push    .16bit      <%exr1>
     xor     .16bit      <%exr1>,                                    <%exr1>
     xor     .32bit      <%her1>,                                    <%her1>
     mov     .64bit      <%dp>,                                      <%fer0>
 
     pop     .16bit      <%exr0>
-    mov     .8bit       <*1&8(%db, %dp, $(0))>,                     <%r0>
+    mov     .8bit       <*1&8(%db, %dp, $8(0))>,                     <%r0>
 
     REFRESH
 
@@ -52,76 +52,76 @@ _putc:
 ; _newline(%EXR0, linear address)
 _newline:
     pushall
-    int                 <$(0x15)>
-    div     .16bit      <$(80)>
+    int                 <$8(0x15)>
+    div     .16bit      <$16(80)>
     ; EXR0 quotient(row), EXR1 reminder(col)
-    cmp     .16bit      <%exr0>,                                    <$(24)>
+    cmp     .16bit      <%exr0>,                                    <$16(24)>
     jbe                 <%cb>,                                      <.scroll>
 
     xor     .16bit      <%exr1>,                                    <%exr1>
     inc     .16bit      <%exr0>
-    mul     .16bit      <$(80)>
+    mul     .16bit      <$16(80)>
     SETCUSP
     REFRESH
     jmp                 <%cb>,                                      < .exit>
 
     .scroll:
         ; move content (scroll up)
-        mov .64bit      <%db>,                                      <$(0xB8000)>
+        mov .64bit      <%db>,                                      <$64(0xB8000)>
         xor .64bit      <%dp>,                                      <%dp>
-        mov .64bit      <%eb>,                                      <$(0xB8000 + 80)>
+        mov .64bit      <%eb>,                                      <$64(0xB8000 + 80)>
         xor .64bit      <%ep>,                                      <%ep>
-        mov .64bit      <%fer3>,                                    <$(2000 - 80)>
+        mov .64bit      <%fer3>,                                    <$64(2000 - 80)>
         movs
 
         ; clear last line
-        mov .64bit      <%fer3>,                                    <$(80)>
-        mov .64bit      <%eb>,                                      <$(0xB8000)>
-        mov .64bit      <%ep>,                                      <$(2000 - 80)>
+        mov .64bit      <%fer3>,                                    <$64(80)>
+        mov .64bit      <%eb>,                                      <$64(0xB8000)>
+        mov .64bit      <%ep>,                                      <$64(2000 - 80)>
         xor .64bit      <%dp>,                                      <%dp>
         .scroll.loop:
-            mov .8bit   <*1&8(%eb, %ep, %dp)>,                      <$(' ')>
+            mov .8bit   <*1&8(%eb, %ep, %dp)>,                      <$8(' ')>
             inc .64bit  <%dp>
             loop        <%cb>,                                      <.scroll.loop>
 
-        mov .16bit      <%exr0>,                                    <$(2000 - 80)>
+        mov .16bit      <%exr0>,                                    <$16(2000 - 80)>
         SETCUSP
         REFRESH
     .exit:
 
     popall
-    int                 <$(0x15)>
+    int                 <$8(0x15)>
     ret
 
 ; _puts(%DB:%DP), null terminated string
 _puts:
     pushall
     .loop:
-        mov .8bit       <%r2>,                                      <*1&8(%db, %dp, $(0))>
+        mov .8bit       <%r2>,                                      <*1&8(%db, %dp, $8(0))>
 
-        cmp .8bit       <%r2>,                                      <$(0)>
+        cmp .8bit       <%r2>,                                      <$8(0)>
         je              <%cb>,                                      <.exit>
 
-        cmp .8bit       <%r2>,                                      <$(0x0A)>
+        cmp .8bit       <%r2>,                                      <$8(0x0A)>
         jne             <%cb>,                                      <.skip_newline>
 
         .newline:
         call            <%cb>,                                      <_newline>
         mov .64bit      <%fer3>,                                    <.last_offset>
-        mov .16bit      <*1&16($(0), %fer3, $(0))>,                 <%exr0>
+        mov .16bit      <*1&16($8(0), %fer3, $8(0))>,               <%exr0>
         jmp             <%cb>,      <.end>
 
         .skip_newline:
         xor .8bit       <%r3>,                                      <%r3>
         mov .64bit      <%fer3>,                                    <.last_offset>
-        mov .16bit      <%exr0>,                                    <*1&16($(0), %fer3, $(0))>
+        mov .16bit      <%exr0>,                                    <*1&16($8(0), %fer3, $8(0))>
         call            <%cb>,                                      <_putc>
 
         inc .16bit      <%exr0>
-        cmp .16bit      <%exr0>,                                    <$(2000)>
+        cmp .16bit      <%exr0>,                                    <$16(2000)>
         je              <%cb>,                                      <.newline>
 
-        mov .16bit      <*1&16($(0), %fer3, $(0))>,                 <%exr0>
+        mov .16bit      <*1&16($8(0), %fer3, $8(0))>,               <%exr0>
         SETCUSP
 
         .end:
@@ -141,16 +141,16 @@ _print_num:
     ; record occurrences of digits
     xor .64bit          <%fer2>,                                    <%fer2>
     .loop:
-        div .64bit      <$(10)>
+        div .64bit      <$64(10)>
         ; %fer0 ==> ori
         ; %fer1 ==> reminder
         mov  .64bit     <%fer3>,                                    <%fer1>
-        add  .64bit     <%fer3>,                                    <$('0')>
+        add  .64bit     <%fer3>,                                    <$64('0')>
         push .64bit     <%fer3>
 
         inc .64bit      <%fer2>
 
-        cmp .64bit      <%fer0>,                                    <$(0x00)>
+        cmp .64bit      <%fer0>,                                    <$64(0x00)>
         jne             <%cb>,                                      <.loop>
 
     xor .64bit          <%db>,                                      <%db>
@@ -159,11 +159,11 @@ _print_num:
     mov .64bit          <%fer3>,                                    <%fer2>
     .loop_pop:
         pop .64bit      <%fer0>
-        mov .8bit       <*1&8(%db, %dp, $(0))>,                     <%r0>
+        mov .8bit       <*1&8(%db, %dp, $8(0))>,                    <%r0>
         inc .64bit      <%dp>
         loop            <%cb>,                                      <.loop_pop>
 
-    mov .8bit           <*1&8(%db, %dp, $(0))>,                     <$(0)>
+    mov .8bit           <*1&8(%db, %dp, $8(0))>,                    <$8(0)>
     mov .64bit          <%dp>,                                      <.cache>
     call                <%cb>,                                      <_puts>
 
@@ -174,28 +174,28 @@ _print_num:
         .resvb < 16 >
 
 _start:
-    mov .64bit          <%sp>,                                      <$(0xFFF)>
-    mov .64bit          <%sb>,                                      <_stack_frame>
-    mov .64bit          <*1&64($(0xA0000), $(16 * 128),  $(8))>,    <_int_rtc>
-    mov .64bit          <*1&64($(0xA0000), $(16 * 5), $(8))>,       <_int_kb_abort>
-    mov .64bit          <*1&64($(0xA0000), $(16 * 9), $(8))>,       <_int_kb_abort>
+    mov .64bit          <%sp>,                                              <$64(0xFFF)>
+    mov .64bit          <%sb>,                                              <_stack_frame>
+    mov .64bit          <*1&64($64(0xA0000), $32(16 * 128),  $8(8))>,       <_int_rtc>
+    mov .64bit          <*1&64($64(0xA0000), $32(16 * 5),   $8(8))>,        <_int_kb_abort>
+    mov .64bit          <*1&64($64(0xA0000), $32(16 * 9),   $8(8))>,        <_int_kb_abort>
     ; out .64bit          <$(RTC_TIME)>,                              <$(1560600000)>
-    out .64bit          <$(RTC_INT)>,                               <$(0x4E2080)>   ; 1s, 0x80
+    out .64bit          <$64(RTC_INT)>,                                     <$64(0x4E2080)>   ; 1s, 0x80
 
     .inf_loop:
-        int             <$(0x14)>
-        cmp .8bit       <%r0>,                                      <$('q')>
+        int             <$8(0x14)>
+        cmp .8bit       <%r0>,                                      <$8('q')>
         jne             <%cb>,                                      <.inf_loop>
 
     xor .64bit          <%fer0>,                                    <%fer0>
     hlt
 
 _int_kb_abort:
-    int                 <$(0x17)>
+    int                 <$8(0x17)>
     xor .64bit          <%db>,                                      <%db>
     mov .64bit          <%dp>,                                      <.message>
     call                <%cb>,                                      <_puts>
-    mov .64bit          <%fer3>,                                    <$(0x1FFFFF)>
+    mov .64bit          <%fer3>,                                    <$64(0x1FFFFF)>
     .wait:
     loop                <%cb>,                                      <.wait>
     xor .64bit          <%fer0>,                                    <%fer0>
@@ -213,30 +213,30 @@ is_leap_year:
     mov .64bit          <%fer2>,                                    <%fer0>
 
     ; %fer0 % 400 == 0 ==> 1
-    div .64bit          <$(400)>
-    cmp .64bit          <%fer1>,                                    <$(0)>
+    div .64bit          <$64(400)>
+    cmp .64bit          <%fer1>,                                    <$64(0)>
     je                  <%cb>,                                      <.return1>
 
     ; %fer0 % 100 == 0 ==> 0
     mov .64bit          <%fer0>,                                    <%fer2>
-    div .64bit          <$(100)>
-    cmp .64bit          <%fer1>,                                    <$(0)>
+    div .64bit          <$64(100)>
+    cmp .64bit          <%fer1>,                                    <$64(0)>
     je                  <%cb>,                                      <.return0>
 
     ; %fer0 % 4 == 0 ==> 1
     mov .64bit          <%fer0>,                                    <%fer2>
-    div .64bit          <$(4)>
-    cmp .64bit          <%fer1>,                                    <$(0)>
+    div .64bit          <$64(4)>
+    cmp .64bit          <%fer1>,                                    <$64(0)>
     je                  <%cb>,                                      <.return1>
 
     jmp                 <%cb>,                                      <.return0>
 
     .return1:
-    mov .64bit          <%fer0>,                                    <$(1)>
+    mov .64bit          <%fer0>,                                    <$64(1)>
     jmp                 <%cb>,                                      <.return>
 
     .return0:
-    mov .64bit          <%fer0>,                                    <$(0)>
+    mov .64bit          <%fer0>,                                    <$64(0)>
 
     .return:
     pop .64bit          <%fer2>
@@ -246,87 +246,87 @@ is_leap_year:
 ; Function to get the number of days in a month for a given year
 ; get_days_in_month(month ==> %fer0, year ==> %fer1)-> days ==> %fer0
 get_days_in_month:
-    cmp .64bit          <%fer0>,                                    <$(1)>
+    cmp .64bit          <%fer0>,                                    <$64(1)>
     je                  <%cb>,                                      <.month1>
-    cmp .64bit          <%fer0>,                                    <$(2)>
+    cmp .64bit          <%fer0>,                                    <$64(2)>
     je                  <%cb>,                                      <.month2>
-    cmp .64bit          <%fer0>,                                    <$(3)>
+    cmp .64bit          <%fer0>,                                    <$64(3)>
     je                  <%cb>,                                      <.month3>
-    cmp .64bit          <%fer0>,                                    <$(4)>
+    cmp .64bit          <%fer0>,                                    <$64(4)>
     je                  <%cb>,                                      <.month4>
-    cmp .64bit          <%fer0>,                                    <$(5)>
+    cmp .64bit          <%fer0>,                                    <$64(5)>
     je                  <%cb>,                                      <.month5>
-    cmp .64bit          <%fer0>,                                    <$(6)>
+    cmp .64bit          <%fer0>,                                    <$64(6)>
     je                  <%cb>,                                      <.month6>
-    cmp .64bit          <%fer0>,                                    <$(7)>
+    cmp .64bit          <%fer0>,                                    <$64(7)>
     je                  <%cb>,                                      <.month7>
-    cmp .64bit          <%fer0>,                                    <$(8)>
+    cmp .64bit          <%fer0>,                                    <$64(8)>
     je                  <%cb>,                                      <.month8>
-    cmp .64bit          <%fer0>,                                    <$(9)>
+    cmp .64bit          <%fer0>,                                    <$64(9)>
     je                  <%cb>,                                      <.month9>
-    cmp .64bit          <%fer0>,                                    <$(10)>
+    cmp .64bit          <%fer0>,                                    <$64(10)>
     je                  <%cb>,                                      <.month10>
-    cmp .64bit          <%fer0>,                                    <$(11)>
+    cmp .64bit          <%fer0>,                                    <$64(11)>
     je                  <%cb>,                                      <.month11>
-    cmp .64bit          <%fer0>,                                    <$(12)>
+    cmp .64bit          <%fer0>,                                    <$64(12)>
     je                  <%cb>,                                      <.month12>
 
     .month1:
-    mov .64bit          <%fer0>,                                    <$(31)>
+    mov .64bit          <%fer0>,                                    <$64(31)>
     jmp                 <%cb>,                                      <.end>
 
     .month2:
     mov .64bit          <%fer0>,                                    <%fer1>
     call                <%cb>,                                      <is_leap_year>
-    cmp .64bit          <%fer0>,                                    <$(1)>
+    cmp .64bit          <%fer0>,                                    <$64(1)>
     je                  <%cb>,                                      <.leap>
 
     .not_leap:
-        mov .64bit      <%fer0>,                                    <$(28)>
+        mov .64bit      <%fer0>,                                    <$64(28)>
         jmp             <%cb>,                                      <.end>
 
     .leap:
-        mov .64bit      <%fer0>,                                    <$(29)>
+        mov .64bit      <%fer0>,                                    <$64(29)>
         jmp             <%cb>,                                      <.end>
 
     .month3:
-    mov .64bit          <%fer0>,                                    <$(31)>
+    mov .64bit          <%fer0>,                                    <$64(31)>
     jmp                 <%cb>,                                      <.end>
 
     .month4:
-    mov .64bit          <%fer0>,                                    <$(30)>
+    mov .64bit          <%fer0>,                                    <$64(30)>
     jmp                 <%cb>,                                      <.end>
 
     .month5:
-    mov .64bit          <%fer0>,                                    <$(31)>
+    mov .64bit          <%fer0>,                                    <$64(31)>
     jmp                 <%cb>,                                      <.end>
 
     .month6:
-    mov .64bit          <%fer0>,                                    <$(30)>
+    mov .64bit          <%fer0>,                                    <$64(30)>
     jmp                 <%cb>,                                      <.end>
 
     .month7:
-    mov .64bit          <%fer0>,                                    <$(31)>
+    mov .64bit          <%fer0>,                                    <$64(31)>
     jmp                 <%cb>,                                      <.end>
 
     .month8:
-    mov .64bit          <%fer0>,                                    <$(31)>
+    mov .64bit          <%fer0>,                                    <$64(31)>
     jmp                 <%cb>,                                      <.end>
 
     .month9:
-    mov .64bit          <%fer0>,                                    <$(30)>
+    mov .64bit          <%fer0>,                                    <$64(30)>
     jmp                 <%cb>,                                      <.end>
 
     .month10:
-    mov .64bit          <%fer0>,                                    <$(31)>
+    mov .64bit          <%fer0>,                                    <$64(31)>
     jmp                 <%cb>,                                      <.end>
 
     .month11:
-    mov .64bit          <%fer0>,                                    <$(30)>
+    mov .64bit          <%fer0>,                                    <$64(30)>
     jmp                 <%cb>,                                      <.end>
 
     .month12:
-    mov .64bit          <%fer0>,                                    <$(31)>
+    mov .64bit          <%fer0>,                                    <$64(31)>
 
     .end:
     ret
@@ -337,22 +337,22 @@ determine_the_year:
     push .64bit         <%fer3>
 
     mov .64bit          <%fer1>,                                    <%fer0>
-    mov .64bit          <%fer2>,                                    <$(1970)>
+    mov .64bit          <%fer2>,                                    <$64(1970)>
 
     ; %fer1 => total_days, %fer2 => year
 
     .loop:
         mov .64bit      <%fer0>,                                    <%fer2>
         call            <%cb>,                                      <is_leap_year>
-        cmp .64bit      <%fer0>,                                    <$(1)>
+        cmp .64bit      <%fer0>,                                    <$64(1)>
         je              <%cb>,                                      <.is_leap>
 
         .is_not_leap:
-        mov .64bit      <%fer3>,                                    <$(365)>
+        mov .64bit      <%fer3>,                                    <$64(365)>
         jmp             <%cb>,                                      <.end_is_leap_cmp>
 
         .is_leap:
-        mov .64bit      <%fer3>,                                    <$(366)>
+        mov .64bit      <%fer3>,                                    <$64(366)>
 
         .end_is_leap_cmp:
         cmp .64bit      <%fer1>,                                    <%fer3>
@@ -375,7 +375,7 @@ determine_the_month:
     push .64bit         <%fer3>
 
     ; %fer2 => month counter
-    mov .64bit          <%fer2>,                                    <$(1)>
+    mov .64bit          <%fer2>,                                    <$64(1)>
     ; total_days => %fer3
     mov .64bit          <%fer3>,                                    <%fer0>
 
@@ -459,8 +459,8 @@ _print_time:
     mov .64bit          <%db>,                                      <.months>
     mov .64bit          <%dp>,                                      <%fer10>
     dec .64bit          <%dp>
-    lea                 <%dp>,                                      <*4&8(%dp, $(0), $(0))>
-    lea                 <%fer0>,                                    <*1&8(%db, %dp, $(0))>
+    lea                 <%dp>,                                      <*4&8(%dp, $8(0), $8(0))>
+    lea                 <%fer0>,                                    <*1&8(%db, %dp, $8(0))>
     call                <%cb>,                                      <_puts>
 
     xor .64bit          <%db>,                                      <%db>
@@ -531,7 +531,7 @@ _int_rtc:
     xor .64bit          <%db>,                                      <%db>
     mov .64bit          <%dp>,                                      <.message>
     call                <%cb>,                                      <_puts>
-    in .64bit           <$(RTC_TIME)>,                              <%fer0>
+    in .64bit           <$64(RTC_TIME)>,                            <%fer0>
 
     ; output current time
     call                <%cb>,                                      <_print_time>

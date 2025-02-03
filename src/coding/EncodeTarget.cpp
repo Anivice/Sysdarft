@@ -33,7 +33,7 @@
 
 // Define regex patterns
 const std::regex register_pattern(R"(^%(R|EXR|HER)[0-7]|%(FER)([\d]+)|^%(SB|SP|CB|DB|DP|EB|EP)|^%XMM[0-5]$)");
-const std::regex constant_pattern(R"(^\$\((.*)\)$)");
+const std::regex constant_pattern(R"(^\$(8|16|32|64)\((.*)\)$)");
 const std::regex memory_pattern(R"(^\*(1|2|4|8|16)\&(8|16|32|64)\(([^,]+),([^,]+),([^,]+)\)$)");
 const std::regex base16_pattern(R"(0x[0-9A-Fa-f]+)");
 
@@ -67,6 +67,18 @@ parsed_target_t parse(std::string input)
     }
     else if (is_valid_constant(input))
     {
+        if (std::smatch matches; std::regex_search(input, matches, constant_pattern))
+        {
+            if (matches.size() != 3) {
+                throw SysdarftCodeExpressionError(input);
+            }
+
+            result.ConstantWidth = matches[1];
+            result.ConstantExpression = matches[2];
+            result.TargetType = parsed_target_t::CONSTANT;
+            return result;
+        }
+
         result.ConstantExpression = input;
         result.TargetType = parsed_target_t::CONSTANT;
         return result;
@@ -241,15 +253,9 @@ void encode_constant(std::vector<uint8_t> & buffer, const parsed_target_t & inpu
 {
     auto tmp = input.ConstantExpression;
 
-    if (tmp.size() <= 2) {
-        throw SysdarftCodeExpressionError(input.ConstantExpression);
+    if (tmp.empty()) {
+        throw SysdarftCodeExpressionError("Received expression being empty: " + input.ConstantExpression);
     }
-
-    // remove last '('
-    tmp.pop_back();
-    // remove '$('
-    tmp.erase(tmp.begin());
-    tmp.erase(tmp.begin());
 
     // replace base 16 value to base 10 value
     process_base16(tmp);
@@ -257,7 +263,18 @@ void encode_constant(std::vector<uint8_t> & buffer, const parsed_target_t & inpu
     code_buffer_push8(buffer, CONSTANT_PREFIX);
     const auto result_from_bc = execute_bc(tmp);
 
-    code_buffer_push8(buffer, _64bit_prefix);
+    if (input.ConstantWidth == "8") {
+        code_buffer_push8(buffer, _8bit_prefix);
+    } else if (input.ConstantWidth == "16") {
+        code_buffer_push8(buffer, _16bit_prefix);
+    } else if (input.ConstantWidth == "32") {
+        code_buffer_push8(buffer, _32bit_prefix);
+    } else if (input.ConstantWidth == "64") {
+        code_buffer_push8(buffer, _64bit_prefix);
+    } else {
+        throw SysdarftCodeExpressionError("Unknown constant width " + input.ConstantWidth);
+    }
+
     char * endptr;
     const __int128_t result = strtoull(result_from_bc.c_str(), &endptr, 10);
     if (result == ULLONG_MAX && errno == ERANGE) {
@@ -269,7 +286,17 @@ void encode_constant(std::vector<uint8_t> & buffer, const parsed_target_t & inpu
         throw SysdarftCodeExpressionError("Not a valid constant: " + input.ConstantExpression);
     }
 
-    code_buffer_push<64>(buffer, &result);
+    if (input.ConstantWidth == "8") {
+        code_buffer_push<8>(buffer, &result);
+    } else if (input.ConstantWidth == "16") {
+        code_buffer_push<16>(buffer, &result);
+    } else if (input.ConstantWidth == "32") {
+        code_buffer_push<32>(buffer, &result);
+    } else if (input.ConstantWidth == "64") {
+        code_buffer_push<64>(buffer, &result);
+    } else {
+        throw SysdarftCodeExpressionError("Unknown constant width " + input.ConstantWidth);
+    }
 }
 
 void encode_memory_width_prefix(std::vector<uint8_t> & buffer, const std::string & input)
@@ -315,12 +342,20 @@ void encode_memory(std::vector<uint8_t> & buffer, const parsed_target_t & input)
         }
         else if (is_valid_constant(param))
         {
-            encode_constant(buffer, parsed_target_t {
-                    .TargetType = parsed_target_t::CONSTANT,
-                    .ConstantExpression = param }
-            );
+            if (std::smatch matches; std::regex_search(param, matches, constant_pattern))
+            {
+                encode_constant(buffer, parsed_target_t {
+                        .TargetType = parsed_target_t::CONSTANT,
+                        .ConstantExpression = matches[2],
+                        .ConstantWidth = matches[1],
+                });
+            }
+            else
+            {
+                throw SysdarftCodeExpressionError("Constant matched but malformed: " + param);
+            }
         } else {
-            throw SysdarftCodeExpressionError(param);
+            throw SysdarftCodeExpressionError("Not a register nor a constant: " + param);
         }
     };
 

@@ -27,7 +27,7 @@ jmp                     <%cb>,                      <_start>
 ; _putc(%EXR0, linear position, %EXR1, ASCII Code)
 _putc:
     pushall
-    mov     .64bit      <%db>,                      <$(0xB8000)>    
+    mov     .64bit      <%db>,                      <$64(0xB8000)>
     push    .16bit      <%exr1>                                     
     xor     .16bit      <%exr1>,                    <%exr1>         
     xor     .32bit      <%her1>,                    <%her1>         
@@ -35,7 +35,7 @@ _putc:
                                                                     
                                                                     
     pop     .16bit      <%exr0>                                     
-    mov     .8bit       <*1&8(%db, %dp, $(0))>,     <%r0>           
+    mov     .8bit       <*1&8(%db, %dp, $8(0))>,    <%r0>
 
     REFRESH
 
@@ -45,76 +45,76 @@ _putc:
 ; _newline(%EXR0, linear address)
 _newline:
     pushall
-    int                 <$(0x15)>
-    div     .16bit      <$(80)>
+    int                 <$8(0x15)>
+    div     .16bit      <$16(80)>
     ; EXR0 quotient(row), EXR1 reminder(col)
-    cmp     .16bit      <%exr0>,                    <$(24)>
+    cmp     .16bit      <%exr0>,                    <$16(24)>
     jbe                 <%cb>,                      <.scroll>
 
     xor     .16bit      <%exr1>,                    <%exr1>
     inc     .16bit      <%exr0>
-    mul     .16bit      <$(80)>
+    mul     .16bit      <$16(80)>
     SETCUSP
     REFRESH
     jmp         <%cb>,      < .exit>
 
     .scroll:
         ; move content (scroll up)
-        mov .64bit      <%db>,                      <$(0xB8000)>
+        mov .64bit      <%db>,                      <$64(0xB8000)>
         xor .64bit      <%dp>,                      <%dp>
-        mov .64bit      <%eb>,                      <$(0xB8000 + 80)>
+        mov .64bit      <%eb>,                      <$64(0xB8000 + 80)>
         xor .64bit      <%ep>,                      <%ep>
-        mov .64bit      <%fer3>,                    <$(2000 - 80)>
+        mov .64bit      <%fer3>,                    <$64(2000 - 80)>
         movs
 
         ; clear last line
-        mov .64bit      <%fer3>,                    <$(80)>
-        mov .64bit      <%eb>,                      <$(0xB8000)>
-        mov .64bit      <%ep>,                      <$(2000 - 80)>
+        mov .64bit      <%fer3>,                    <$64(80)>
+        mov .64bit      <%eb>,                      <$64(0xB8000)>
+        mov .64bit      <%ep>,                      <$64(2000 - 80)>
         xor .64bit      <%dp>,                      <%dp>
         .scroll.loop:
-            mov .8bit   <*1&8(%eb, %ep, %dp)>,      <$(' ')>
+            mov .8bit   <*1&8(%eb, %ep, %dp)>,      <$8(' ')>
             inc .64bit  <%dp>
             loop        <%cb>,                      <.scroll.loop>
 
-        mov .16bit      <%exr0>,                    <$(2000 - 80)>
+        mov .16bit      <%exr0>,                    <$16(2000 - 80)>
         SETCUSP
         REFRESH
     .exit:
 
     popall
-    int                 <$(0x15)>
+    int                 <$8(0x15)>
     ret
 
 ; _puts(%DB:%DP), null terminated string
 _puts:
     pushall
     .loop:
-        mov .8bit       <%r2>,                      <*1&8(%db, %dp, $(0))>      
+        mov .8bit       <%r2>,                      <*1&8(%db, %dp, $8(0))>
 
-        cmp .8bit       <%r2>,                      <$(0)>
+        cmp .8bit       <%r2>,                      <$8(0)>
         je              <%cb>,                      <.exit>
 
-        cmp .8bit       <%r2>,                      <$(0x0A)>
+        cmp .8bit       <%r2>,                      <$8(0x0A)>
         jne             <%cb>,                      <.skip_newline>
 
         .newline:
         call            <%cb>,                      <_newline>
         mov .64bit      <%fer3>,                    <.last_offset>
-        mov .16bit      <*1&16($(0), %fer3, $(0))>, <%exr0>
+        mov .16bit      <*1&16($8(0), %fer3, $8(0))>, <%exr0>
         jmp             <%cb>,      <.end>
 
         .skip_newline:
         xor .8bit       <%r3>,                      <%r3>
         mov .64bit      <%fer3>,                    <.last_offset>
-        mov .16bit      <%exr0>,                    <*1&16($(0), %fer3, $(0))>
+        mov .16bit      <%exr0>,                    <*1&16($8(0), %fer3, $8(0))>
         call            <%cb>,                      <_putc>
 
         inc .16bit      <%exr0>
-        cmp .16bit      <%exr0>,                    <$(2000)>
+        cmp .16bit      <%exr0>,                    <$16(2000)>
         je              <%cb>,                      <.newline>
 
-        mov .16bit      <*1&16($(0), %fer3, $(0))>, <%exr0>
+        mov .16bit      <*1&16($8(0), %fer3, $8(0))>, <%exr0>
         SETCUSP
 
         .end:
@@ -134,16 +134,16 @@ _print_num:
 
     xor .64bit          <%fer2>,                    <%fer2>       ; record occurrences of digits
     .loop:
-        div .64bit      <$(10)>
+        div .64bit      <$64(10)>
         ; %fer0 ==> ori
         ; %fer1 ==> reminder
         mov  .64bit     <%fer3>,                    <%fer1>
-        add  .64bit     <%fer3>,                    <$('0')>
+        add  .64bit     <%fer3>,                    <$64('0')>
         push .64bit     <%fer3>
 
         inc .64bit      <%fer2>
 
-        cmp .64bit      <%fer0>,                    <$(0x00)>
+        cmp .64bit      <%fer0>,                    <$64(0x00)>
         jne             <%cb>,                      <.loop>
 
     xor .64bit          <%db>,                      <%db>
@@ -152,11 +152,11 @@ _print_num:
     mov .64bit          <%fer3>,                    <%fer2>
     .loop_pop:
         pop .64bit      <%fer0>
-        mov .8bit       <*1&8(%db, %dp, $(0))>,     <%r0>
+        mov .8bit       <*1&8(%db, %dp, $8(0))>,    <%r0>
         inc .64bit      <%dp>
         loop            <%cb>,                      <.loop_pop>
 
-    mov .8bit           <*1&8(%db, %dp, $(0))>,     <$(0)>
+    mov .8bit           <*1&8(%db, %dp, $8(0))>,    <$8(0)>
     mov .64bit          <%dp>,                      <.cache>
     call                <%cb>,                      <_puts>
 
@@ -171,7 +171,7 @@ _reads:
     pushall
     in .64bit           DISK_SIZE,                  <%fer3>
     ; max 640 KB, meaning 1280 sectors
-    cmp .64bit          <%fer3>,                    <$(1280)>
+    cmp .64bit          <%fer3>,                    <$64(1280)>
     jl                  <%cb>,                      <.skip.trunc>
 
     mov .64bit          <%dp>,                      <.message.disk.too.big>
@@ -182,7 +182,7 @@ _reads:
     mov .64bit          <%dp>,                      < .message.disk.too.big.tail >
     call                <%cb>,                      <_puts>
 
-    mov .64bit          <%fer3>,                    <$(1280)>
+    mov .64bit          <%fer3>,                    <$64(1280)>
 
     mov .64bit          <%dp>,                      <.message.disk.resize>
     call                <%cb>,                      <_puts>
@@ -206,16 +206,16 @@ _reads:
     xor .64bit          <%db>,                      <%db>
     call                <%cb>,                      <_puts>
 
-    out .64bit          DISK_START_SEC,             <$(0)>
+    out .64bit          DISK_START_SEC,             <$64(0)>
     out .64bit          DISK_OPS_SEC_CNT,           <%fer3>
-    mul .64bit          <$(512)>
+    mul .64bit          <$64(512)>
     mov .64bit          <%fer3>,                    <%fer0>
     xor .64bit          <%dp>,                      <%dp>
     xor .64bit          <%db>,                      <%db>
     ins .64bit          DISK_INPUT
 
     mov .64bit          <%fer0>,                    <.ret>
-    mov .64bit          <*1&64(%fer0, $(0), $(0))>, <%fer3>
+    mov .64bit          <*1&64(%fer0, $8(0), $8(0))>, <%fer3>
 
     mov .64bit          <%dp>,                      <.message.done>
     xor .64bit          <%db>,                      <%db>
@@ -224,7 +224,7 @@ _reads:
     popall
 
     mov .64bit          <%fer0>,                    <.ret>
-    mov .64bit          <%fer0>,                    <*1&64(%fer0, $(0), $(0))>
+    mov .64bit          <%fer0>,                    <*1&64(%fer0, $8(0), $8(0))>
 
     ret
 
@@ -272,12 +272,12 @@ _writes:
 
     ; %fer0 <== A: size
     mov .64bit          <%fer0>,                    <%fer3>
-    mul .64bit          <$(512)>
+    mul .64bit          <$64(512)>
 
     ; compare %fer0 and %fer4
     cmp .64bit          <%fer0>,                    <%fer4>
     jbe                 <%cb>,                      <.skip.trunc>
-    add .64bit          <%sp>,                      <$(8)>
+    add .64bit          <%sp>,                      <$64(8)>
     push .64bit         <%fer0>
 
     mov .64bit          <%dp>,                      <.message.disk.too.small>
@@ -307,9 +307,9 @@ _writes:
 
     pop .64bit          <%fer0>
     push .64bit         <%fer0>
-    div .64bit          <$(512)>
+    div .64bit          <$64(512)>
 
-    out .64bit          FDA_START_SEC,              <$(0)>
+    out .64bit          FDA_START_SEC,              <$64(0)>
     out .64bit          FDA_OPS_SEC_CNT,            <%fer0>
     pop .64bit          <%fer3>
     xor .64bit          <%dp>,                      <%dp>
@@ -346,7 +346,7 @@ _writes:
     .8bit_data < 0 >
 
 _int_0x02_io_error:
-    cmp .16bit          <%exr0>,                    <$(0xF0)>
+    cmp .16bit          <%exr0>,                    <$16(0xF0)>
     je                  <%cb>,                      <.io_error>
 
     ; no such device
@@ -355,7 +355,7 @@ _int_0x02_io_error:
     call                <%cb>,                      <_puts>
     KBFLUSH
     INTGETC
-    mov .64bit          <%fer0>,                    <$(6)>
+    mov .64bit          <%fer0>,                    <$64(6)>
     jmp                 <%cb>,                      <.error.type.end>
 
     .io_error:
@@ -364,7 +364,7 @@ _int_0x02_io_error:
     call                <%cb>,                      <_puts>
     KBFLUSH
     INTGETC
-    mov .64bit          <%fer0>,                    <$(5)>
+    mov .64bit          <%fer0>,                    <$64(5)>
 
     .error.type.end:
     hlt
@@ -379,10 +379,10 @@ _int_0x02_io_error:
 
 _start:
     mov .64bit          <%sb>,                      <_stack_frame>
-    mov .64bit          <%sp>,                      <$(0xFFF)>
+    mov .64bit          <%sp>,                      <$64(0xFFF)>
 
     ; install error handler
-    mov .64bit          <*1&64($(0xA0000), $(0x02 * 16), $(8))>, <_int_0x02_io_error>
+    mov .64bit          <*1&64($32(0xA0000), $16(0x02 * 16), $8(8))>, <_int_0x02_io_error>
 
     ; show welcome message
     mov .64bit          <%dp>,                      <.welcome>

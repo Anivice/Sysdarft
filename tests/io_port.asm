@@ -21,15 +21,15 @@
 %ifndef _IO_PORT_ASM_
 %define _IO_PORT_ASM_
 
-.equ 'DISK_SIZE',           '< $(0x136) >'
-.equ 'DISK_START_SEC',      '< $(0x137) >'
-.equ 'DISK_OPS_SEC_CNT',    '< $(0x138) >'
-.equ 'DISK_INPUT',          '< $(0x139) >'
+.equ 'DISK_SIZE',           '< $64(0x136) >'
+.equ 'DISK_START_SEC',      '< $64(0x137) >'
+.equ 'DISK_OPS_SEC_CNT',    '< $64(0x138) >'
+.equ 'DISK_INPUT',          '< $64(0x139) >'
 
-.equ 'FDA_SIZE',            '< $(0x116) >'
-.equ 'FDA_START_SEC',       '< $(0x117) >'
-.equ 'FDA_OPS_SEC_CNT',     '< $(0x118) >'
-.equ 'FDA_OUTPUT',          '< $(0x11A) >'
+.equ 'FDA_SIZE',            '< $64(0x116) >'
+.equ 'FDA_START_SEC',       '< $64(0x117) >'
+.equ 'FDA_OPS_SEC_CNT',     '< $64(0x118) >'
+.equ 'FDA_OUTPUT',          '< $64(0x11A) >'
 
 ; floppy disk B
 

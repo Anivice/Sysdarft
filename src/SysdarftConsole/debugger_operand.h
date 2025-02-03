@@ -24,6 +24,29 @@
 #include <algorithm>
 #include <SysdarftCPU.h>
 
+template < unsigned BIT_SIZE >
+struct NumTypeIdentifier;
+
+template <>
+struct NumTypeIdentifier<8> {
+    using type = uint8_t;
+};
+
+template <>
+struct NumTypeIdentifier<16> {
+    using type = uint16_t;
+};
+
+template <>
+struct NumTypeIdentifier<32> {
+    using type = uint16_t;
+};
+
+template <>
+struct NumTypeIdentifier<64> {
+    using type = uint16_t;
+};
+
 // short-lived type, valid only for current timestamp
 class debugger_operand_type
 {
@@ -80,8 +103,52 @@ protected:
     uint64_t do_access_operand_based_on_table();
     void store_value_to_operand_based_on_table(uint64_t value);
 
-    uint8_t pop_code8();
-    uint64_t pop_code64();
+
+
+    template <unsigned BIT_SIZE>
+        requires(BIT_SIZE % 8 == 0)
+    typename NumTypeIdentifier<BIT_SIZE>::type pop_code()
+    {
+        auto pop8 = [&]() -> uint8_t {
+            uint8_t value = 0;
+            if (!operand_expression.empty()) {
+                value = operand_expression.back();
+                operand_expression.pop_back();
+            } else {
+                throw IllegalInstruction("Operand expression is empty");
+            }
+
+            return value;
+        };
+
+        uint64_t value = 0;
+
+        if (operand_expression.size() >= BIT_SIZE / 8) {
+            for (unsigned int i = 0; i < BIT_SIZE / 8; i++) {
+                ((uint8_t *)&value)[i] = pop8();
+            }
+        } else {
+            throw IllegalInstruction("Operand expression is empty");
+        }
+
+        return static_cast<typename NumTypeIdentifier<BIT_SIZE>::type>(value);
+    }
+
+    uint8_t pop_code8() {
+        return pop_code<8>();
+    }
+
+    uint16_t pop_code16() {
+        return pop_code<16>();
+    }
+
+    uint32_t pop_code32() {
+        return pop_code<32>();
+    }
+
+    uint64_t pop_code64() {
+        return pop_code<64>();
+    }
 
 public:
     [[nodiscard]] uint64_t get_val() { return do_access_operand_based_on_table(); }

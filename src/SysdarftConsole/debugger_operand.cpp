@@ -130,18 +130,44 @@ void debugger_operand_type::do_decode_register_without_prefix()
 
 void debugger_operand_type::do_decode_constant_without_prefix()
 {
-    if (const auto & prefix = pop_code8();
-        prefix == _64bit_prefix)
-    {
-        std::stringstream ss;
-        const auto num = pop_code64();
-        OperandReferenceTable.OperandType = ConstantOperand;
-        OperandReferenceTable.OperandInfo.ConstantValue = num;
-        ss << "0x" << std::uppercase << std::hex << num;
-        OperandReferenceTable.literal = "$(" + ss.str() + ")";
+    OperandReferenceTable.OperandType = ConstantOperand;
+    const auto & prefix = pop_code8();
+    uint64_t num;
+
+#ifdef __DEBUG__
+    std::stringstream ss;
+    std::string prefix_literal;
+#endif // __DEBUG__
+
+    if (prefix == _8bit_prefix) {
+#ifdef __DEBUG__
+        prefix_literal = "8";
+#endif // __DEBUG__
+        num = pop_code8();
+    } else if (prefix == _16bit_prefix) {
+#ifdef __DEBUG__
+        prefix_literal = "16";
+#endif // __DEBUG__
+        num = pop_code16();
+    } else if (prefix == _32bit_prefix) {
+#ifdef __DEBUG__
+        prefix_literal = "32";
+#endif // __DEBUG__
+        num = pop_code32();
+    } else if (prefix == _64bit_prefix) {
+#ifdef __DEBUG__
+        prefix_literal = "64";
+#endif // __DEBUG__
+        num = pop_code64();
     } else {
         throw IllegalInstruction("Unknown constant width");
     }
+
+    OperandReferenceTable.OperandInfo.ConstantValue = num;
+#ifdef __DEBUG__
+    ss << "0x" << std::uppercase << std::hex << num;
+    OperandReferenceTable.literal = "$" + prefix_literal + "(" + ss.str() + ")";
+#endif // __DEBUG__
 }
 
 void debugger_operand_type::do_decode_memory_without_prefix()
@@ -339,33 +365,4 @@ uint64_t debugger_operand_type::do_access_width_specified_access_memory_based_on
     case _64bit_prefix: return do_width_ambiguous_access_memory_based_on_table<uint64_t>();
     default: throw IllegalInstruction("Unknown memory access width");
     }
-}
-
-uint8_t debugger_operand_type::pop_code8()
-{
-    uint8_t value = 0;
-    if (!operand_expression.empty()) {
-        value = operand_expression.back();
-        operand_expression.pop_back();
-    } else {
-        throw IllegalInstruction("Operand expression is empty");
-    }
-
-    return value;
-}
-
-uint64_t debugger_operand_type::pop_code64()
-{
-    uint64_t value = 0;
-
-    if (operand_expression.size() >= 8)
-    {
-        for (int i = 0; i < 8; i++) {
-            ((char*)&value)[i] = pop_code8();
-        }
-    } else {
-        throw IllegalInstruction("Operand expression is empty");
-    }
-
-    return value;
 }

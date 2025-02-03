@@ -152,7 +152,7 @@ void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> & buffer, co
         };
 
         // width consistency check
-        if (current_ops_width != 0 && instruction_map.at(instruction_name).at(ENTRY_OPCODE) != OPCODE_LEA)
+        if (current_ops_width != 0)
         {
             if (parsed_target.TargetType == parsed_target_t::REGISTER)
             {
@@ -185,6 +185,18 @@ void SYSDARFT_EXPORT_SYMBOL encode_instruction(std::vector<uint8_t> & buffer, co
                 case _16bit_prefix: assertion(parsed_target.memory.MemoryWidth == "16"); break;
                 case _32bit_prefix: assertion(parsed_target.memory.MemoryWidth == "32"); break;
                 case _64bit_prefix: assertion(parsed_target.memory.MemoryWidth == "64"); break;
+                default: throw InstructionExpressionError("Unknown error for " + instruction);
+                }
+            }
+
+            if (parsed_target.TargetType == parsed_target_t::CONSTANT)
+            {
+                switch (current_ops_width)
+                {
+                case _8bit_prefix:  assertion(parsed_target.ConstantWidth == "8");  break;
+                case _16bit_prefix: assertion(parsed_target.ConstantWidth == "16"); break;
+                case _32bit_prefix: assertion(parsed_target.ConstantWidth == "32"); break;
+                case _64bit_prefix: assertion(parsed_target.ConstantWidth == "64"); break;
                 default: throw InstructionExpressionError("Unknown error for " + instruction);
                 }
             }
