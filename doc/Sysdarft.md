@@ -274,7 +274,7 @@ $\text{Physical Address} = (\text{Segment Address} \ll 4) + \text{Segment Offset
 
 Usually, segmented address is denoted by `[Segmnet Address]:[Segment Offset]`[^SegmentNotation]
 
-[^SegmentDenoting]
+[^SegmentDenoting]:
 *A chunk of memory is known as a segment and hence the phrase
 'segmented memory architecture.'
 ...,
