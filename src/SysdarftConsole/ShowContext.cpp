@@ -158,8 +158,8 @@ std::string current_instruction(const uint8_t opcode, const SysdarftCPU::WidthAn
 
 std::string show_context(SysdarftCPU &CPUInstance,
     uint64_t actual_ip,
-    const uint8_t opcode,
-    const SysdarftCPU::WidthAndOperandsType &Arg)
+    const uint8_t,
+    const SysdarftCPU::WidthAndOperandsType &)
 {
     std::stringstream ss;
 
@@ -374,7 +374,7 @@ std::string show_context(SysdarftCPU &CPUInstance,
     auto show_next_8_instructions = [&]()
     {
         std::vector<std::string> next_8_instructions;
-        const uint64_t offset = CPUInstance.load<CodeBaseType>() + CPUInstance.load<InstructionPointerType>();
+        const uint64_t offset = CPUInstance.load<CodeBaseType>() + actual_ip;
         const uint64_t length = std::min<uint64_t>(256, CPUInstance.SystemTotalMemory() - offset);
         std::vector<uint8_t> buffer_max256;
         buffer_max256.reserve(length);
@@ -409,8 +409,6 @@ std::string show_context(SysdarftCPU &CPUInstance,
         }
     };
 
-    ss << "=> " << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << actual_ip
-                         << current_instruction(opcode, Arg) << "\n";
     show_next_8_instructions();
 
     // return result

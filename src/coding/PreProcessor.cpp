@@ -60,17 +60,24 @@ void replace_whole_word(std::string& text,
                                 std::string target,
                                 const std::string& replacement)
 {
+    const auto original_target = target;
     replace_all(target, ".", "\\.");
-    const std::string target_reg_literal = R"((^|[^A-Za-z0-9._]))" + target + R"(([^A-Za-z0-9._]|$))";
+    const std::string target_reg_literal = "(?:^|[^A-Za-z0-9_.])(" + target + ")(?=$|[^A-Za-z0-9_.])";
     const std::regex rep_tag(target_reg_literal);
     std::smatch match;
     std::regex_search(text, match, rep_tag);
     if (!match.empty())
     {
-        auto matched = match[0].str();
-        matched.pop_back();
-        matched.erase(matched.begin());
-        replace_all(text, matched, replacement);
+        std::string matched_text = match[0];
+        replace_all(matched_text, original_target, "");
+        std::string front, back;
+        switch (matched_text.size()) {
+        case 0: break;
+        case 1: front = matched_text.front(); break;
+        case 2: front = matched_text.front(); back = matched_text.back(); break;
+        default: throw SysdarftPreProcessorError("Unrecognized format for regex replacement, possibly internal error");
+        }
+        text = std::regex_replace(text, rep_tag, front + replacement + back);
     }
 }
 
@@ -119,7 +126,9 @@ line_marker_register(std::vector<std::string> & file)
                 for (std::string & cursf_line : current_file_section)
                 {
                     for (const auto & [marker, rep] : sub_linemarkers) {
-                        replace_whole_word(cursf_line, marker, rep);
+                        if (cursf_line.find(marker) != std::string::npos) {
+                            replace_whole_word(cursf_line, marker, rep);
+                        }
                     }
                 }
 
@@ -290,7 +299,7 @@ void sed_equ(std::string& input, std::map < std::string, std::string > & equ_rep
             }
         } else {
             if (input.find(key) != std::string::npos) {
-                replace_all(input, key, value);
+                replace_whole_word(input, key, value);
             }
         }
     }
