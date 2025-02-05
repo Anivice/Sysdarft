@@ -274,7 +274,7 @@ $\text{Physical Address} = (\text{Segment Address} \ll 4) + \text{Segment Offset
 
 Usually, segmented address is denoted by `[Segmnet Address]:[Segment Offset]`[^SegmentNotation]
 
-[^SegmentDenoting]:
+[^SegmentNotation]:
 *A chunk of memory is known as a segment and hence the phrase
 'segmented memory architecture.'
 ...,
@@ -1152,9 +1152,9 @@ representing a total `16` registers as designed.
 
 Constants can vary in width (`8`, `16`, `32`, and `64`) with `0x02` as its indication.
 
-| Byte 0, Constant Identification | Byte 1, Data Width, Always `64` | Byte 2-9, Binary Number |
-|---------------------------------|---------------------------------|-------------------------|
-| `0x02`                          | `0x08`/`0x16`/`0x32`/`0x64`     | Constant Binary Number  |
+| Byte 0, Constant Identification | Byte 1, Data Width          | Byte 2-9, Binary Number                                      |
+|---------------------------------|-----------------------------|--------------------------------------------------------------|
+| `0x02`                          | `0x08`/`0x16`/`0x32`/`0x64` | Constant Binary Number, `1`, `2`, `4`, or `8` bytes in width |
 
 ### Memory Reference
 
