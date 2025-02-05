@@ -165,7 +165,7 @@ file(READ "${information_file}" SYSDARFT_INFO_CONTENT)
 string(REPLACE "\n" "\\n" SYSDARFT_INFO_CONTENT_ESCAPED "${SYSDARFT_INFO_CONTENT}")
 
 add_compile_definitions(
-        SYSDARFT_VERSION="0.0.2-alpha-rc0"
+        SYSDARFT_VERSION="0.0.2-alpha-rc1"
         SYSDARFT_INFORMATION="${SYSDARFT_INFO_CONTENT_ESCAPED}"
         __CLEAN_OUTPUT__
 )

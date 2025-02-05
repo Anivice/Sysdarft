@@ -55,13 +55,43 @@ std::string truncateAfterSemicolonOrHash(const std::string& input)
     return input;
 }
 
+// This function takes a replacement string and escapes all '$' characters
+// by replacing each '$' with '$$', ensuring that the replacement string
+// will be interpreted literally by std::regex_replace.
+std::string escapeRegexReplacement(const std::string& replacement)
+{
+    std::string result;
+    result.reserve(replacement.size());
+    for (const char c : replacement) {
+        if (c == '$') {
+            // Double the '$' so that it is not treated as the start of a replacement directive.
+            result.append("$$");
+        } else {
+            result.push_back(c);
+        }
+    }
+    return result;
+}
+
+
 // Function to replace whole words based on custom allowed characters
 void replace_whole_word(std::string& text,
                                 std::string target,
-                                const std::string& replacement)
+                                const std::string & replacement_)
 {
+    const std::string regexSpecialChars = R"(\^$.|?*+())";
     const auto original_target = target;
-    replace_all(target, ".", "\\.");
+    std::string replacement = replacement_;
+
+    for (const auto ch : regexSpecialChars)
+    {
+        std::string search_target;
+        search_target += ch;
+        replace_all(target, search_target, "\\" + search_target);
+    }
+
+    replacement = escapeRegexReplacement(replacement);
+
     const std::string target_reg_literal = "(?:^|[^A-Za-z0-9_.])(" + target + ")(?=$|[^A-Za-z0-9_.])";
     const std::regex rep_tag(target_reg_literal);
     std::smatch match;
