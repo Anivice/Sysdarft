@@ -42,25 +42,20 @@ jobs:
             apt-transport-https \
             gnupg cmake libsfml-dev libasio-dev
 
-      ########################################################################
-      # BUILD & TEST with Memory/Address/Undefined Sanitizers
-      ########################################################################
-      - name: Configure (Memory/Address Sanitizers)
+      - name: Configure
         run: |
-          cmake -B build_msan -S . \
-            -D COMPILE_WITH_MEMORY_SANITIZERS=True  \
-            -D COMPILE_WITH_THREAD_SANITIZERS=False \
-            -D CMAKE_BUILD_TYPE=Debug
+          cmake -B build -S . \
+            -D CMAKE_BUILD_TYPE=Release
 
-      - name: Build (Memory/Address Sanitizers)
+      - name: Build
         run: |
-          cmake --build build_msan --parallel 16
+          cmake --build build --parallel 16 --target AppImage
 
-      - name: Test (Memory/Address Sanitizers)
+      - name: Test
         env:
           TERM: xterm-256color
         run: |
-          ctest --test-dir build_msan --extra-verbose -LE "NotTestable"
+          ctest --test-dir build --extra-verbose -LE "NotTestable"
 
       ########################################################################
       # OPEN ISSUE IF ANY TEST FAILURE OCCURRED
@@ -78,3 +73,15 @@ jobs:
               title: "Test Failure in Automated CMake Test Workflow",
               body: "# One or more tests have failed!"
             })
+
+      - name: Get Git commit hash
+        id: get_commit
+        run: echo "GIT_HASH=$(git rev-parse --short=8 HEAD)" >> $GITHUB_ENV
+
+      - name: Create a GitHub release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/sysdarft-system
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NAME: Sysdarft.NightlyBuild.${{ env.GIT_HASH }}

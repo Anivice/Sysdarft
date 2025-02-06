@@ -68,6 +68,30 @@ cp "$TEMP_DIR"/Sysdarft.AppDir/usr/share/applications/Sysdarft.desktop "$TEMP_DI
 
 SCRIPT_DIR=\$(dirname \"\$(readlink -f \"\$0\")\")
 
+rm -rf /tmp/SysdarftChecksumStatus
+
+verify_file() {
+    file=\"\$1\"
+    if echo \"\$file\" | grep '\.sig' 2>/dev/null >/dev/null; then # Skip signature files
+        return
+    fi
+
+    if ! openssl dgst -sha256 -verify \"\$SCRIPT_DIR/Public.pem\" -signature \"\${file}.sig\" \"\$file\" 2>/dev/null >/dev/null; then
+        echo \"Checksum failed for \$file\" >> /tmp/SysdarftChecksumStatus
+    fi
+}
+
+export SCRIPT_DIR  # export for use in the subshell
+export -f verify_file  # export the function so it can be used in -exec
+
+find \"\$SCRIPT_DIR/\" -type f ! -name \"*.sig\" -exec bash -c 'verify_file \"\$0\"' {} \;
+
+if [ -e /tmp/SysdarftChecksumStatus ]; then
+    cat /tmp/SysdarftChecksumStatus
+    rm -rf /tmp/SysdarftChecksumStatus
+    exit 1
+fi
+
 \"\$SCRIPT_DIR/usr/bin/sysdarft-system\" \${@}
 "
 } > "$TEMP_DIR"/Sysdarft.AppDir/AppRun
@@ -76,8 +100,15 @@ chmod +x "$TEMP_DIR"/Sysdarft.AppDir/AppRun
 
 cd "$TEMP_DIR" || exit 1
 
+echo "Generating verification checksum..."
+openssl genrsa -out Private.pem 4096
+openssl rsa -in Private.pem -pubout -out "$TEMP_DIR"/Sysdarft.AppDir/Public.pem
+find "$TEMP_DIR"/Sysdarft.AppDir -type f -exec openssl dgst -sha256 -sign Private.pem -out {}.sig {} \;
+
 echo "Building AppImage..."
 
 "$SCRIPT_DIR/../utils/appimagetool-$ARCH.AppImage" "$TEMP_DIR"/Sysdarft.AppDir
 
 mv "$TEMP_DIR"/Sysdarft-"$ARCH".AppImage "$TEMP_DIR"/sysdarft-system
+
+echo "Build finished on " "$(date)"
