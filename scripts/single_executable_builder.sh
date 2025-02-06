@@ -36,9 +36,12 @@ FILE_LIST=$(cat "$TEMP_DIR"/requirements.sorted)
 
 echo "Copying files..."
 
+preload=""
+
 for item in $FILE_LIST; do
     if echo "$item" | grep "\\.so" > /dev/null 2> /dev/null; then
         cp "$item" "$TEMP_DIR"/Sysdarft.AppDir/usr/lib
+        preload="$preload:\$SCRIPT_DIR/usr/lib/$(basename "$item")"
     else
         cp "$item" "$TEMP_DIR"/Sysdarft.AppDir/usr/bin
     fi
@@ -92,7 +95,7 @@ if [ -e /tmp/SysdarftChecksumStatus ]; then
     exit 1
 fi
 
-\"\$SCRIPT_DIR/usr/bin/sysdarft-system\" \${@}
+LD_LIBRARY_PATH=\"\$LD_LIBRARY_PATH\":\"\$SCRIPT_DIR/usr/lib\" LD_PRELOAD=\"\$SCRIPT_DIR/usr/lib/libSysdarft.so:\$SCRIPT_DIR/usr/lib/libSysdarftResources.so\" \"\$SCRIPT_DIR/usr/bin/sysdarft-system\" \${@}
 "
 } > "$TEMP_DIR"/Sysdarft.AppDir/AppRun
 
