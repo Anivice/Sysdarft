@@ -190,7 +190,6 @@ protected:
     std::vector < uint64_t > interruption_requests;
     std::atomic < bool > external_device_requested = false;
     std::atomic < uint64_t > current_routine_pop_len = 0;
-    std::atomic < int > input_source = 0;
     std::atomic < uint64_t > ip_before_pop = 0;
 
     struct InterruptionPointer {
@@ -274,7 +273,6 @@ private:
 
 public:
     void do_ext_dev_interruption(uint64_t code);
-    bool try_add_input(int input_);
     void debugger_pause_0x14() { debugger_pause_blocked_int_0x14 = true;}
 };
 

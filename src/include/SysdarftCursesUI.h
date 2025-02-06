@@ -63,6 +63,7 @@ protected:
 
 public:
     std::atomic<bool> translate_cr_to_lf = false;
+    bool try_add_input(int input_);
 
 protected:
     // External halt is handled at upper level

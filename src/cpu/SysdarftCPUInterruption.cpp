@@ -250,17 +250,6 @@ void SysdarftCPUInterruption::do_ext_dev_interruption(const uint64_t code)
     }
 }
 
-bool SysdarftCPUInterruption::try_add_input(const int input_)
-{
-    // interruption open and seeking input
-    if (input_source == 0) {
-        input_source = input_;
-        return true;
-    }
-
-    return false;
-}
-
 SysdarftCPUInterruption::InterruptionPointer SysdarftCPUInterruption::do_interruption_lookup(const uint64_t code)
 {
     InterruptionPointer pointer { };
@@ -371,14 +360,13 @@ void SysdarftCPUInterruption::do_interruption_getInput_0x14()
             return;
         }
 
-        if (input_source != 0) {
-            SysdarftRegister::store<ExtendedRegisterType, 0>(input_source);
-            input_source = 0;
-            return;
-        }
-
         if (const auto Key = SysdarftCursesUI::get_input(); Key != -1)
         {
+            if (translate_cr_to_lf && Key == ASCII_CR) {
+                SysdarftRegister::store<ExtendedRegisterType, 0>(ASCII_LF);
+                return;
+            }
+
             SysdarftRegister::store<ExtendedRegisterType, 0>(Key);
             return;
         }

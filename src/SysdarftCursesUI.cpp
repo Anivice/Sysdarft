@@ -312,11 +312,6 @@ void SysdarftCursesUI::monitor_console_input(std::atomic < bool > & running)
             default:
                 {
                     std::lock_guard lock(input_mutex);
-                    if (translate_cr_to_lf && key == ASCII_CR) {
-                        captured_input.emplace_back(ASCII_LF);
-                        return;
-                    }
-
                     captured_input.emplace_back(key);
                 }
             }
@@ -402,4 +397,11 @@ int SysdarftCursesUI::get_input()
     const auto ret = captured_input.front();
     captured_input.erase(captured_input.begin());
     return ret;
+}
+
+bool SysdarftCursesUI::try_add_input(const int input_)
+{
+    std::lock_guard<std::mutex> lock(input_mutex);
+    captured_input.emplace_back(input_);
+    return true;
 }

@@ -71,12 +71,22 @@ void RemoteDebugServer::crow_setup_intAlertSSE()
                 } else {
                     send_data("Failed");
                 }
-            } else {
-                if (is_binary) {
-                    conn.send_binary("Request not recognized");
+            } else if (!request.empty() && request == "context") {
+                if (!breakpoint_triggered || args == nullptr) {
+                    send_data("Not Ready");
                 } else {
-                    conn.send_text("Request not recognized");
+                    send_data(show_context(CPUInstance, actual_ip, opcode, *args.load()));
                 }
+            } else if (!request.empty() && request == "continue") {
+                if (!breakpoint_triggered) {
+                    send_data("Already running");
+                } else {
+                    breakpoint_triggered = false;
+                    manual_stop = false;
+                    send_data("Continue");
+                }
+            } else {
+                send_data("Request not recognized");
             }
         });
 }
