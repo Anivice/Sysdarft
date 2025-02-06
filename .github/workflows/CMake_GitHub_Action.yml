@@ -21,58 +21,57 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      # 1) Install needed system packages (including ccache, cmake, etc.)
-#      - name: Install dependencies
-#        run: |
-#          sudo apt-get update
-#          sudo apt-get install -y \
-#            ccache \
-#            build-essential \
-#            libncurses-dev \
-#            bsdutils \
-#            libboost-dev \
-#            libboost-filesystem-dev \
-#            libboost-thread-dev \
-#            nlohmann-json3-dev \
-#            libcurl4-openssl-dev \
-#            expect \
-#            bc \
-#            software-properties-common \
-#            wget \
-#            apt-transport-https \
-#            gnupg cmake libsfml-dev libasio-dev
-#
-#      - name: Configure
-#        run: |
-#          cmake -B build -S . \
-#            -D CMAKE_BUILD_TYPE=Release
-#
-#      - name: Build
-#        run: |
-#          cmake --build build --parallel 16 --target AppImage
-#
-#      - name: Test
-#        env:
-#          TERM: xterm-256color
-#        run: |
-#          ctest --test-dir build --extra-verbose -LE "NotTestable"
-#
-#      ########################################################################
-#      # OPEN ISSUE IF ANY TEST FAILURE OCCURRED
-#      ########################################################################
-#      - name: Open an Issue on Test Failure
-#        # This step runs only if a previous step in the same job has failed
-#        if: ${{ failure() }}
-#        uses: actions/github-script@v6
-#        with:
-#          github-token: ${{ secrets.GITHUB_TOKEN }}
-#          script: |
-#            github.rest.issues.create({
-#              owner: context.repo.owner,
-#              repo: context.repo.repo,
-#              title: "Test Failure in Automated CMake Test Workflow",
-#              body: "# One or more tests have failed!"
-#            })
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ccache \
+            build-essential \
+            libncurses-dev \
+            bsdutils \
+            libboost-dev \
+            libboost-filesystem-dev \
+            libboost-thread-dev \
+            nlohmann-json3-dev \
+            libcurl4-openssl-dev \
+            expect \
+            bc \
+            software-properties-common \
+            wget \
+            apt-transport-https \
+            gnupg cmake libsfml-dev libasio-dev
+
+      - name: Configure
+        run: |
+          cmake -B build -S . \
+            -D CMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: |
+          cmake --build build --parallel 16 --target AppImage
+
+      - name: Test
+        env:
+          TERM: xterm-256color
+        run: |
+          ctest --test-dir build --extra-verbose -LE "NotTestable"
+
+      ########################################################################
+      # OPEN ISSUE IF ANY TEST FAILURE OCCURRED
+      ########################################################################
+      - name: Open an Issue on Test Failure
+        # This step runs only if a previous step in the same job has failed
+        if: ${{ failure() }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "Test Failure in Automated CMake Test Workflow",
+              body: "# One or more tests have failed!"
+            })
 
       - name: Get Git commit hash
         id: get_commit
@@ -91,7 +90,7 @@ jobs:
       - name: Create a GitHub release
         uses: softprops/action-gh-release@v1
         with:
-#          files: build/sysdarft-system
+          files: build/sysdarft-system
           tag_name: "Sysdarft.NightlyBuild.${{ env.GIT_HASH }}"
           prerelease: true  # Marking this as a pre-release
         env:
