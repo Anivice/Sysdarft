@@ -61,6 +61,8 @@ set(compiler_options
         -fno-eliminate-unused-debug-types
         -fno-omit-frame-pointer
         -lasan -lubsan -fPIC --pie
+        -Wl,-z,relro -Wl,-z,now
+        -fstack-protector-all
 )
 
 set(linker_options
@@ -81,6 +83,7 @@ set(linker_options
         # Stack protection
         -fstack-protector-all                   # Link with stack protection for all functions
         -lasan -lubsan -fPIC --pie --whole-file
+        -Wl,-z,relro -Wl,-z,now
 )
 
 if ("${COMPILE_WITH_MEMORY_SANITIZERS}" STREQUAL "True")
@@ -130,6 +133,8 @@ set(optimization_flags
         -fdata-sections
         -ffunction-sections
         -D_FORTIFY_SOURCE=2
+        -fstack-protector-strong
+        -Wl,-z,relro -Wl,-z,now
         -s
 )
 
@@ -145,6 +150,8 @@ set(optimization_link_flags
         -ffunction-sections
         -Wl,--gc-sections
         -D_FORTIFY_SOURCE=2
+        -fstack-protector-strong
+        -Wl,-z,relro -Wl,-z,now
         -s
 )
 
@@ -165,7 +172,7 @@ file(READ "${information_file}" SYSDARFT_INFO_CONTENT)
 string(REPLACE "\n" "\\n" SYSDARFT_INFO_CONTENT_ESCAPED "${SYSDARFT_INFO_CONTENT}")
 
 add_compile_definitions(
-        SYSDARFT_VERSION="0.0.2-alpha-rc2"
+        SYSDARFT_VERSION="0.0.2-alpha-rc3"
         SYSDARFT_INFORMATION="${SYSDARFT_INFO_CONTENT_ESCAPED}"
         __CLEAN_OUTPUT__
 )
@@ -177,6 +184,14 @@ endif ()
 # Define include directories globally (can be refined per target)
 include_directories(src/include)
 
+add_subdirectory(utils)
+
+# Lock:
+add_custom_target(GlobalMutexLock
+        COMMAND ${CMAKE_BINARY_DIR}/utils/lock "CMakeBuildLock.lock"
+        DEPENDS lock unlock mutex
+)
+
 # Debug:
 add_library(SysdarftDebug OBJECT
         src/SysdarftDebug.cpp
@@ -186,22 +201,24 @@ add_library(SysdarftDebug OBJECT
         src/demangle.cpp
 )
 target_include_directories(SysdarftDebug PUBLIC src/include)
+add_dependencies(SysdarftDebug GlobalMutexLock)
 
 # Message Map:
 add_library(SysdarftMessageMap OBJECT src/SysdarftMessageMap.cpp)
 target_include_directories(SysdarftMessageMap PUBLIC src/include)
+add_dependencies(SysdarftMessageMap GlobalMutexLock)
 
 # Modular:
 add_library(SysdarftModule OBJECT src/SysdarftModule.cpp)
 target_include_directories(SysdarftModule PUBLIC src/include)
+add_dependencies(SysdarftModule GlobalMutexLock)
 
 add_library(SysdarftGlobalEvents OBJECT src/GlobalEvents.cpp)
 target_include_directories(SysdarftGlobalEvents PUBLIC src/include)
+add_dependencies(SysdarftGlobalEvents GlobalMutexLock)
 
 # Resource files
 find_package(ZLIB REQUIRED)
-add_executable(compress utils/compress.c src/coding/zlib.c)
-target_link_libraries(compress PRIVATE ZLIB::ZLIB)
 
 function(get_basename input_path output_var)
     # Extract the basename from the input_path
@@ -221,7 +238,7 @@ function(add_compressed_resource_target TARGET NAME FILE)
             COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/resources
             COMMAND rm -rf ${FILE}
             COMMAND cp "${CMAKE_CURRENT_SOURCE_DIR}/resources/${FILE}" ${CMAKE_CURRENT_BINARY_DIR}/resources/${BASENAME}
-            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/compress
+            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/utils/compress
                         "${CMAKE_CURRENT_BINARY_DIR}/resources/${BASENAME}"
                         "${CMAKE_CURRENT_BINARY_DIR}/resources/${BASENAME}.bin"
             COMMAND ${XXD_PROGRAM} -n ${NAME} -i "${CMAKE_CURRENT_BINARY_DIR}/resources/${BASENAME}.bin" > ${CMAKE_CURRENT_BINARY_DIR}/resources/${TARGET}
@@ -342,7 +359,7 @@ else ()
 endif ()
 
 set_target_properties(SysdarftResources PROPERTIES LINKER_LANGUAGE C)
-
+add_dependencies(SysdarftResources GlobalMutexLock)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/resources)
 
 # Curses:
@@ -363,6 +380,7 @@ target_link_libraries(SysdarftCursesUI PUBLIC ${CURSES_LIBRARIES} SysdarftResour
         ZLIB::ZLIB
         sfml-graphics
         sfml-window)
+add_dependencies(SysdarftCursesUI GlobalMutexLock)
 
 # CPU
 add_library(SysdarftCPU OBJECT
@@ -388,6 +406,7 @@ add_library(SysdarftCPU OBJECT
 )
 target_include_directories(SysdarftCPU PUBLIC src/include src/cpu/include)
 set_target_properties(SysdarftCPU PROPERTIES LINKER_LANGUAGE CXX)
+add_dependencies(SysdarftCPU GlobalMutexLock)
 
 # Encoder and decoder
 add_library(SysdarftCoding OBJECT
@@ -403,6 +422,7 @@ add_library(SysdarftCoding OBJECT
         src/coding/zlib.c
 )
 target_include_directories(SysdarftCoding PUBLIC src/include)
+add_dependencies(SysdarftCoding GlobalMutexLock)
 
 # I/O Controller Hub
 add_library(SysdarftICH OBJECT
@@ -415,6 +435,7 @@ add_library(SysdarftICH OBJECT
         src/ext_dev/RealTimeClock.cpp
 )
 target_include_directories(SysdarftICH PUBLIC src/include)
+add_dependencies(SysdarftICH GlobalMutexLock)
 
 # Sysdarft Shared Library:
 if(DEFINED STATIC_BUILD AND STATIC_BUILD)
@@ -434,6 +455,7 @@ target_link_libraries(Sysdarft PRIVATE
         SysdarftCPU
         SysdarftICH
 )
+add_dependencies(Sysdarft GlobalMutexLock)
 
 # Console Executable:
 find_package(nlohmann_json REQUIRED)
@@ -479,6 +501,7 @@ add_executable(sysdarft-system
 )
 target_include_directories(sysdarft-system PUBLIC ${ASIO_INCLUDE_DIR} src/include src/include/crow)
 target_link_libraries(sysdarft-system PRIVATE Sysdarft nlohmann_json::nlohmann_json SysdarftResources)
+add_dependencies(sysdarft-system GlobalMutexLock)
 
 # Enable testing
 enable_testing()
@@ -560,26 +583,37 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
                     "Unless you are inside a container, DO NOT build an AppImage and deploy it.")
 endif ()
 
+add_custom_target(GlobalMutexUnLock ALL
+        COMMAND ${CMAKE_BINARY_DIR}/utils/unlock "CMakeBuildLock.lock"
+        DEPENDS sysdarft-system
+)
+
 if(DEFINED STATIC_BUILD AND STATIC_BUILD)
     add_custom_target(
             AppImage
+            COMMAND ${CMAKE_BINARY_DIR}/utils/lock "AppImageBuild.lock"
             COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/single_executable_builder.sh
                             sysdarft-system
                             "    "
                             "${CMAKE_BINARY_DIR}"
                             ${CMAKE_SYSTEM_PROCESSOR}
-            DEPENDS sysdarft-system
+            COMMAND ${CMAKE_BINARY_DIR}/utils/unlock "AppImageBuild.lock"
+            COMMAND ${CMAKE_BINARY_DIR}/utils/unlock "CMakeBuildLock.lock"
+            DEPENDS sysdarft-system lock unlock
             COMMENT "Building AppImage..."
     )
 else ()
     add_custom_target(
             AppImage
+            COMMAND ${CMAKE_BINARY_DIR}/utils/lock "AppImageBuild.lock"
             COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/single_executable_builder.sh
                             sysdarft-system
                             "libSysdarft.so libSysdarftResources.so"
                             "${CMAKE_BINARY_DIR}"
                             ${CMAKE_SYSTEM_PROCESSOR}
-            DEPENDS sysdarft-system
+            COMMAND ${CMAKE_BINARY_DIR}/utils/unlock "AppImageBuild.lock"
+            COMMAND ${CMAKE_BINARY_DIR}/utils/unlock "CMakeBuildLock.lock"
+            DEPENDS sysdarft-system lock unlock
             COMMENT "Building AppImage..."
     )
 endif ()

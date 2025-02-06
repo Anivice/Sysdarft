@@ -45,8 +45,8 @@ for item in $FILE_LIST; do
 done
 
 # cp "$TEMP_DIR"/Sysdarft.pdf "$TEMP_DIR"/Sysdarft.AppDir/usr/share/doc
-cp "$SCRIPT_DIR"/../resources/icon/sysdarft.svg "$TEMP_DIR"/Sysdarft.AppDir/usr/share/icons/hicolor/128x128/apps
-cp "$SCRIPT_DIR"/../resources/icon/sysdarft.svg "$TEMP_DIR"/Sysdarft.AppDir/
+cp "$SCRIPT_DIR"/../resources/icon/icon.png "$TEMP_DIR"/Sysdarft.AppDir/usr/share/icons/hicolor/128x128/apps/sysdarft.png
+cp "$SCRIPT_DIR"/../resources/icon/icon.png "$TEMP_DIR"/Sysdarft.AppDir/sysdarft.png
 
 echo "Generating scripting files..."
 
