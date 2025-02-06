@@ -82,6 +82,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: build/sysdarft-system
+          prerelease: true  # Marking this as a pre-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_NAME: Sysdarft.NightlyBuild.${{ env.GIT_HASH }}
