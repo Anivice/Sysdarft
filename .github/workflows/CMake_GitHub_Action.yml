@@ -91,7 +91,8 @@ jobs:
       - name: Create a GitHub release
         uses: softprops/action-gh-release@v1
         with:
-          files: build/sysdarft-system
+#          files: build/sysdarft-system
+          tag_name: "Sysdarft.NightlyBuild.${{ env.GIT_HASH }}"
           prerelease: true  # Marking this as a pre-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
