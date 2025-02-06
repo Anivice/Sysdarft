@@ -141,7 +141,8 @@ uint64_t boot_sysdarft(
     const uint16_t port,
     const std::string & log_path,
     const bool headless,
-    const bool gui)
+    const bool gui,
+    const bool cr_to_lf)
 {
     std::ifstream file(bios, std::ios::in | std::ios::binary);
     std::vector<uint8_t> bios_code;
@@ -169,6 +170,8 @@ uint64_t boot_sysdarft(
         if (debug) { // request a debug server
             debug_server = std::make_unique<RemoteDebugServer>(ip, port, CPUInstance, log_path);
         }
+
+        CPUInstance.translate_cr_to_lf = cr_to_lf;
 
         ret = CPUInstance.Boot(headless, gui);
     } catch (...) {
@@ -415,6 +418,8 @@ int main(int argc, char** argv)
                 return EXIT_SUCCESS;
             }
 
+            const bool cr_to_lf = parsed_options.contains("cr-to-lf");
+
             // boot system
             return static_cast<int>(boot_sysdarft(
                 memory_size,
@@ -428,7 +433,8 @@ int main(int argc, char** argv)
                 port,
                 log_file,
                 headless,
-                gui));
+                gui,
+                cr_to_lf));
         }
 
         std::cout   << "If you see this message, that means you have provided one or more arguments,\n"

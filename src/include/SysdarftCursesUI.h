@@ -45,15 +45,24 @@ class SYSDARFT_EXPORT_SYMBOL SysdarftCursesUI : public SysdarftCPUMemoryAccess
 public:
     explicit SysdarftCursesUI(uint64_t memory, const std::string & font_name);
     ~SysdarftCursesUI() override;
-    void initialize();
+
+protected:
     void cleanup();
+    void start_again();
+    void initialize();
     void set_cursor(int x, int y);
     void set_cursor_visibility(bool visible);
     void teletype(char text);
     void newline();
+
+public:
     void handle_resize();
-    void start_again();
+
+protected:
     void ringbell();
+
+public:
+    std::atomic<bool> translate_cr_to_lf = false;
 
 protected:
     // External halt is handled at upper level

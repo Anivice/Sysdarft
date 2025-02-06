@@ -91,6 +91,7 @@ const option_complicated long_options[] = {
     {"memory",  required_argument,  nullptr, 'M',   "Specify memory size (in MB)\n"
                                                                                                 "Left unset and the default size is 32MB"},
     {"boot",    no_argument,        nullptr, 'S',   "Boot the system"},
+    {"cr-to-lf",        no_argument,        nullptr, 'E',   "Translate ASCII CR('\\r', carriage ret) to LF('\\n', new line)"},
     {"debug",   required_argument,  nullptr, 'D',   "Boot the system with remote debug console\n"
                                                                                                 "The system will not be started unless the debug console is connected\n"
                                                                                                 "Disconnecting debug console will cause system to immediately halt,\n"
