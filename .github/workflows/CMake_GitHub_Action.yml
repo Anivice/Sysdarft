@@ -78,10 +78,15 @@ jobs:
         id: get_commit
         run: echo "GIT_HASH=$(git rev-parse --short=8 HEAD)" >> $GITHUB_ENV
 
+      - name: Set up Git for pushing tag
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
       - name: Create Git tag for release
         run: |
-            git tag "Sysdarft.NightlyBuild.${{ env.GIT_HASH }}"
-            git push origin "Sysdarft.NightlyBuild.${{ env.GIT_HASH }}"
+          git tag "Sysdarft.NightlyBuild.${{ env.GIT_HASH }}"
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} "Sysdarft.NightlyBuild.${{ env.GIT_HASH }}"
 
       - name: Create a GitHub release
         uses: softprops/action-gh-release@v1
