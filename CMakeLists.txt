@@ -63,6 +63,8 @@ set(compiler_options
         -lasan -lubsan -fPIC --pie
         -Wl,-z,relro -Wl,-z,now
         -fstack-protector-all
+        -static-libgcc
+        -static-libstdc++
 )
 
 set(linker_options
@@ -84,6 +86,8 @@ set(linker_options
         -fstack-protector-all                   # Link with stack protection for all functions
         -lasan -lubsan -fPIC --pie --whole-file
         -Wl,-z,relro -Wl,-z,now
+        -static-libgcc
+        -static-libstdc++
 )
 
 if ("${COMPILE_WITH_MEMORY_SANITIZERS}" STREQUAL "True")
@@ -589,6 +593,9 @@ add_custom_target(GlobalMutexUnLock ALL
 )
 
 if(DEFINED STATIC_BUILD AND STATIC_BUILD)
+    add_compile_options(-static)
+    add_link_options(-static)
+
     add_custom_target(
             AppImage
             COMMAND ${CMAKE_BINARY_DIR}/utils/lock "AppImageBuild.lock"

@@ -39,7 +39,7 @@ jobs:
             software-properties-common \
             wget \
             apt-transport-https \
-            gnupg cmake libsfml-dev libasio-dev
+            gnupg cmake libsfml-dev libasio-dev libc6-dev
 
       - name: Configure
         run: |

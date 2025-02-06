@@ -95,7 +95,7 @@ if [ -e /tmp/SysdarftChecksumStatus ]; then
     exit 1
 fi
 
-LD_LIBRARY_PATH=\"\$LD_LIBRARY_PATH\":\"\$SCRIPT_DIR/usr/lib\" LD_PRELOAD=\"\$SCRIPT_DIR/usr/lib/libSysdarft.so:\$SCRIPT_DIR/usr/lib/libSysdarftResources.so\" \"\$SCRIPT_DIR/usr/bin/sysdarft-system\" \${@}
+LD_PRELOAD=\"\$SCRIPT_DIR/usr/lib/libSysdarft.so:\$SCRIPT_DIR/usr/lib/libSysdarftResources.so\" \"\$SCRIPT_DIR/usr/bin/sysdarft-system\" \${@}
 "
 } > "$TEMP_DIR"/Sysdarft.AppDir/AppRun
 
