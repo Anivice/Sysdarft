@@ -41,11 +41,23 @@ preload=""
 for item in $FILE_LIST; do
     if echo "$item" | grep "\\.so" > /dev/null 2> /dev/null; then
         cp "$item" "$TEMP_DIR"/Sysdarft.AppDir/usr/lib
-        preload="$preload:\$SCRIPT_DIR/usr/lib/$(basename "$item")"
+        if echo "$item" | grep "curses" > /dev/null 2> /dev/null; then
+            preload="$preload:\$SCRIPT_DIR/usr/lib/$(basename "$item")"
+        fi
+
+        if echo "$item" | grep "libtinfo" > /dev/null 2> /dev/null; then
+            preload="$preload:\$SCRIPT_DIR/usr/lib/$(basename "$item")"
+        fi
+
+        if echo "$item" | grep "Sysdarft" > /dev/null 2> /dev/null; then
+            preload="$preload:\$SCRIPT_DIR/usr/lib/$(basename "$item")"
+        fi
     else
         cp "$item" "$TEMP_DIR"/Sysdarft.AppDir/usr/bin
     fi
 done
+
+preload=$(echo "$preload" | tr ':' '\n' | sort -u | tr '\n' ':' | sed 's/:$//')
 
 # cp "$TEMP_DIR"/Sysdarft.pdf "$TEMP_DIR"/Sysdarft.AppDir/usr/share/doc
 cp "$SCRIPT_DIR"/../resources/icon/icon.png "$TEMP_DIR"/Sysdarft.AppDir/usr/share/icons/hicolor/128x128/apps/sysdarft.png
@@ -95,7 +107,7 @@ if [ -e /tmp/SysdarftChecksumStatus ]; then
     exit 1
 fi
 
-LD_PRELOAD=\"\$SCRIPT_DIR/usr/lib/libSysdarft.so:\$SCRIPT_DIR/usr/lib/libSysdarftResources.so\" \"\$SCRIPT_DIR/usr/bin/sysdarft-system\" \${@}
+LD_PRELOAD=\"$preload\" \"\$SCRIPT_DIR/usr/bin/sysdarft-system\" \${@}
 "
 } > "$TEMP_DIR"/Sysdarft.AppDir/AppRun
 
