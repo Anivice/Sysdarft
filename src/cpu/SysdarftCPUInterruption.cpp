@@ -403,7 +403,7 @@ void SysdarftCPUInterruption::do_interruption_getInput_0x14()
 
 void SysdarftCPUInterruption::do_interruption_cur_pos_0x15()
 {
-    const uint16_t linear = cursor_y * V_WIDTH + cursor_x;
+    const uint16_t linear = SysdarftCursesUI::cursor_y * V_WIDTH + SysdarftCursesUI::cursor_x;
     SysdarftRegister::store<ExtendedRegisterType, 0>(linear);
 }
 

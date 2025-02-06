@@ -30,6 +30,10 @@ void replace_all(
 {
     if (target.empty()) return; // Avoid infinite loop if target is empty
 
+    if (target == " " && replacement.empty()) {
+        std::erase_if(original, [](const char c) { return c == ' '; });
+    }
+
     size_t pos = 0;
     while ((pos = original.find(target, pos)) != std::string::npos) {
         original.replace(pos, target.length(), replacement);
@@ -247,10 +251,24 @@ object_t SysdarftAssemble(
 
     std::vector < data_expression_identifier > data_processors;
     uint64_t line_number = 0;
+    int64_t lastBucket = -1; // start with an invalid bucket value
 
     for (auto & line : file)
     {
         line_number++;
+
+        if (debug::verbose)
+        {
+            if (const auto bucket = static_cast<int64_t>(
+                    static_cast<int64_t>(line_number) * static_cast<long double>(10.0) / static_cast<int64_t>(file.size()));
+                bucket != lastBucket)
+            {
+                std::cout << "--- Assembler progress " << std::fixed << std::setprecision(2)
+                          << static_cast<double>(line_number) / static_cast<double>(file.size()) * 100.0f << "% ..."
+                          << std::endl;
+                lastBucket = bucket;
+            }
+        }
 
         if (is_line_empty(line)) {
             continue;

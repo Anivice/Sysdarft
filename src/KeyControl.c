@@ -48,8 +48,12 @@ static void enableRawMode()
         exit(EXIT_FAILURE);
     }
     raw = orig_termios;
-    // Disable canonical mode, echo, and signals (ISIG).
+    // Disable canonical mode, echo, and signals.
     raw.c_lflag &= ~(ECHO | ICANON | ISIG);
+
+    // **Re-enable CR to NL translation:**
+    raw.c_iflag |= ICRNL;
+
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
         perror("tcsetattr");
         exit(EXIT_FAILURE);

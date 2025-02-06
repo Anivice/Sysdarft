@@ -98,15 +98,27 @@ void SysdarftCursesUI::initialize()
     }
     is_inited = true;
 
+
+#ifdef __DEBUG__
     const auto window    = initscr();            // Start curses mode
     const auto cbreak_status = cbreak();             // Disable line buffering
     const auto noecho_status = noecho();             // Don't echo typed characters
     const auto keypad_status = keypad(stdscr, TRUE); // Enable special keys
+    const auto raw_status = raw();
+    const auto nl_status = nl();
 
-    if (!window || cbreak_status != 0 || noecho_status != 0 || keypad_status != 0)
-    {
-        throw std::runtime_error("Failed to initialize curses");
-    }
+    // if (!window || cbreak_status != 0 || noecho_status != 0 || keypad_status != 0 || raw_status != 0 || nl_status != 0)
+    // {
+        // throw std::runtime_error("Failed to initialize curses");
+    // }
+#else
+    initscr();            // Start curses mode
+    cbreak();             // Disable line buffering
+    noecho();             // Don't echo typed characters
+    keypad(stdscr, TRUE); // Enable special keys
+    raw();
+    nl();
+#endif
 
     recalc_offsets();
     if (const auto clear_status = clear(); clear_status != 0)
@@ -133,6 +145,8 @@ void SysdarftCursesUI::start_again()
     cbreak();
     noecho();
     keypad(stdscr, TRUE);
+    raw();
+    nl();
     recalc_offsets();
     clear();
     curs_set(1);         // Ensure cursor visibility is reset

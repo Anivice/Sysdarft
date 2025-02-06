@@ -433,6 +433,10 @@ void PreProcess(std::vector<std::string> &file, defined_line_marker_t &defined_l
             } else if (std::regex_match(line, equ_pattern)) {
                 process_equ(line, equ_replacement);
             } else {
+                if (debug::verbose) {
+                    std::cout << "PreProcessor declaration process stopped at line " << line_number
+                              << " due to the appearance of a non-declarative directive." << std::endl;
+                }
                 break;
             }
 

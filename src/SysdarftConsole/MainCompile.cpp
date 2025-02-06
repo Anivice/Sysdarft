@@ -18,6 +18,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <ranges>
 #include <SysdarftMain.h>
 
 #define EXE_MAGIC ((uint32_t)(0x00455845))
@@ -64,20 +65,65 @@ struct file_attr_t {
     header_file_list_t header_files;
 };
 
+size_t max_line_length(const std::vector < std::string >& input)
+{
+    size_t max_length = 0;
+
+    for (auto const & line : input) {
+        if (line.size() > max_length) {
+            max_length = line.size();
+        }
+    }
+
+    return max_length;
+}
+
+void print_definition(const file_attr_t & file)
+{
+    std::vector<std::string> key_list;
+    for (auto const &def : std::views::keys(file.definition)) {
+        key_list.push_back(def);
+    }
+
+    const auto max_len = max_line_length(key_list);
+    for (auto &[key, value] : file.definition) {
+        std::cout << "    " << key << std::string(max_len + 1 - key.size(), ' ') << "= " << value << std::endl;
+    }
+}
+
 void PreProcess(std::vector < file_attr_t > & files, uint64_t & org, const bool regex, const std::vector < std::string > & include_path)
 {
     for (file_attr_t & file : files)
     {
         try {
+            if (debug::verbose) {
+                std::cout << "Stage 1: PreProcessing file " << file.filename << std::endl;
+            }
             HeadProcess(file.file, file.definition, file.header_files, include_path);
+            if (debug::verbose)
+            {
+                std::cout << "Stage 1: File " << file.filename << " loaded with these headers:" << std::endl;
+                for (const auto & header: file.header_files) {
+                    std::cout << "    " << header.file_name << std::endl;
+                }
+
+                std::cout << std::endl;
+
+                std::cout << "Stage 1: File " << file.filename << " loaded with these definitions:" << std::endl;
+                print_definition(file);
+                std::cout << std::endl;
+            }
         } catch (const std::exception & err) {
-            throw std::runtime_error("Error when processing file " + file.filename + ": " + err.what());
+            throw std::runtime_error("Error when processing file " + file.filename + ":\n    " + err.what());
         }
     }
 
     for (file_attr_t & file : files)
     {
         try {
+            if (debug::verbose) {
+                std::cout << "Stage 2: PreProcessing file " << file.filename << std::endl;
+            }
             std::map < std::string, std::string > equ_replacement;
             PreProcess(file.file,
                 file.symbol_table,
@@ -87,8 +133,12 @@ void PreProcess(std::vector < file_attr_t > & files, uint64_t & org, const bool 
                 file.header_files,
                 file.definition,
                 include_path);
+
+            std::cout << "Stage 2: File " << file.filename << " loaded with these definitions:" << std::endl;
+            print_definition(file);
+            std::cout << std::endl;
         } catch (const std::exception & err) {
-            throw std::runtime_error("Error when processing file " + file.filename + ": " + err.what());
+            throw std::runtime_error("Error when processing file " + file.filename + ":\n    " + err.what());
         }
     }
 }
@@ -98,9 +148,12 @@ void Assemble(std::vector < file_attr_t > & files, uint64_t & org)
     for (file_attr_t & file : files)
     {
         try {
+            if (debug::verbose) {
+                std::cout << "Stage 3: Assembling file " << file.filename << std::endl;
+            }
             file.object = SysdarftAssemble(file.code, file.file, org, file.symbol_table);
         } catch (const std::exception & err) {
-            throw std::runtime_error("Error when processing file " + file.filename + ": " + err.what());
+            throw std::runtime_error("Error when processing file " + file.filename + ":\n    " + err.what());
         }
     }
 }
@@ -109,6 +162,9 @@ std::vector <object_t> Archive(std::vector < file_attr_t > & files)
 {
     std::vector <object_t> objects;
     for (file_attr_t & file : files) {
+        if (debug::verbose) {
+            std::cout << "Stage 4: Archiving file " << file.filename << std::endl;
+        }
         objects.push_back(file.object);
     }
 
@@ -142,7 +198,7 @@ std::vector < file_attr_t > ReadFiles(const std::vector<std::string> &source_fil
 
             files.emplace_back(file);
         } catch (const std::exception & e) {
-            throw SysdarftAssemblerError("Error when processing file " + source_file + ": " + e.what());
+            throw SysdarftAssemblerError("Error when processing file " + source_file + ":\n    " + e.what());
         }
     }
 
@@ -175,7 +231,7 @@ void LinkedWrite(const std::string &binary_filename, const object_t & linked_obj
 
         file.close();
     } catch (const std::exception & e) {
-        throw SysdarftAssemblerError("Error when writing to output file " + binary_filename + ": " + e.what());
+        throw SysdarftAssemblerError("Error when writing to output file " + binary_filename + ":\n    " + e.what());
     }
 }
 
@@ -199,34 +255,34 @@ void compile_to_binary(const std::vector<std::string> &source_files, const std::
 
     // preprocessing
     if (debug::verbose) {
-        std::cout << "PreProcessing ..." << std::endl;
+        std::cout << "Stage 1 & 2: PreProcessing ..." << std::endl;
     }
 
     PreProcess(files, org, regex, include_path);
 
     // compiling
     if (debug::verbose) {
-        std::cout << "Assembling ..." << std::endl;
+        std::cout << "Stage 3: Assembling ..." << std::endl;
     }
 
     Assemble(files, org);
 
     // archiving
     if (debug::verbose) {
-        std::cout << "Archiving ..." << std::endl;
+        std::cout << "Stage 4: Archiving ..." << std::endl;
     }
 
     auto objects = Archive(files);
 
     // Link
     if (debug::verbose) {
-        std::cout << "Linking ..." << std::endl;
+        std::cout << "Stage 5: Linking ..." << std::endl;
     }
 
     const object_t linked_object = SysdarftLink(objects);
 
     if (debug::verbose) {
-        std::cout << "Writing to file ..." << std::endl;
+        std::cout << "Stage 6: Writing to file ..." << std::endl;
     }
 
     LinkedWrite(binary_filename, linked_object, compile_mode);
