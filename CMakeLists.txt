@@ -63,8 +63,6 @@ set(compiler_options
         -lasan -lubsan -fPIC --pie
         -Wl,-z,relro -Wl,-z,now
         -fstack-protector-all
-        -static-libgcc
-        -static-libstdc++
 )
 
 set(linker_options
@@ -86,8 +84,6 @@ set(linker_options
         -fstack-protector-all                   # Link with stack protection for all functions
         -lasan -lubsan -fPIC --pie --whole-file
         -Wl,-z,relro -Wl,-z,now
-        -static-libgcc
-        -static-libstdc++
 )
 
 if ("${COMPILE_WITH_MEMORY_SANITIZERS}" STREQUAL "True")
@@ -592,6 +588,17 @@ add_custom_target(GlobalMutexUnLock ALL
         DEPENDS sysdarft-system
 )
 
+find_program(OPENSSL_EXEC   openssl             REQUIRED)
+find_program(FIND_EXEC      find                REQUIRED)
+find_program(BASH_EXEC      bash                REQUIRED)
+find_program(BC_EXEC        bc                  REQUIRED)
+find_program(GREP_EXEC      grep                REQUIRED)
+find_program(SED_EXEC       sed                 REQUIRED)
+find_program(RM_EXEC        rm                  REQUIRED)
+find_program(CAT_EXEC       cat                 REQUIRED)
+find_program(ECHO_EXEC      echo                REQUIRED)
+set(PROGRAMS " ${OPENSSL_EXEC} ${FIND_EXEC} ${BASH_EXEC} ${BC_EXEC} ${GREP_EXEC} ${SED_EXEC} ${RM_EXEC} ${CAT_EXEC} ${ECHO_EXEC}")
+
 if(DEFINED STATIC_BUILD AND STATIC_BUILD)
     add_compile_options(-static)
     add_link_options(-static)
@@ -601,13 +608,14 @@ if(DEFINED STATIC_BUILD AND STATIC_BUILD)
             COMMAND ${CMAKE_BINARY_DIR}/utils/lock "AppImageBuild.lock"
             COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/single_executable_builder.sh
                             sysdarft-system
-                            "    "
+                            "${PROGRAMS}     "
                             "${CMAKE_BINARY_DIR}"
                             ${CMAKE_SYSTEM_PROCESSOR}
             COMMAND ${CMAKE_BINARY_DIR}/utils/unlock "AppImageBuild.lock"
             COMMAND ${CMAKE_BINARY_DIR}/utils/unlock "CMakeBuildLock.lock"
             DEPENDS sysdarft-system lock unlock
             COMMENT "Building AppImage..."
+            BYPRODUCTS "${CMAKE_BINARY_DIR}/Sysdarft.AppDir/"
     )
 else ()
     add_custom_target(
@@ -615,12 +623,13 @@ else ()
             COMMAND ${CMAKE_BINARY_DIR}/utils/lock "AppImageBuild.lock"
             COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/single_executable_builder.sh
                             sysdarft-system
-                            "libSysdarft.so libSysdarftResources.so"
-                            "${CMAKE_BINARY_DIR}"
+                            "libSysdarft.so libSysdarftResources.so ${PROGRAMS}"
+            "${CMAKE_BINARY_DIR}"
                             ${CMAKE_SYSTEM_PROCESSOR}
             COMMAND ${CMAKE_BINARY_DIR}/utils/unlock "AppImageBuild.lock"
             COMMAND ${CMAKE_BINARY_DIR}/utils/unlock "CMakeBuildLock.lock"
             DEPENDS sysdarft-system lock unlock
             COMMENT "Building AppImage..."
+            BYPRODUCTS "${CMAKE_BINARY_DIR}/Sysdarft.AppDir/"
     )
 endif ()

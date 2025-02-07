@@ -134,9 +134,11 @@ void PreProcess(std::vector < file_attr_t > & files, uint64_t & org, const bool 
                 file.definition,
                 include_path);
 
-            std::cout << "Stage 2: File " << file.filename << " loaded with these definitions:" << std::endl;
-            print_definition(file);
-            std::cout << std::endl;
+            if (debug::verbose) {
+                std::cout << "Stage 2: File " << file.filename << " loaded with these definitions:" << std::endl;
+                print_definition(file);
+                std::cout << std::endl;
+            }
         } catch (const std::exception & err) {
             throw std::runtime_error("Error when processing file " + file.filename + ":\n    " + err.what());
         }
