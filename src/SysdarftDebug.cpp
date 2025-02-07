@@ -210,14 +210,8 @@ debug::cmd_status debug::_exec_command(const std::string &cmd,
             argv.push_back(const_cast<char *>(arg.c_str()));
         }
         argv.push_back(nullptr);
+        execv(cmd.c_str(), argv.data());
 
-        if (const std::string sysroot = std::getenv("SYSROOT");
-            !sysroot.empty())
-        {
-            execv((sysroot + "/" + cmd).c_str(), argv.data());
-        } else {
-            execv(cmd.c_str(), argv.data());
-        }
         // If execv fails
         perror("execv");
         exit(EXIT_FAILURE);

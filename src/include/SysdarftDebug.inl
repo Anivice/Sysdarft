@@ -28,7 +28,20 @@ debug::cmd_status debug::exec_command(const std::string &cmd, const std::string 
                                       Strings &&...args)
 {
     const std::vector<std::string> vec{std::forward<Strings>(args)...};
-    return _exec_command(cmd, vec, input);
+    const auto csysroot = std::getenv("SYSROOT");
+    std::string sysroot;
+    if (csysroot != nullptr) {
+        sysroot = csysroot;
+    }
+
+    if (debug::verbose) {
+        d_log("Executing ", sysroot, "/", cmd, " ", vec, "\n");
+        const auto ret = _exec_command(sysroot + "/" + cmd, vec, input);
+        d_log("Exit status for executed command: ", ret.exit_status, ", stderr: ", ret.fd_stderr, "\n");
+        return ret;
+    }
+
+    return _exec_command(sysroot + "/" + cmd, vec, input);
 }
 
 template <typename Container>
